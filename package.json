@@ -9,6 +9,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@vueuse/rxjs": "^13.7.0",
+    "dexie": "^4.2.0",
+    "pinyin-pro": "^3.27.0",
     "vue": "^3.5.18",
     "vue-router": "^4.5.1"
   },

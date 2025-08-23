@@ -1,9 +1,9 @@
 <template>
         <header class="app-header">
                 <div class="header-left">
-                        <a @click="$emit('back')" class="back-button">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"
-                                        stroke="currentColor" stroke-width="2">
+                        <a @click="handleBackClick" class="back-button">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none"
+                                        viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
                                 </svg>
                         </a>
@@ -18,15 +18,33 @@
 </template>
 
 <script setup>
-defineProps({
+import { useRouter } from 'vue-router';
+
+// We now accept an optional function prop to override the default back behavior.
+const props = defineProps({
         title: {
                 type: String,
-                default: '页面标题' // 提供一个默认值
+                default: '页面标题'
+        },
+        overrideBackAction: {
+                type: Function,
+                default: null,
         }
 });
 
-// 定义组件可以发出的事件
-defineEmits(['back']);
+
+const router = useRouter();
+
+// The new handler function
+const handleBackClick = () => {
+        // If a custom function is passed as a prop, run it.
+        if (props.overrideBackAction) {
+                props.overrideBackAction();
+        } else {
+                // Otherwise, perform the default action: go to the homepage.
+                router.push('/');
+        }
+};
 </script>
 
 <style scoped>
@@ -51,8 +69,8 @@ defineEmits(['back']);
         color: var(--text-primary);
 
         /* 边距与安全区域 */
-        height: calc(50px + env(safe-area-inset-top));
-        padding-top: env(safe-area-inset-top);
+        height: calc(56px + var(--safe-top));
+        padding-top: var(--safe-top);
         padding-left: 15px;
         padding-right: 15px;
         padding-bottom: 0;

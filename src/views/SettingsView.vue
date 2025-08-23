@@ -1,7 +1,7 @@
 <!-- src/views/SettingsView.vue -->
 <template>
         <div class="page-container">
-                <AppHeader title="设置" @back="goHome">
+                <AppHeader title="设置">
                         <template #right>
                                 <button @click="saveChanges" class="header-action-button">保存</button>
                         </template>
@@ -360,9 +360,6 @@ async function handleLocalImport(event) {
         reader.readAsText(file);
 }
 
-const goHome = () => router.back();
-
-
 </script>
 
 <style scoped>
@@ -373,7 +370,6 @@ const goHome = () => router.back();
         height: 100vh;
         display: flex;
         flex-direction: column;
-        padding-top: 50px;
         box-sizing: border-box;
 }
 

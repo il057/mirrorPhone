@@ -1,32 +1,149 @@
 <template>
         <div class="app-main-container">
-                <!-- 
-      子路由对应的组件 (MessagesView, ContactsView 等) 
-      将在这里被渲染出来。
-    -->
-                <router-view />
+                <AppHeader :title="currentTitle">
+                        <template #right>
+                                <button v-if="showPlusMenu" @click="isDropdownOpen = true" class="header-action-button">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"
+                                                viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                                stroke-linecap="round" stroke-linejoin="round">
+                                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                                        </svg>
+                                </button>
+                                <button v-if="route.name === 'chat-me'" class="header-action-button">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"
+                                                viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                                stroke-linecap="round" stroke-linejoin="round">
+                                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                                                <circle cx="12" cy="7" r="4"></circle>
+                                        </svg>
+                                </button>
+                        </template>
+                </AppHeader>
 
-                <!-- 
-      我们的通用 Footer。
-      :hasNotification 是一个示例，你可以根据实际的全局状态来传递。
-    -->
+                <main class="chat-content-area">
+                        <router-view />
+                </main>
+
                 <AppFooter :has-notification="true" />
+
+                <DropdownMenu :is-open="isDropdownOpen" @close="isDropdownOpen = false">
+                        <template v-if="route.name === 'chat-messages' || route.name === 'chat-contacts'">
+                                <li @click="handleDropdownAction('addFriend')">添加好友</li>
+                                <li @click="handleDropdownAction('suggestedFriends')">可能认识</li>
+                                <li @click="handleDropdownAction('startGroupChat')">发起群聊</li>
+                                <li v-if="route.name === 'chat-contacts'" @click="handleDropdownAction('manageGroups')">
+                                        管理分组</li>
+                        </template>
+                        <template v-if="route.name === 'chat-moments'">
+                                <li @click="handleDropdownAction('writePost')">写动态</li>
+                                <li @click="handleDropdownAction('postPhoto')">发照片</li>
+                        </template>
+                </DropdownMenu>
+
+                <ManageGroupsModal :is-open="isManageGroupsModalOpen" @close="isManageGroupsModalOpen = false" />
         </div>
 </template>
 
 <script setup>
+import { ref, watch, computed } from 'vue';
+import { useRoute } from 'vue-router';
+import { useObservable } from '@vueuse/rxjs';
+import { liveQuery } from 'dexie';
+import db from '../services/database';
+import AppHeader from '../components/layout/Header.vue';
 import AppFooter from '../components/layout/Footer.vue';
-</script>
+import DropdownMenu from '../components/ui/DropdownMenu.vue';
+import ManageGroupsModal from './chat/ManageGroupsModal.vue';
+import { showToast } from '../services/uiService';
 
+const route = useRoute();
+const currentTitle = ref('');
+const isDropdownOpen = ref(false);
+const isManageGroupsModalOpen = ref(false);
+
+const showPlusMenu = computed(() => {
+        const routesWithPlus = ['chat-messages', 'chat-contacts', 'chat-moments'];
+        return routesWithPlus.includes(route.name);
+});
+
+watch(
+        () => route.meta,
+        (meta) => {
+                currentTitle.value = meta.title || '';
+        },
+        { immediate: true }
+);
+
+// This logic runs in the background to keep the 'Special Care' group in sync.
+const actors = useObservable(liveQuery(() => db.actors.toArray()), { initialValue: [] });
+watch(actors, async (newActors) => {
+        if (!newActors) return;
+
+        const specialCareActorsExist = newActors.some(a => a.specialCare && !a.isGroup);
+        const specialGroup = await db.groups.get('group_special');
+
+        if (specialCareActorsExist && !specialGroup) {
+                // If special care characters exist but the group doesn't, create it.
+                // Using .put() is safe for both creating and updating.
+                await db.groups.put({ id: 'group_special', name: '特别关心', order: 0 }); // Order 0 to always be first
+        } else if (!specialCareActorsExist && specialGroup) {
+                // If no special care characters exist but the group does, delete it.
+                await db.groups.delete('group_special');
+        }
+}, { immediate: true });
+
+const handleDropdownAction = (action) => {
+        isDropdownOpen.value = false; // Close dropdown after action
+        switch (action) {
+                case 'manageGroups':
+                        isManageGroupsModalOpen.value = true;
+                        break;
+                // You can add logic for other actions here
+                default:
+                        showToast(`${action} 功能待开发`, 'info');
+                        break;
+        }
+};
+
+</script>
 <style scoped>
 .app-main-container {
         width: 100vw;
         height: 100vh;
         background-color: var(--bg-primary);
-        /* 为固定的 Footer 留出空间 */
-        padding-bottom: calc(55px + env(safe-area-inset-bottom));
-        box-sizing: border-box;
+        display: flex;
+        flex-direction: column;
         overflow: hidden;
-        /* 防止页面整体滚动 */
+        /* Prevent the whole container from scrolling */
+}
+
+.chat-content-area {
+        flex: 1;
+        /* Allows this area to grow and fill the space between header and footer */
+        overflow-y: auto;
+        /* This makes ONLY the main content scrollable */
+        padding-top: var(--header-height);
+        padding-bottom: var(--footer-height);
+}
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+.chat-content-area::-webkit-scrollbar {
+        display: none;
+}
+
+/* Hide scrollbar for IE and Edge */
+.chat-content-area {
+        -ms-overflow-style: none;  /* IE and Edge */
+        scrollbar-width: none;  /* Firefox */
+}
+
+/* Header action button styles */
+.header-action-button {
+        color: var(--text-primary);
+        background: none;
+        border: none;
+        padding: 5px;
+        cursor: pointer;
 }
 </style>

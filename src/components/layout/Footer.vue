@@ -1,11 +1,10 @@
-<!-- src/components/layout/Footer.vue -->
 <template>
         <footer class="app-footer">
                 <nav class="footer-nav">
                         <router-link v-for="item in navItems" :key="item.id" :to="item.path" class="nav-item">
                                 <span class="nav-text">{{ item.name }}</span>
-                                <!-- 仅为“消息”项添加光晕效果 -->
-                                <span v-if="item.id === 'messages' && hasNotification" class="notification-halo"></span>
+                                <!-- 仅为“消息”和“动态”项添加光晕效果 -->
+                                <!--<span v-if="(item.id === 'messages' || item.id === 'moments') && hasNotification" class="notification-glow" ></span>-->
                         </router-link>
                 </nav>
         </footer>
@@ -46,7 +45,8 @@ const navItems = ref([
         border-top: 1px solid var(--border-color);
 
         /* 安全区域适配 iPhone 等设备 */
-        padding-bottom: env(safe-area-inset-bottom);
+        height: calc(56px + var(--safe-bottom));
+        padding-bottom: var(--safe-bottom);
 }
 
 .footer-nav {
@@ -80,24 +80,23 @@ const navItems = ref([
 }
 
 /* --- 新消息光晕动画 --- */
-@keyframes halo-pulse {
+@keyframes glow-pulse {
         0% {
-                transform: scale(0.5);
+                transform: scale(0);
                 opacity: 0.8;
         }
 
         70% {
-                transform: scale(1.5);
-                opacity: 0;
+                opacity: 1;
         }
 
         100% {
-                transform: scale(1.5);
+                transform: scale(1.3);
                 opacity: 0;
         }
 }
 
-.notification-halo {
+.notification-glow {
         position: absolute;
         top: 50%;
         left: 50%;
@@ -105,9 +104,27 @@ const navItems = ref([
         height: 40px;
         margin-top: -20px;
         margin-left: -20px;
-        background-color: var(--accent-primary);
         border-radius: 50%;
         z-index: 1;
-        animation: halo-pulse 2s infinite ease-out;
+}
+
+.notification-glow::before,
+.notification-glow::after {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 40px;
+        height: 40px;
+        margin-top: -20px;
+        margin-left: -20px;
+        border-radius: 50%;
+        z-index: 0;
+        animation: glow-pulse 2s infinite ease-out;
+        box-shadow: 0 0 18px var(--accent-primary);
+}
+
+.notification-glow::after {
+        animation-delay: 0.75s;
 }
 </style>

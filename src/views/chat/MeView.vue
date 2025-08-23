@@ -1,14 +1,13 @@
 <template>
-        <div>
-                <AppHeader title="消息" />
-                <main class="page-content">
-                        <h1>消息列表页面</h1>
-                </main>
-        </div>
+        <main class="page-content">
+                <h1>个人中心页面</h1>
+        </main>
 </template>
 
 <script setup>
-import AppHeader from '../../components/layout/Header.vue';
+import { useRouter } from 'vue-router';
+
+const router = useRouter();
 </script>
 
 <style scoped>

@@ -23,7 +23,5 @@ body {
   height: 100vh;
   width: 100vw;
   overflow: hidden; /* 防止内容溢出屏幕 */
-  /* 可以设置一张壁纸 */
-  background: url('/path/to/your/wallpaper.jpg') no-repeat center center / cover;
 }
 </style>

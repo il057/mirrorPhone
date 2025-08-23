@@ -13,6 +13,16 @@
 
         --border-color: rgba(255, 255, 255, 0.1);
         --header-bg: rgba(42, 42, 42, 0.75);
+        --header-secondary-bg: rgba(42, 42, 42, 0.5);
+        --footer-bg: rgba(42, 42, 42, 0.75);
+
+        --safe-top: env(safe-area-inset-top);
+        --safe-right: env(safe-area-inset-right);
+        --safe-bottom: env(safe-area-inset-bottom);
+        --safe-left: env(safe-area-inset-left);
+
+        --header-height: calc(56px + var(--safe-top));
+        --footer-height: calc(56px + var(--safe-bottom));
 }
 
 [data-theme="light"] {
@@ -34,27 +44,36 @@
 
 html,
 body {
+        min-height: 100vh;
+        min-height: 100dvh;
         overscroll-behavior-y: none;
         /* 不允许把滚动链到视口 */
 }
 
 html {
         height: 100%;
+        background-color: var(--bg-primary);
+        transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 /* 确保背景过渡平滑 */
 body {
-        background-color: var(--bg-primary);
         color: var(--text-primary);
-        transition: background-color 0.3s ease, color 0.3s ease;
-        height: var(--app-height, 100%);
+        height: var(--app-height, 100vh);
         overflow: hidden;
+        margin: 0;
 }
 
 input:focus, textarea:focus, select:focus {
         outline: none;
         border-color: var(--accent-primary);
         box-shadow: 0 0 5px var(--accent-primary);
+}
+
+.page-container {
+        padding-top: var(--header-height);
+        padding-right: var(--safe-right);
+        padding-left: var(--safe-left);
 }
 
 /* --- Toast 样式 --- */
