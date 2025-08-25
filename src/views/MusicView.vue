@@ -771,6 +771,7 @@ onMounted(async () => {
         font-weight: 600;
         cursor: pointer;
         transition: all 0.2s ease;
+        width: 100%;
 }
 
 .logout-button:hover {

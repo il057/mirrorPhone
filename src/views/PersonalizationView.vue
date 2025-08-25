@@ -1058,36 +1058,6 @@ function showCustomPresetEditor() {
         flex-shrink: 0;
 }
 
-
-.segmented-control {
-        display: flex;
-        width: 100%;
-        background-color: var(--bg-primary);
-        border-radius: 8px;
-        padding: 4px;
-}
-
-.segmented-control label {
-        flex: 1;
-        text-align: center;
-        padding: 8px 10px;
-        margin: 0;
-        cursor: pointer;
-        border-radius: 6px;
-        transition: all 0.2s ease;
-        color: var(--text-secondary);
-}
-
-.segmented-control label.active {
-        background-color: var(--bg-secondary);
-        color: var(--text-primary);
-        font-weight: 600;
-}
-
-.segmented-control input[type="radio"] {
-        display: none;
-}
-
 .preset-grid {
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(50px, 1fr));
@@ -1354,10 +1324,6 @@ function showCustomPresetEditor() {
         padding: 4px;
         border-radius: 8px;
         transition: background-color 0.2s ease;
-}
-
-.preview-app-icon:hover {
-        background-color: rgba(255, 255, 255, 0.1);
 }
 
 /* 稍微缩小图标和字体以适应预览框 */

@@ -134,7 +134,7 @@ db.version(1).stores({
          */
         widgetSettings: '&id, type, settings',
         stickers: '++id, &url, name, order',
-        worldbooks: '&id, name',
+        worldbooks: '&id, name, content, type, keywords, groupId, createTime, updateTime',
         worldbookGroups: '&id, name'
         // 你未来可以增加更多的表，例如 'gallery', 'musicPlaylists' 等。
 });

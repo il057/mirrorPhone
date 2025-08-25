@@ -31,22 +31,20 @@
                                 </div>
                                 <div class="form-group">
                                         <label for="gender">性别</label>
-                                        <select id="gender" v-model="actor.gender">
-                                                <option>男</option>
-                                                <option>女</option>
-                                                <option>未知</option>
-                                                <option value="custom">自定义...</option>
-                                        </select>
+                                        <MainDropdown
+                                                v-model="actor.gender"
+                                                :options="genderOptions"
+                                                placeholder="选择性别"
+                                        />
                                 </div>
                                 <div class="form-group">
                                         <label for="group">分组</label>
-                                        <select id="group" v-model="actor.groupIds[0]">
-                                                <option :value="undefined">未分组</option>
-                                                <option v-for="group in availableGroups" :key="group.id"
-                                                        :value="group.id">{{ group.name
-                                                        }}</option>
-                                                <option value="new_group">新建分组...</option>
-                                        </select>
+                                        <MainDropdown
+                                                v-model="actor.groupIds[0]"
+                                                :options="groupOptions"
+                                                placeholder="选择分组"
+                                                @change="handleGroupChange"
+                                        />
                                 </div>
                         </section>
 
@@ -107,6 +105,7 @@ import { useObservable } from '@vueuse/rxjs';
 import { liveQuery } from 'dexie';
 import db from '../services/database.js';
 import AppHeader from '../components/layout/Header.vue';
+import MainDropdown from '../components/ui/MainDropdown.vue';
 import { showToast, showConfirm } from '../services/uiService.js';
 
 const route = useRoute();
@@ -122,6 +121,36 @@ const availableGroups = useObservable(
         { initialValue: [] }
 );
 
+// 下拉菜单选项
+const genderOptions = [
+        { label: '男', value: '男' },
+        { label: '女', value: '女' },
+        { label: '未知', value: '未知' },
+        { label: '自定义...', value: 'custom' }
+];
+
+const groupOptions = computed(() => {
+        const options = [
+                { label: '未分组', value: undefined }
+        ];
+        
+        // 添加现有分组
+        availableGroups.value.forEach(group => {
+                options.push({
+                        label: group.name,
+                        value: group.id
+                });
+        });
+        
+        // 添加新建分组选项
+        options.push({
+                label: '新建分组...',
+                value: 'new_group'
+        });
+        
+        return options;
+});
+
 const getInitial = (name) => {
         if (!name) return '#';
         return name.charAt(0).toUpperCase();
@@ -134,27 +163,27 @@ watch(() => actor.value?.gender, (newGender) => {
         }
 });
 
-watch(() => actor.value?.groupIds, async (newVal) => {
-        const selectedGroup = newVal ? newVal[0] : undefined;
-        if (selectedGroup === 'new_group') {
+// 处理分组变化
+const handleGroupChange = async (option) => {
+        if (option.value === 'new_group') {
                 const groupName = prompt('请输入新分组的名称:');
                 if (groupName) {
                         try {
-                                const maxOrderGroup = await db.groups.orderBy('order').last();
-                                const newOrder = (maxOrderGroup?.order || 0) + 1;
-                                const newId = `group_${Date.now()}`;
-                                await db.groups.add({ id: newId, name: groupName, order: newOrder, worldbookIds: [] });
-                                actor.value.groupIds = [newId];
-                                showToast('分组已创建', 'success');
+                                const newGroupId = await db.groups.add({
+                                        id: `group_${Date.now()}`,
+                                        name: groupName
+                                });
+                                actor.value.groupIds = [newGroupId];
                         } catch (error) {
-                                showToast(`创建失败: ${error.message}`, 'error');
-                                actor.value.groupIds = [];
+                                console.error('创建分组失败:', error);
+                                showToast('创建分组失败', 'error');
+                                actor.value.groupIds = [undefined]; // 回退到未分组
                         }
                 } else {
-                        actor.value.groupIds = [];
+                        actor.value.groupIds = [undefined]; // 取消时回退到未分组
                 }
         }
-}, { deep: true });
+};
 
 onMounted(async () => {
         if (isNew.value) {

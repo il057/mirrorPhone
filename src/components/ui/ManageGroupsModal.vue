@@ -161,35 +161,12 @@ const closeModal = () => {
 </script>
 
 <style scoped>
-/* 样式保持不变 */
-.modal-overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background-color: rgba(0, 0, 0, 0.6);
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        z-index: 1000;
-}
-
-.modal-content {
-        background-color: var(--bg-card);
-        padding: 0;
-        border-radius: 12px;
-        width: 95%;
-        max-width: 450px;
-        text-align: left;
-}
-
 .modal-header {
-        padding: 15px 20px;
-        border-bottom: 1px solid var(--border-color);
         display: flex;
         justify-content: space-between;
         align-items: center;
+        padding: 15px 20px;
+        border-bottom: 1px solid var(--border-color);
 }
 
 .modal-header h3 {

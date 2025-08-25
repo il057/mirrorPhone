@@ -6,6 +6,7 @@ import PromptModal from '../components/ui/PromptModal.vue';
 import UploadChoiceModal from '../components/ui/UploadChoiceModal.vue';
 import AlbumPickerModal from '../components/ui/AlbumPickerModal.vue';
 import ManageGroupsModal from '../components/ui/ManageGroupsModal.vue';
+import WorldbookEditModal from '../components/ui/WorldbookEditModal.vue';
 
 // 确保有一个容器来挂载这些动态组件
 function getModalsContainer() {
@@ -204,4 +205,39 @@ export function showManageGroupsModal(groupTable) {
         });
 
         modalApp.mount(modalWrapper);
+}
+
+/**
+ * 显示世界书编辑模态框
+ * @param {Object} worldbook - 要编辑的世界书对象，新建时传null
+ * @returns {Promise<boolean>} - 返回是否保存了更改
+ */
+export function showWorldbookEditModal(worldbook = null) {
+        return new Promise((resolve) => {
+                const container = getModalsContainer();
+                const modalWrapper = document.createElement('div');
+                container.appendChild(modalWrapper);
+
+                const cleanup = () => {
+                        modalApp.unmount();
+                        if (container.contains(modalWrapper)) {
+                                container.removeChild(modalWrapper);
+                        }
+                };
+
+                const modalApp = createApp(WorldbookEditModal, {
+                        isOpen: true,
+                        worldbook: worldbook,
+                        onClose: () => {
+                                cleanup();
+                                resolve(false);
+                        },
+                        onSave: () => {
+                                cleanup();
+                                resolve(true);
+                        }
+                });
+
+                modalApp.mount(modalWrapper);
+        });
 }

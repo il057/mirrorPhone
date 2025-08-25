@@ -21,13 +21,11 @@
 
                                 <div class="form-group">
                                         <label>当前方案</label>
-                                        <select v-model="activeProfileId">
-                                                <option :value="null" disabled>-- 请选择一个方案 --</option>
-                                                <option v-for="profile in apiProfiles" :key="profile.id"
-                                                        :value="profile.id">
-                                                        {{ profile.profileName }}
-                                                </option>
-                                        </select>
+                                        <MainDropdown
+                                                v-model="activeProfileId"
+                                                :options="profileOptions"
+                                                placeholder="-- 请选择一个方案 --"
+                                        />
                                 </div>
 
                                 <!-- 方案编辑表单 -->
@@ -39,10 +37,11 @@
                                         </div>
                                         <div class="form-group">
                                                 <label>API 服务商</label>
-                                                <select v-model="currentProfile.connectionType">
-                                                        <option value="direct">Gemini 直连</option>
-                                                        <option value="proxy">默认 / 其他反代</option>
-                                                </select>
+                                                <MainDropdown
+                                                        v-model="currentProfile.connectionType"
+                                                        :options="connectionTypeOptions"
+                                                        placeholder="选择服务商"
+                                                />
                                         </div>
                                         <div v-if="currentProfile.connectionType === 'proxy'" class="form-group">
                                                 <label>AI API 地址 (反代)</label>
@@ -58,13 +57,12 @@
                                                 <label>AI 模型</label>
                                                 <div class="model-group">
                                                         <!-- 如果已拉取到模型列表，则显示下拉框 -->
-                                                        <select v-if="availableModels.length > 0"
-                                                                v-model="currentProfile.model">
-                                                                <option v-for="modelName in availableModels"
-                                                                        :key="modelName" :value="modelName">
-                                                                        {{ modelName }}
-                                                                </option>
-                                                        </select>
+                                                        <MainDropdown
+                                                                v-if="availableModels.length > 0"
+                                                                v-model="currentProfile.model"
+                                                                :options="modelOptions"
+                                                                placeholder="选择模型"
+                                                        />
                                                         <!-- 否则，显示文本输入框 -->
                                                         <input v-else type="text" v-model="currentProfile.model"
                                                                 placeholder="例如: gemini-2.5-pro">
@@ -178,6 +176,7 @@ import { useRouter } from 'vue-router';
 import db, { initializeGlobalSettings } from '../services/database.js';
 import { fetchModels } from '../services/APIConnection.js';
 import AppHeader from '../components/layout/Header.vue';
+import MainDropdown from '../components/ui/MainDropdown.vue';
 import { packDataForExport, unpackAndImportData } from '../services/dataService.js';
 import { syncToGist, restoreFromGist } from '../services/gistService.js';
 import { showToast, showConfirm } from '../services/uiService.js';
@@ -205,6 +204,26 @@ const canSync = computed(() => {
 
 const canRestore = computed(() => {
         return canSync.value && globalSettings.value.githubGistId && globalSettings.value.githubGistId.trim() !== '';
+});
+
+// 下拉菜单选项
+const profileOptions = computed(() => {
+        return apiProfiles.value.map(profile => ({
+                label: profile.profileName,
+                value: profile.id
+        }));
+});
+
+const connectionTypeOptions = [
+        { label: 'Gemini 直连', value: 'direct' },
+        { label: '默认 / 其他反代', value: 'proxy' }
+];
+
+const modelOptions = computed(() => {
+        return availableModels.value.map(model => ({
+                label: model,
+                value: model
+        }));
 });
 
 // --- 生命周期钩子 ---
