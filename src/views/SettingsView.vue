@@ -7,7 +7,7 @@
                         </template>
                 </AppHeader>
 
-                <main class="settings-content">
+                <main class="settings-content content">
                         <!-- AI API 设置卡片 -->
                         <section class="settings-card">
                                 <div class="card-header">
@@ -105,33 +105,64 @@
                                 </div>
                         </section>
 
-                        <!-- 数据同步卡片 -->
+                        <!-- 云端同步卡片 -->
                         <section class="settings-card">
                                 <div class="card-header">
                                         <h2>云端同步 (GitHub Gist)</h2>
+                                        <div class="sync-status">
+                                                <span v-if="isSyncing" class="status-indicator syncing">同步中...</span>
+                                                <span v-else-if="lastSyncTime" class="status-indicator success">
+                                                        最后同步: {{ lastSyncTime }}
+                                                </span>
+                                        </div>
                                 </div>
                                 <div class="form-group">
-                                        <label for="gistId">Gist ID</label>
-                                        <input id="gistId" type="text" v-model="globalSettings.githubGistId"
-                                                placeholder="用于同步的 Gist ID">
+                                        <label for="githubToken">GitHub Personal Access Token</label>
+                                        <input id="githubToken" type="password" v-model="globalSettings.githubToken"
+                                                placeholder="ghp_xxxxxxxxxxxxxxxxxxxx">
+                                        <p class="form-help">
+                                                需要具有 'gist' 权限的 Personal Access Token。
+                                                <a href="https://github.com/settings/tokens" target="_blank" rel="noopener">创建 Token</a>
+                                        </p>
                                 </div>
-                                <p class="description">登录和同步功能待开发。</p>
+                                <div class="form-group">
+                                        <label for="gistId">Gist ID (可选)</label>
+                                        <input id="gistId" type="text" v-model="globalSettings.githubGistId"
+                                                placeholder="留空则自动创建新的 Gist">
+                                        <p class="form-help">如果已有备份 Gist，请填入其 ID</p>
+                                </div>
+                                <div class="sync-actions">
+                                        <button @click="handleSyncToGist" :disabled="!canSync || isSyncing" 
+                                                class="sync-button primary">
+                                                <span v-if="isSyncing">同步中...</span>
+                                                <span v-else>{{ globalSettings.githubGistId ? '更新到 Gist' : '创建并同步到 Gist' }}</span>
+                                        </button>
+                                        <button @click="handleRestoreFromGist" :disabled="!canRestore || isSyncing" 
+                                                class="sync-button secondary">
+                                                从 Gist 恢复
+                                        </button>
+                                </div>
                         </section>
 
                         <!-- 数据管理卡片 -->
                         <section class="settings-card">
                                 <div class="card-header">
-                                        <h2>数据管理</h2>
+                                        <h2>本地数据管理</h2>
                                 </div>
-                                <p class="description">备份你的所有设置、方案和聊天记录。</p>
-                                <div class="button-group">
-                                        <button @click="handleLocalExport" class="manage-button">导出到本地</button>
-                                        <button @click="triggerFileInput" class="manage-button">从本地导入</button>
-                                </div>
-                                <p class="description" style="margin-top: 15px;">云端同步功能待开发。</p>
-                                <div class="button-group">
-                                        <button class="manage-button" disabled>同步到 Gist</button>
-                                        <button class="manage-button" disabled>从 Gist 恢复</button>
+                                <p class="description">导入导出本地备份文件</p>
+                                <div class="data-actions">
+                                        <button @click="handleLocalExport" class="data-button export">
+                                                <span class="button-text">
+                                                        <strong>导出备份</strong>
+                                                        <small>保存所有数据到本地文件</small>
+                                                </span>
+                                        </button>
+                                        <button @click="triggerFileInput" class="data-button import">
+                                                <span class="button-text">
+                                                        <strong>导入备份</strong>
+                                                        <small>从本地文件恢复数据</small>
+                                                </span>
+                                        </button>
                                 </div>
                                 <!-- 隐藏的文件输入框 -->
                                 <input type="file" ref="fileInput" @change="handleLocalImport" accept=".json"
@@ -142,12 +173,13 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue';
+import { ref, onMounted, watch, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import db, { initializeGlobalSettings } from '../services/database.js';
 import { fetchModels } from '../services/APIConnection.js';
 import AppHeader from '../components/layout/Header.vue';
 import { packDataForExport, unpackAndImportData } from '../services/dataService.js';
+import { syncToGist, restoreFromGist } from '../services/gistService.js';
 import { showToast, showConfirm } from '../services/uiService.js';
 
 const router = useRouter();
@@ -161,6 +193,19 @@ const globalSettings = ref({});
 const isFetchingModels = ref(false);
 const availableModels = ref([]);
 const fileInput = ref(null); // 用于访问隐藏的文件输入框
+
+// 云端同步相关状态
+const isSyncing = ref(false);
+const lastSyncTime = ref('');
+
+// 计算属性
+const canSync = computed(() => {
+        return globalSettings.value.githubToken && globalSettings.value.githubToken.trim() !== '';
+});
+
+const canRestore = computed(() => {
+        return canSync.value && globalSettings.value.githubGistId && globalSettings.value.githubGistId.trim() !== '';
+});
 
 // --- 生命周期钩子 ---
 onMounted(async () => {
@@ -290,12 +335,78 @@ async function saveChanges() {
                 }
 
                 // 2. 保存所有全局设置
-                await db.globalSettings.put({ ...globalSettings.value });
+                // 只保存可序列化的全局设置
+                const { activeApiProfileId, cloudinaryCloudName, cloudinaryUploadPreset, githubGistId, githubToken } = globalSettings.value;
+                await db.globalSettings.put({
+                        id: 'global',
+                        activeApiProfileId,
+                        cloudinaryCloudName,
+                        cloudinaryUploadPreset,
+                        githubGistId,
+                        githubToken
+                });
 
                 showToast('设置已保存！', 'success');
         } catch (error) {
                 console.error('保存失败:', error);
                 showToast('保存失败。', 'error');
+        }
+}
+
+// --- 云端同步处理 ---
+
+async function handleSyncToGist() {
+        if (!canSync.value) {
+                showToast('请先配置 GitHub Token', 'error');
+                return;
+        }
+
+        isSyncing.value = true;
+        try {
+                const gistId = await syncToGist(globalSettings.value.githubToken, globalSettings.value.githubGistId);
+                
+                // 如果是新创建的 Gist，更新设置中的 Gist ID
+                if (!globalSettings.value.githubGistId) {
+                        globalSettings.value.githubGistId = gistId;
+                        await saveChanges(); // 保存新的 Gist ID
+                }
+                
+                lastSyncTime.value = new Date().toLocaleString('zh-CN');
+                showToast('数据已成功同步到 GitHub Gist！', 'success');
+        } catch (error) {
+                console.error('同步失败:', error);
+                showToast(`同步失败: ${error.message}`, 'error');
+        } finally {
+                isSyncing.value = false;
+        }
+}
+
+async function handleRestoreFromGist() {
+        if (!canRestore.value) {
+                showToast('请先配置 GitHub Token 和 Gist ID', 'error');
+                return;
+        }
+
+        const confirmed = await showConfirm(
+                '从 Gist 恢复',
+                '这将覆盖所有本地数据，确定要继续吗？'
+        );
+        
+        if (!confirmed) return;
+
+        isSyncing.value = true;
+        try {
+                await restoreFromGist(globalSettings.value.githubToken, globalSettings.value.githubGistId);
+                showToast('数据恢复成功！应用将重新加载。', 'success');
+                // 重新加载页面以确保所有状态都从新数据库中读取
+                setTimeout(() => {
+                        window.location.reload();
+                }, 1500);
+        } catch (error) {
+                console.error('恢复失败:', error);
+                showToast(`恢复失败: ${error.message}`, 'error');
+        } finally {
+                isSyncing.value = false;
         }
 }
 
@@ -381,31 +492,6 @@ async function handleLocalImport(event) {
         cursor: pointer;
 }
 
-.settings-content {
-        flex-grow: 1;
-        overflow-y: auto;
-        padding: 20px;
-}
-
-.settings-card {
-        background-color: var(--bg-card);
-        border-radius: 8px;
-        padding: 15px 20px;
-        margin-bottom: 20px;
-}
-
-.card-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 15px;
-}
-
-.card-header h2 {
-        margin: 0;
-        font-size: 18px;
-}
-
 .profile-actions {
         display: flex;
         gap: 10px;
@@ -485,5 +571,142 @@ async function handleLocalImport(event) {
 .pull-button:disabled {
         opacity: 0.5;
         cursor: not-allowed;
+}
+
+/* 云端同步样式 */
+.sync-status {
+        display: flex;
+        align-items: center;
+}
+
+.status-indicator {
+        font-size: 12px;
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-weight: 500;
+}
+
+.status-indicator.syncing {
+        background-color: #ffc107;
+        color: #000;
+}
+
+.status-indicator.success {
+        background-color: #28a745;
+        color: #fff;
+}
+
+.form-help {
+        font-size: 12px;
+        color: var(--text-secondary);
+        margin-top: 5px;
+        line-height: 1.4;
+}
+
+.form-help a {
+        color: var(--accent-primary);
+        text-decoration: none;
+}
+
+.form-help a:hover {
+        text-decoration: underline;
+}
+
+.sync-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        margin-top: 15px;
+}
+
+.sync-button {
+        padding: 12px 20px;
+        border: none;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        font-size: 14px;
+}
+
+.sync-button.primary {
+        background-color: var(--accent-primary);
+        color: var(--accent-text);
+}
+
+.sync-button.primary:hover:not(:disabled) {
+        background-color: var(--accent-darker);
+}
+
+.sync-button.secondary {
+        background-color: var(--bg-secondary);
+        color: var(--text-primary);
+        border: 1px solid var(--border-color);
+}
+
+.sync-button.secondary:hover:not(:disabled) {
+        background-color: var(--bg-card);
+}
+
+.sync-button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+}
+
+/* 数据管理样式 */
+.data-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 15px;
+        margin-top: 15px;
+}
+
+.data-button {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 16px;
+        border: 2px solid var(--border-color);
+        border-radius: 12px;
+        background-color: var(--bg-secondary);
+        color: var(--text-primary);
+        cursor: pointer;
+        transition: all 0.2s ease;
+        text-align: left;
+}
+
+.data-button:hover {
+        border-color: var(--accent-primary);
+        background-color: var(--bg-card);
+        transform: translateY(-1px);
+}
+
+.data-button.export:hover {
+        border-color: var(--accent-primary);
+}
+
+.data-button.import:hover {
+        border-color: var(--accent-primary);
+}
+
+.button-icon {
+        font-size: 24px;
+        flex-shrink: 0;
+}
+
+.button-text {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+}
+
+.button-text strong {
+        font-size: 14px;
+        font-weight: 600;
+}
+
+.button-text small {
+        font-size: 12px;
+        color: var(--text-secondary);
 }
 </style>

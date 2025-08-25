@@ -35,6 +35,7 @@ import { computed } from 'vue';
 import db from '../../services/database.js';
 import { useObservable } from '@vueuse/rxjs';
 import { liveQuery } from 'dexie';
+import { formatTimestamp } from '../../utils/datetime.js';
 
 const conversations = useObservable(
         liveQuery(async () => {
@@ -48,18 +49,6 @@ const conversations = useObservable(
 );
 
 
-function formatTimestamp(timestamp) {
-    const date = new Date(timestamp);
-    const now = new Date();
-    const isToday = date.toDateString() === now.toDateString();
-
-    if (isToday) {
-        return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
-    } else {
-        return date.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' });
-    }
-}
-
 </script>
 
 <style scoped>
@@ -70,6 +59,10 @@ function formatTimestamp(timestamp) {
         box-sizing: border-box;
         display: flex;
         flex-direction: column;
+}
+
+.page-content {
+   padding-top: var(--header-height);
 }
 
 .conversation-list {
@@ -87,22 +80,13 @@ function formatTimestamp(timestamp) {
 .conversation-item:hover {
     background-color: var(--bg-secondary);
 }
-.avatar {
-    width: 48px;
-    height: 48px;
-    border-radius: 50%;
-    background-color: #555;
-    margin-right: 15px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    font-size: 20px;
-    font-weight: bold;
-}
+
 .convo-details {
     flex-grow: 1;
     overflow: hidden;
+    
 }
+
 .convo-header {
     display: flex;
     justify-content: space-between;

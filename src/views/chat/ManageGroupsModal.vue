@@ -135,9 +135,6 @@ const closeModal = () => {
 </script>
 
 <style scoped>
-.modal-overlay {
-        /* ... existing styles from main.css ... */
-}
 
 .modal-content {
         background-color: var(--bg-card);

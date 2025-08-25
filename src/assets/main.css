@@ -2,14 +2,33 @@
         --bg-primary: #121212;
         --bg-secondary: #1e1e1e;
         --bg-card: #2a2a2a;
+        --bg-card-rgb: 42, 42, 42;
 
         --text-primary: #e0e0e0;
         --text-secondary: #aaa;
         --text-inverse: #121212;
 
-        --accent-primary: #4CAF50;
         /* 我们的主题色 */
-        --accent-primary-hover: #5cb85c;
+        --accent-primary: #4CAF50;
+        --accent-lighter: #81C784;
+        --accent-darker: #388E3C;
+        --accent-text: #FFFFFF;
+
+        /* 新增UI统一颜色变量 */
+        --button-bg: rgba(255, 255, 255, 0.2);
+        --button-bg-hover: rgba(255, 255, 255, 0.3);
+        --button-bg-active: rgba(255, 255, 255, 0.35);
+        --button-text: #ffffff;
+        --button-border: rgba(255, 255, 255, 0.3);
+        
+        --overlay-bg: rgba(0, 0, 0, 0.4);
+        --glass-bg: rgba(255, 255, 255, 0.1);
+        --glass-border: rgba(255, 255, 255, 0.1);
+        --glass-shadow: rgba(0, 0, 0, 0.1);
+        
+        --delete-btn-bg: #ff3b30;
+        --delete-btn-bg-active: #d70015;
+        --delete-btn-border: rgba(255, 255, 255, 0.9);
 
         --border-color: rgba(255, 255, 255, 0.1);
         --header-bg: rgba(42, 42, 42, 0.75);
@@ -23,23 +42,79 @@
 
         --header-height: calc(56px + var(--safe-top));
         --footer-height: calc(56px + var(--safe-bottom));
+
+        --app-bg: rgba(18, 18, 18, 0.15);
+        --app-bg-hover: rgba(18, 18, 18, 0.25);
 }
 
 [data-theme="light"] {
         --bg-primary: #f5f5f5;
         --bg-secondary: #ffffff;
         --bg-card: #ffffff;
+        --bg-card-rgb: 255, 255, 255;
 
         --text-primary: #212121;
         --text-secondary: #757575;
         --text-inverse: #ffffff;
 
-        /* 主题色在浅色模式下可能需要微调 */
-        --accent-primary: #43a047;
-        --accent-primary-hover: #388e3c;
+        /* 浅色模式下的UI颜色 */
+        --button-bg: rgba(0, 0, 0, 0.1);
+        --button-bg-hover: rgba(0, 0, 0, 0.15);
+        --button-bg-active: rgba(0, 0, 0, 0.2);
+        --button-text: #212121;
+        --button-border: rgba(0, 0, 0, 0.2);
+        
+        --overlay-bg: rgba(0, 0, 0, 0.4);
+        --glass-bg: rgba(255, 255, 255, 0.8);
+        --glass-border: rgba(0, 0, 0, 0.1);
+        --glass-shadow: rgba(0, 0, 0, 0.05);
+        
+        --delete-btn-bg: #ff3b30;
+        --delete-btn-bg-active: #d70015;
+        --delete-btn-border: rgba(255, 255, 255, 0.9);
 
         --border-color: rgba(0, 0, 0, 0.1);
-        --header-bg: rgba(255, 255, 255, 0.75);     
+        --header-bg: rgba(255, 255, 255, 0.75);
+        --header-secondary-bg: rgba(255, 255, 255, 0.5);
+        --footer-bg: rgba(255, 255, 255, 0.75);
+
+        --app-bg: rgba(255, 255, 255, 0.15);
+        --app-bg-hover: rgba(255, 255, 255, 0.25);
+}
+
+[data-theme="dark"] {
+        --bg-primary: #121212;
+        --bg-secondary: #1e1e1e;
+        --bg-card: #2a2a2a;
+        --bg-card-rgb: 42, 42, 42;
+
+        --text-primary: #e0e0e0;
+        --text-secondary: #aaa;
+        --text-inverse: #121212;
+
+        /* 深色模式下的UI颜色 */
+        --button-bg: rgba(255, 255, 255, 0.2);
+        --button-bg-hover: rgba(255, 255, 255, 0.3);
+        --button-bg-active: rgba(255, 255, 255, 0.35);
+        --button-text: #ffffff;
+        --button-border: rgba(255, 255, 255, 0.3);
+        
+        --overlay-bg: rgba(0, 0, 0, 0.4);
+        --glass-bg: rgba(255, 255, 255, 0.1);
+        --glass-border: rgba(255, 255, 255, 0.1);
+        --glass-shadow: rgba(0, 0, 0, 0.1);
+        
+        --delete-btn-bg: #ff3b30;
+        --delete-btn-bg-active: #d70015;
+        --delete-btn-border: rgba(255, 255, 255, 0.9);
+
+        --border-color: rgba(255, 255, 255, 0.1);
+        --header-bg: rgba(42, 42, 42, 0.75);
+        --header-secondary-bg: rgba(42, 42, 42, 0.5);
+        --footer-bg: rgba(42, 42, 42, 0.75);
+
+        --app-bg: rgba(18, 18, 18, 0.15);
+        --app-bg-hover: rgba(18, 18, 18, 0.25);
 }
 
 html,
@@ -48,6 +123,34 @@ body {
         min-height: 100dvh;
         overscroll-behavior-y: none;
         /* 不允许把滚动链到视口 */
+        /* 禁用移动端点击高亮 */
+        -webkit-tap-highlight-color: transparent;
+        -webkit-touch-callout: none;
+        -webkit-user-select: none;
+        user-select: none;
+}
+
+/* 全局禁用移动端点击高亮 */
+*,
+*::before,
+*::after {
+        -webkit-tap-highlight-color: transparent;
+        -webkit-touch-callout: none;
+        /* 全局禁用拖拽选中 */
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
+}
+
+/* 只对需要选择的元素启用文本选择 */
+input,
+textarea,
+[contenteditable="true"] {
+        -webkit-user-select: text;
+        -moz-user-select: text;
+        -ms-user-select: text;
+        user-select: text;
 }
 
 html {
@@ -59,8 +162,18 @@ html {
 /* 确保背景过渡平滑 */
 body {
         color: var(--text-primary);
+        background-color: var(--bg-primary);
         height: var(--app-height, 100vh);
-        overflow: hidden;
+        overflow-y: auto;
+        margin: 0;
+}
+
+button,
+input,
+textarea,
+select {
+        font-family: inherit;
+        font-size: 100%;
         margin: 0;
 }
 
@@ -74,6 +187,39 @@ input:focus, textarea:focus, select:focus {
         padding-top: var(--header-height);
         padding-right: var(--safe-right);
         padding-left: var(--safe-left);
+        min-height: 100dvh;
+}
+
+.content {
+        margin-top:  calc(var(--header-height) * -1);
+        padding-top: calc(var(--header-height) + 10px);
+}
+
+.settings-content {
+        padding-left: 20px;
+        padding-right: 20px;
+        padding-bottom: 20px;
+        flex-grow: 1;
+        overflow-y: auto;
+}
+
+.settings-card {
+        background-color: var(--bg-card);
+        border-radius: 8px;
+        padding: 15px 20px;
+        margin-bottom: 20px;
+}
+
+.card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+}
+
+.card-header h2 {
+        margin: 0;
+        font-size: 18px;
 }
 
 /* --- Toast 样式 --- */
@@ -145,7 +291,24 @@ input:focus, textarea:focus, select:focus {
         border-radius: 12px;
         width: 90%;
         max-width: 400px;
+        max-height: 60vh; /* 添加最大高度限制 */
+        overflow: hidden; /* 防止内容溢出 */
         text-align: center;
+}
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+.modal-body::-webkit-scrollbar,
+.content::-webkit-scrollbar {
+        display: none;
+}
+
+/* Hide scrollbar for IE and Edge */
+.modal-body,
+.content {
+        -ms-overflow-style: none;
+        /* IE and Edge */
+        scrollbar-width: none;
+        /* Firefox */
 }
 
 .modal-title {
@@ -166,7 +329,7 @@ input:focus, textarea:focus, select:focus {
 
 .modal-btn {
         padding: 10px;
-        border: none;
+        border: var(--border-color) 1px solid;
         border-radius: 8px;
         font-weight: 600;
         cursor: pointer;
@@ -190,4 +353,70 @@ input:focus, textarea:focus, select:focus {
 .modal-fade-enter-from,
 .modal-fade-leave-to {
         opacity: 0;
+}
+
+.modal-input {
+        width: 100%;
+        padding: 10px;
+        border-radius: 4px;
+        border: 1px solid var(--border-color);
+        background-color: var(--bg-primary);
+        color: var(--text-primary);
+        box-sizing: border-box;
+        font-size: 16px;
+        margin-top: 10px;
+}
+
+/* --- Global Avatar Style --- */
+.avatar {
+        width: 48px;
+        height: 48px;
+        border-radius: 8px;
+        /* Rounded Square */
+        background-color: #555;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-weight: bold;
+        color: var(--accent-primary);
+        overflow: hidden;
+        /* Ensure images inside don't break the border-radius */
+}
+
+.avatar img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+}
+.avatar-initial {
+        font-size: 20px;
+}
+
+.contact-item {
+        display: flex;
+        align-items: center;
+        padding: 12px 16px;
+        border-bottom: 1px solid var(--border-color);
+}
+
+.contact-item .avatar,
+.conversation-item .avatar {
+        margin-right: 12px;
+}
+
+/* --- Widget 通用样式 --- */
+.widget {
+        background: var(--app-bg);
+        border-radius: 16px;
+        border: 1px solid var(--app-border);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        transition: all 0.3s ease;
+        overflow: hidden;
+}
+
+.widget:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
 }

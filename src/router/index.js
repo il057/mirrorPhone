@@ -23,6 +23,21 @@ const router = createRouter({
                         component: () => import('../views/SettingsView.vue')
                 },
                 {
+                        path: '/album',
+                        name: 'album',
+                        component: () => import('../views/AlbumView.vue')
+                },
+                {
+                        path: '/personalization',
+                        name: 'personalization',
+                        component: () => import('../views/PersonalizationView.vue')
+                },
+                {
+                        path: '/stickers',
+                        name: 'stickers',
+                        component: () => import('../views/StickersView.vue')
+                },
+                {
                         path: '/chat',
                         component: () => import('../views/ChatLayout.vue'),
                         redirect: '/chat/messages',

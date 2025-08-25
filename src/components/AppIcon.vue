@@ -3,8 +3,8 @@
                 <div class="icon-wrapper">
                         <slot></slot>
                 </div>
-                <span class="app-name">{{ name }}</span>
         </div>
+        <span class="app-name">{{ name }}</span>
 </template>
 
 <script setup>
@@ -18,41 +18,55 @@ defineProps({
 
 <style scoped>
 .app-icon {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        text-align: center;
+        width: 100%;
+        height: 100%;
         color: white;
         cursor: pointer;
-        width: 80px; /* 固定宽度，方便布局 */
+        position: relative;
 }
 
 .icon-wrapper {
-        width: 60px;
-        height: 60px;
-        background-color: rgba(255, 255, 255, 0.15);
-        border-radius: 15px; /* iOS风格的圆角 */
+        width: 100%;
+        height: 100%;
+        background: var(--app-bg);
+        border: 1px solid var(--app-border);
+        border-radius: min(16px, calc(var(--cell-size, 80px) * 0.2));
         display: flex;
         justify-content: center;
         align-items: center;
-        margin-bottom: 8px;
-        overflow: hidden; /* 确保SVG不会超出边界 */
-        -webkit-backdrop-filter: blur(5px);
-        backdrop-filter: blur(5px);
+        overflow: hidden;
+        -webkit-backdrop-filter: blur(15px);
+        backdrop-filter: blur(15px);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        transition: all 0.3s ease;
 }
 
 .icon-wrapper svg {
         width: 60%;
         height: 60%;
-        color: #ffffff; /* SVG图标的颜色 */
 }
 
 .app-name {
-        font-size: 12px;
-        /* 防止文字换行 */
+        position: absolute;
+        bottom: calc(-1 * var(--gap, 12px) * 0.7);
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: clamp(8px, calc(var(--gap, 12px) * 0.6), 11px);
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
-        width: 100%;
+        width: calc(100% + var(--gap, 12px) * 0.8);
+        text-align: center;
+        z-index: 10;
+        padding: 2px 6px;
+        border-radius: 6px;
+        color: white;
+        max-width: calc(var(--cell-size, 80px) + var(--gap, 12px));
+        pointer-events: none;
+        line-height: 1.2;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 16px;
 }
 </style>

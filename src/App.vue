@@ -9,6 +9,19 @@
 </script>
 
 <style>
+/* 全局样式 */
+@keyframes gradientAnimation {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
 /* 我们将一些最基础的样式放在这里，确保应用铺满全屏。
   这些样式会应用到整个应用。
 */

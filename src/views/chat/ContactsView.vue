@@ -14,6 +14,7 @@
                                                         viewBox="0 0 24 24">
                                                         <path d="m9 18 6-6-6-6" />
                                                 </svg>
+
                                                 <span class="group-name">{{ group.name }}</span>
                                                 <span class="group-count">{{ group.members.length }}</span>
                                         </div>
@@ -75,7 +76,6 @@ import { ref, computed } from 'vue';
 import { pinyin } from 'pinyin-pro';
 import { useObservable } from '@vueuse/rxjs';
 import { liveQuery } from 'dexie';
-import AppHeader from '../../components/layout/Header.vue';
 import db from '../../services/database.js';
 
 const activeTab = ref('groups');
@@ -197,12 +197,12 @@ const groupChats = computed(() => allActors.value.filter(a => a.isGroup).sort((a
         padding: 10px 0;
         border-bottom: 1px solid var(--border-color);
         background-color: var(--header-secondary-bg);
-        position: sticky;
+        position: absolute;
         /* Height of the header */
         z-index: 99;
-        position: sticky;
-        top: 0;
-        backdrop-filter: blur(10px);   
+        top: var(--header-height);
+        width: 100%;
+        backdrop-filter: blur(10px);
         -webkit-backdrop-filter: blur(10px);
         height: 28px;
 
@@ -226,6 +226,7 @@ const groupChats = computed(() => allActors.value.filter(a => a.isGroup).sort((a
 .page-content {
         flex-grow: 1;
         overflow-y: auto;
+        padding-top: calc(var(--header-height) + 48px);
 }
 
 .contact-list ul {
@@ -240,18 +241,6 @@ const groupChats = computed(() => allActors.value.filter(a => a.isGroup).sort((a
         align-items: center;
         padding: 12px 15px;
         border-bottom: 1px solid var(--border-color);
-}
-
-.avatar {
-        width: 40px;
-        height: 40px;
-        border-radius: 6px;
-        background-color: #555;
-        margin-right: 15px;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        font-weight: bold;
 }
 
 .group-avatar .avatar-initial {
@@ -271,6 +260,7 @@ const groupChats = computed(() => allActors.value.filter(a => a.isGroup).sort((a
         width: 20px;
         height: 20px;
         stroke: var(--text-secondary);
+        fill: var(--bg-secondary);
         transition: transform 0.2s ease-in-out;
 }
 

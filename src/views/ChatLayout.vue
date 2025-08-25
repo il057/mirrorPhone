@@ -21,7 +21,7 @@
                         </template>
                 </AppHeader>
 
-                <main class="chat-content-area">
+                <main class="chat-content content">
                         <router-view />
                 </main>
 
@@ -47,7 +47,7 @@
 
 <script setup>
 import { ref, watch, computed } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { useObservable } from '@vueuse/rxjs';
 import { liveQuery } from 'dexie';
 import db from '../services/database';
@@ -58,6 +58,7 @@ import ManageGroupsModal from './chat/ManageGroupsModal.vue';
 import { showToast } from '../services/uiService';
 
 const route = useRoute();
+const router = useRouter();
 const currentTitle = ref('');
 const isDropdownOpen = ref(false);
 const isManageGroupsModalOpen = ref(false);
@@ -96,6 +97,10 @@ watch(actors, async (newActors) => {
 const handleDropdownAction = (action) => {
         isDropdownOpen.value = false; // Close dropdown after action
         switch (action) {
+                case 'addFriend':
+                        // 跳转到新建角色的页面
+                        router.push('/edit');
+                        break;
                 case 'manageGroups':
                         isManageGroupsModalOpen.value = true;
                         break;
@@ -118,7 +123,7 @@ const handleDropdownAction = (action) => {
         /* Prevent the whole container from scrolling */
 }
 
-.chat-content-area {
+.chat-content {
         flex: 1;
         /* Allows this area to grow and fill the space between header and footer */
         overflow-y: auto;
@@ -127,16 +132,6 @@ const handleDropdownAction = (action) => {
         padding-bottom: var(--footer-height);
 }
 
-/* Hide scrollbar for Chrome, Safari and Opera */
-.chat-content-area::-webkit-scrollbar {
-        display: none;
-}
-
-/* Hide scrollbar for IE and Edge */
-.chat-content-area {
-        -ms-overflow-style: none;  /* IE and Edge */
-        scrollbar-width: none;  /* Firefox */
-}
 
 /* Header action button styles */
 .header-action-button {

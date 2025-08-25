@@ -13,5 +13,6 @@ const router = useRouter();
 <style scoped>
 .page-content {
         padding: 20px;
+        padding-top: calc(var(--header-height) + 20px);
 }
 </style>
