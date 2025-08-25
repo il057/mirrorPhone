@@ -188,6 +188,13 @@ input:focus, textarea:focus, select:focus {
         padding-right: var(--safe-right);
         padding-left: var(--safe-left);
         min-height: 100dvh;
+        background-color: var(--bg-primary);
+        color: var(--text-primary);
+        width: 100vw;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        box-sizing: border-box;
 }
 
 .content {

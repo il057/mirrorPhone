@@ -474,15 +474,6 @@ async function handleLocalImport(event) {
 </script>
 
 <style scoped>
-.page-container {
-        background-color: var(--bg-primary);
-        color: var(--text-primary);
-        width: 100vw;
-        height: 100vh;
-        display: flex;
-        flex-direction: column;
-        box-sizing: border-box;
-}
 
 .header-action-button {
         background: none;

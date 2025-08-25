@@ -5,6 +5,7 @@ import ConfirmModal from '../components/ui/ConfirmModal.vue';
 import PromptModal from '../components/ui/PromptModal.vue';
 import UploadChoiceModal from '../components/ui/UploadChoiceModal.vue';
 import AlbumPickerModal from '../components/ui/AlbumPickerModal.vue';
+import ManageGroupsModal from '../components/ui/ManageGroupsModal.vue';
 
 // 确保有一个容器来挂载这些动态组件
 function getModalsContainer() {
@@ -177,4 +178,30 @@ export function showAlbumPickerModal() {
 
                 pickerApp.mount(modalWrapper);
         });
+}
+
+/**
+ * 显示分组管理模态框
+ * @param {string} groupTable - 要管理的数据库表名 ('groups' 或 'worldbookGroups')
+ * @returns {void}
+ */
+export function showManageGroupsModal(groupTable) {
+        const container = getModalsContainer();
+        const modalWrapper = document.createElement('div');
+        container.appendChild(modalWrapper);
+
+        const cleanup = () => {
+                modalApp.unmount();
+                if (container.contains(modalWrapper)) {
+                        container.removeChild(modalWrapper);
+                }
+        };
+
+        const modalApp = createApp(ManageGroupsModal, {
+                isOpen: true,
+                groupTable: groupTable, // 传递表名
+                onClose: cleanup       // 将清理函数作为 prop 传递
+        });
+
+        modalApp.mount(modalWrapper);
 }

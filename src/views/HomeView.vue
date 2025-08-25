@@ -16,7 +16,7 @@
                         transform: `translateX(${pageTransform}px)`,
                         width: `${visiblePages.length * 100}vw`
                      }">
-                        <div v-for="pageIndex in visiblePages" :key="pageIndex" class="page-container"
+                        <div v-for="pageIndex in visiblePages" :key="pageIndex" class="index-page-container"
                                 :class="{ 'current-page': pageIndex === currentPage }" :style="{ width: '100vw' }">
                                 <div class="app-grid" @dragover.prevent @drop.prevent="handleDropOnGrid" :style="{
                                         '--cols': gridConfig.cols,
@@ -498,7 +498,7 @@ const loadLayout = async () => {
                 // 否则，使用默认布局
                 console.log('No saved layout found, using default.');
                 layoutToLoad = [
-                        {id: 'chat', type: 'app', component: 'IconChat', name: '弦镜', route: '/chat', gridSpan: { col: 1, row: 1 }},
+                        {id: 'chat', type: 'app', component: 'IconChat', name: '见我', route: '/chat', gridSpan: { col: 1, row: 1 }},
                         {id: 'settings', type: 'app', component: 'IconSettings', name: '设置', route: '/settings', gridSpan: { col: 1, row: 1 }},
                         {id: 'personalization', type: 'app', component: 'IconPersonalization', name: '个性化', route: '/personalization', gridSpan: { col: 1, row: 1 }},
                         {id: 'album', type: 'app', component: 'IconAlbum', name: '相册', route: '/album', gridSpan: { col: 1, row: 1 }},
@@ -709,6 +709,7 @@ async function loadGlobalSettings() {
 
 // --- Long Press Logic ---
 let pressTimer = null;
+let touchedItem = null;
 let isDragging = false;
 let touchStartTime = 0;
 let touchStartPos = { x: 0, y: 0 };
@@ -737,6 +738,7 @@ const onTouchStart = (item, index, event) => {
         const touch = event.touches[0];
         touchStartTime = Date.now();
         touchStartPos = { x: touch.clientX, y: touch.clientY };
+        touchedItem = item; // 暂存被触摸的 item
         isDragging = false;
         
         // 阻止事件冒泡
@@ -766,13 +768,33 @@ const onTouchStart = (item, index, event) => {
 };
 
 const onTouchEnd = (event) => {
+        const pressDuration = Date.now() - touchStartTime;
+        const wasDragging = isDragging; // 记录拖拽状态
+
         clearTimeout(pressTimer);
-        
+
         if (isEditMode.value && touchDragData && touchDragData.isDragging) {
                 handleTouchDragEnd();
         }
-        
-        // 清除视觉反馈
+
+        // 如果不是拖拽，且触摸时间很短（说明是一次“短按”）
+        if (!wasDragging && pressDuration < 500) {
+                if (touchedItem) {
+                        // 在这里处理短按交互，逻辑与 handleClick 类似
+                        if (touchedItem.type === 'app' && !isEditMode.value) {
+                                router.push(touchedItem.route);
+                        } else if (touchedItem.type === 'widget' && !isEditMode.value) {
+                                // 小组件的短按交互区
+                                console.log(`Widget tapped: ${touchedItem.id}`);
+                        }
+                }
+        }
+
+        // 重置状态
+        isDragging = false;
+        touchedItem = null;
+
+        // 清除视觉反馈 (这段逻辑可以保留，用于拖拽结束时)
         const gridItems = document.querySelectorAll('.grid-item');
         gridItems.forEach(item => {
                 item.style.transform = '';
@@ -807,11 +829,21 @@ const onTouchMove = (event) => {
 
 // --- Click Logic ---
 const handleClick = (item) => {
-        // 这样可以确保只有 App 类型的项目会触发路由跳转，从而避免在点击 Widget 时报错。
-        if (!isEditMode.value && !isDragging && item.type === 'app') {
-                router.push(item.route);
+        // 关键：一次快速的点击会立即清除启动编辑模式的计时器。
+        clearTimeout(pressTimer);
+
+        if (!isEditMode.value && !isDragging) {
+                if (item.type === 'app') {
+                        // 如果是 App，跳转路由
+                        router.push(item.route);
+                } else if (item.type === 'widget') {
+                        // 如果是 Widget，则不执行任何操作。
+                        // 这里是未来添加小组件交互逻辑的地方。
+                        console.log(`Widget clicked: ${item.id}`);
+                }
         }
 };
+
 // --- Drag and Drop Logic ---
 const handleDragStart = (index) => {
         draggingIndex.value = index;
@@ -1960,7 +1992,7 @@ const addWidgetToScreen = (widgetBlueprint) => {
         transition: none; /* 滑动时禁用过渡 */
 }
 
-.page-container {
+.index-page-container {
         flex-shrink: 0;
         width: 100vw;
         height: 100%;
@@ -1976,7 +2008,7 @@ const addWidgetToScreen = (widgetBlueprint) => {
         padding-bottom: 10px;
 }
 
-.home-screen.edit-mode .page-container {
+.home-screen.edit-mode .index-page-container {
         /* 编辑模式下增加更多内边距 */
         padding: 15px 20px;
         padding-top: 20px;
@@ -1984,7 +2016,7 @@ const addWidgetToScreen = (widgetBlueprint) => {
 }
 
 /* 页面分隔线 */
-.page-container::after {
+.index-page-container::after {
         content: '';
         position: absolute;
         right: 0;
@@ -1996,25 +2028,25 @@ const addWidgetToScreen = (widgetBlueprint) => {
 }
 
 /* 非当前页面添加遮罩 */
-.page-container:not(.current-page) {
+.index-page-container:not(.current-page) {
         opacity: 0.3;
         pointer-events: none;
 }
 
-.page-container.current-page {
+.index-page-container.current-page {
         opacity: 1;
         pointer-events: auto;
 }
 
 /* 移动端页面容器优化 */
 @media (max-width: 768px) {
-        .page-container {
+        .index-page-container {
                 padding: 0 10px;
                 padding-top: 5px;
                 padding-bottom: 5px;
         }
         
-        .home-screen.edit-mode .page-container {
+        .home-screen.edit-mode .index-page-container {
                 padding: 10px 15px;
                 padding-top: 15px;
                 padding-bottom: 15px;
@@ -2022,11 +2054,11 @@ const addWidgetToScreen = (widgetBlueprint) => {
 }
 
 @media (max-width: 430px) {
-        .page-container {
+        .index-page-container {
                 padding: 0 8px;
         }
         
-        .home-screen.edit-mode .page-container {
+        .home-screen.edit-mode .index-page-container {
                 padding: 8px 12px;
                 padding-top: 12px;
                 padding-bottom: 12px;

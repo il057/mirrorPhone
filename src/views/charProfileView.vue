@@ -1,5 +1,5 @@
 <template>
-        <div class="profile-page-container">
+        <div class="page-container">
                 <AppHeader :title="actor?.name || '详细资料'">
                         <template #right>
                                 <router-link :to="`/edit/${actorId}`" class="header-action-button">编辑</router-link>
@@ -103,12 +103,6 @@ const groupNames = computed(() => {
 </script>
 
 <style scoped>
-.profile-page-container {
-        display: flex;
-        flex-direction: column;
-        height: 100vh;
-        background-color: var(--bg-primary);
-}
 
 .header-action-button {
         font-size: 16px;

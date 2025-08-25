@@ -41,7 +41,6 @@
                         </template>
                 </DropdownMenu>
 
-                <ManageGroupsModal :is-open="isManageGroupsModalOpen" @close="isManageGroupsModalOpen = false" />
         </div>
 </template>
 
@@ -54,14 +53,12 @@ import db from '../services/database';
 import AppHeader from '../components/layout/Header.vue';
 import AppFooter from '../components/layout/Footer.vue';
 import DropdownMenu from '../components/ui/DropdownMenu.vue';
-import ManageGroupsModal from './chat/ManageGroupsModal.vue';
-import { showToast } from '../services/uiService';
+import { showToast, showManageGroupsModal } from '../services/uiService'; // 导入新的服务
 
 const route = useRoute();
 const router = useRouter();
 const currentTitle = ref('');
 const isDropdownOpen = ref(false);
-const isManageGroupsModalOpen = ref(false);
 
 const showPlusMenu = computed(() => {
         const routesWithPlus = ['chat-messages', 'chat-contacts', 'chat-moments'];
@@ -85,9 +82,7 @@ watch(actors, async (newActors) => {
         const specialGroup = await db.groups.get('group_special');
 
         if (specialCareActorsExist && !specialGroup) {
-                // If special care characters exist but the group doesn't, create it.
-                // Using .put() is safe for both creating and updating.
-                await db.groups.put({ id: 'group_special', name: '特别关心', order: 0 }); // Order 0 to always be first
+                await db.groups.put({ id: 'group_special', name: '特别关心', order: 0 });
         } else if (!specialCareActorsExist && specialGroup) {
                 // If no special care characters exist but the group does, delete it.
                 await db.groups.delete('group_special');
@@ -95,16 +90,11 @@ watch(actors, async (newActors) => {
 }, { immediate: true });
 
 const handleDropdownAction = (action) => {
-        isDropdownOpen.value = false; // Close dropdown after action
+        isDropdownOpen.value = false;
         switch (action) {
-                case 'addFriend':
-                        // 跳转到新建角色的页面
-                        router.push('/edit');
-                        break;
                 case 'manageGroups':
-                        isManageGroupsModalOpen.value = true;
+                        showManageGroupsModal('groups');
                         break;
-                // You can add logic for other actions here
                 default:
                         showToast(`${action} 功能待开发`, 'info');
                         break;
@@ -120,14 +110,11 @@ const handleDropdownAction = (action) => {
         display: flex;
         flex-direction: column;
         overflow: hidden;
-        /* Prevent the whole container from scrolling */
 }
 
 .chat-content {
         flex: 1;
-        /* Allows this area to grow and fill the space between header and footer */
         overflow-y: auto;
-        /* This makes ONLY the main content scrollable */
         padding-top: var(--header-height);
         padding-bottom: var(--footer-height);
 }

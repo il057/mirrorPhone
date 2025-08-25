@@ -480,9 +480,6 @@ const startDrag = (event, index) => {
 <style scoped>
 /* General Styles */
 .page-container {
-        display: flex;
-        flex-direction: column;
-        height: 100vh;
         overflow: hidden;
 }
 

@@ -43,15 +43,22 @@
 </template>
 
 <script setup>
-import { ref, nextTick } from 'vue';
+import { ref, nextTick, watchEffect } from 'vue';
 import db from '../../services/database';
 import { useObservable } from '@vueuse/rxjs';
 import { liveQuery } from 'dexie';
 import { showToast, showConfirm } from '../../services/uiService';
 
-defineProps({
+const props = defineProps({
         isOpen: Boolean,
+        onClose: Function,
+        groupTable: {
+                type: String,
+                required: true,
+                validator: (value) => ['groups', 'worldbookGroups'].includes(value)
+        }
 });
+
 const emit = defineEmits(['close']);
 
 const isAdding = ref(false);
@@ -60,18 +67,31 @@ const newGroupInput = ref(null);
 const editingGroupId = ref(null);
 const editingGroupName = ref('');
 
-const groups = useObservable(
-        liveQuery(() =>
-                db.groups
-                        .orderBy('order')
-                        .filter(group => group.id !== 'group_special')
-                        .toArray()
-        )
-);
+const groups = ref([]);
+watchEffect(() => {
+        if (props.groupTable && db[props.groupTable]) {
+                // 条件化查询：只有当表是 'groups' 时才按 'order' 排序
+                const query = props.groupTable === 'groups'
+                        ? db[props.groupTable].orderBy('order')
+                        : db[props.groupTable].orderBy('name'); // worldbookGroups 按名称排序
+
+                const observable = useObservable(
+                        liveQuery(() =>
+                                query
+                                        .filter(group => group.id !== 'group_special') // 仍然排除特殊分组
+                                        .toArray()
+                        )
+                );
+                watchEffect(() => {
+                        groups.value = observable.value;
+                });
+        }
+});
+
 
 const beginAddNewGroup = async () => {
         isAdding.value = true;
-        await nextTick(); // Wait for the DOM to update
+        await nextTick();
         newGroupInput.value?.focus();
 };
 
@@ -81,26 +101,30 @@ const saveNewGroup = async () => {
                 return;
         }
         try {
-                const maxOrderGroup = await db.groups.orderBy('order').last();
-                const newOrder = (maxOrderGroup?.order || 0) + 1;
+                const table = db[props.groupTable];
+                const newId = `${props.groupTable}_${Date.now()}`;
 
-                const newId = `group_${Date.now()}`;
-
-                await db.groups.add({
-                        id: newId, // Add the ID to the object being saved
+                const newGroupData = {
+                        id: newId,
                         name: newGroupName.value,
-                        order: newOrder,
-                        worldbookIds: []
-                });
+                };
+
+                // 条件化添加 order 字段
+                if (props.groupTable === 'groups') {
+                        const maxOrderGroup = await table.orderBy('order').last();
+                        newGroupData.order = (maxOrderGroup?.order || 0) + 1;
+                }
+
+                await table.add(newGroupData);
 
                 showToast('分组已添加', 'success');
                 newGroupName.value = '';
                 isAdding.value = false;
         } catch (error) {
                 showToast(`添加失败: ${error.message}`, 'error');
-                console.error(error); // Log the full error for debugging
+                console.error(error);
         }
-    };
+};
 
 const startEdit = (group) => {
         editingGroupId.value = group.id;
@@ -112,17 +136,16 @@ const saveEdit = async (group) => {
                 showToast('分组名不能为空', 'error');
                 return;
         }
-        await db.groups.update(group.id, { name: editingGroupName.value });
+        await db[props.groupTable].update(group.id, { name: editingGroupName.value });
         editingGroupId.value = null;
         editingGroupName.value = '';
         showToast('修改已保存', 'success');
 };
 
 const deleteGroup = async (group) => {
-        const confirmed = await showConfirm('删除分组', `确定要删除分组 "${group.name}" 吗？此操作不会删除分组内的好友。`);
+        const confirmed = await showConfirm('删除分组', `确定要删除分组 "${group.name}" 吗？`);
         if (confirmed) {
-                // Here you would also handle removing the groupId from actors, but for now we just delete the group
-                await db.groups.delete(group.id);
+                await db[props.groupTable].delete(group.id);
                 showToast('分组已删除', 'success');
         }
 };
@@ -130,11 +153,27 @@ const deleteGroup = async (group) => {
 const closeModal = () => {
         isAdding.value = false;
         editingGroupId.value = null;
+        if (props.onClose) {
+                props.onClose();
+        }
         emit('close');
 };
 </script>
 
 <style scoped>
+/* 样式保持不变 */
+.modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.6);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+}
 
 .modal-content {
         background-color: var(--bg-card);

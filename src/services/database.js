@@ -133,7 +133,9 @@ db.version(1).stores({
          * settings: 设置对象
          */
         widgetSettings: '&id, type, settings',
-        stickers: '++id, &url, name, order'
+        stickers: '++id, &url, name, order',
+        worldbooks: '&id, name',
+        worldbookGroups: '&id, name'
         // 你未来可以增加更多的表，例如 'gallery', 'musicPlaylists' 等。
 });
 

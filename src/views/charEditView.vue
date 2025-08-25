@@ -1,5 +1,5 @@
 <template>
-        <div class="edit-page-container">
+        <div class="page-container">
                 <AppHeader :title="isNew ? '创建新角色' : '编辑资料'">
                         <template #right>
                                 <button @click="saveChanges" class="header-action-button">保存</button>
@@ -233,12 +233,6 @@ const deleteCharacter = async () => {
 </script>
 
 <style scoped>
-.edit-page-container {
-        display: flex;
-        flex-direction: column;
-        height: 100vh;
-        background-color: var(--bg-primary);
-}
 
 .header-action-button {
         font-size: 16px;

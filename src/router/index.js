@@ -38,6 +38,16 @@ const router = createRouter({
                         component: () => import('../views/StickersView.vue')
                 },
                 {
+                        path: '/music',
+                        name: 'music',
+                        component: () => import('../views/MusicView.vue')
+                },
+                {
+                        path: '/worldbook',
+                        name: 'worldbook',
+                        component: () => import('../views/WorldbookView.vue')
+                },
+                {
                         path: '/chat',
                         component: () => import('../views/ChatLayout.vue'),
                         redirect: '/chat/messages',

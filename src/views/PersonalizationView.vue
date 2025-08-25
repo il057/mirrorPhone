@@ -783,7 +783,7 @@ function restoreDefaultPresets() {
                 if (!wallpaperPresets.value.some(p => p.name === dp.name && p.type === dp.type)) {
                         wallpaperPresets.value.push(dp);
                 }
-        });
+        });d
 
         // 重新添加用户的非默认预设
         wallpaperPresets.value.push(...userPresets);
@@ -865,15 +865,6 @@ function showCustomPresetEditor() {
 </script>
 
 <style scoped>
-.page-container {
-        background-color: var(--bg-primary);
-        color: var(--text-primary);
-        width: 100vw;
-        height: 100vh;
-        display: flex;
-        flex-direction: column;
-        box-sizing: border-box;
-}
 
 .header-action-button {
         background: none;
@@ -1062,7 +1053,6 @@ function showCustomPresetEditor() {
 }
 
 .accordion-content {
-        
         border-top: 1px solid var(--border-color);
 }
 
