@@ -42,37 +42,93 @@ export function getZodiacSign(birthdateString) {
 }
 
 /**
- * Formats a timestamp into a user-friendly string based on how old it is.
+ * Formats a timestamp into a user-friendly, detailed string based on how old it is.
  * @param {Date | string | number} timestamp - The timestamp of the message.
- * @returns {string} - The formatted time string (e.g., "15:30", "昨天", "星期三", "2025/7/15").
+ * @param {boolean} isChatroom - Whether this is for chatroom display (more detailed format)
+ * @returns {string} - The formatted time string.
  */
-export function formatTimestamp(timestamp) {
+export function formatTimestamp(timestamp, isChatroom = false) {
         if (!timestamp) return '';
 
         const messageDate = new Date(timestamp);
         const now = new Date();
 
+        // Time difference in seconds
+        const diffInSeconds = Math.round((now.getTime() - messageDate.getTime()) / 1000);
+
+        // Helper to format HH:mm
+        const formatTime = (date) => {
+                return date.toLocaleTimeString('zh-CN', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: false
+                });
+        };
+
+        // 1. Within a minute
+        if (diffInSeconds < 60) {
+                return '刚刚';
+        }
+
+        // 2. Within an hour
+        if (diffInSeconds < 3600) {
+                const minutes = Math.floor(diffInSeconds / 60);
+                return `${minutes}分钟前`;
+        }
+
+        // Define start of today, yesterday, and the current week (Monday)
         const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
         const startOfYesterday = new Date(startOfToday);
         startOfYesterday.setDate(startOfYesterday.getDate() - 1);
 
-        // Find the start of the current week (assuming Monday is the first day)
         const startOfWeek = new Date(startOfToday);
         const dayOfWeek = now.getDay(); // Sunday = 0, Monday = 1, ...
-        const diff = (dayOfWeek === 0) ? 6 : dayOfWeek - 1; // Adjust for Sunday
-        startOfWeek.setDate(startOfWeek.getDate() - diff);
+        const diffToMonday = (dayOfWeek === 0) ? 6 : dayOfWeek - 1;
+        startOfWeek.setDate(startOfWeek.getDate() - diffToMonday);
 
+        // 3. Today: Show specific time for chatroom, hours ago for others
         if (messageDate >= startOfToday) {
-                // Today: Show time
-                return messageDate.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false });
-        } else if (messageDate >= startOfYesterday) {
-                // Yesterday
-                return '昨天';
-        } else if (messageDate >= startOfWeek) {
-                // This week: Show day of the week
-                return messageDate.toLocaleDateString('zh-CN', { weekday: 'long' });
+                if (isChatroom) {
+                        return formatTime(messageDate);
+                } else {
+                        const hours = Math.floor(diffInSeconds / 3600);
+                        return `${hours}小时前`;
+                }
+        }
+
+        // 4. Yesterday
+        if (messageDate >= startOfYesterday) {
+                return `昨天 ${formatTime(messageDate)}`;
+        }
+
+        // 5. This week
+        if (messageDate >= startOfWeek) {
+                const weekday = messageDate.toLocaleDateString('zh-CN', { weekday: 'long' });
+                return `${weekday} ${formatTime(messageDate)}`;
+        }
+
+        // 6. This year - different format for chatroom
+        if (messageDate.getFullYear() === now.getFullYear()) {
+                if (isChatroom) {
+                        const month = messageDate.getMonth() + 1;
+                        const day = messageDate.getDate();
+                        return `${month}/${day} ${formatTime(messageDate)}`;
+                } else {
+                        const monthAndDay = messageDate.toLocaleDateString('zh-CN', {
+                                month: 'numeric',
+                                day: 'numeric'
+                        });
+                        return `${monthAndDay}`;
+                }
+        }
+
+        // 7. Older than this year - different format for chatroom
+        if (isChatroom) {
+                const year = messageDate.getFullYear();
+                const month = messageDate.getMonth() + 1;
+                const day = messageDate.getDate();
+                return `${year}/${month}/${day}`;
         } else {
-                // Older than a week: Show full date
                 return messageDate.toLocaleDateString('zh-CN');
         }
 }

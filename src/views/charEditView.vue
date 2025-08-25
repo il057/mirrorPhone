@@ -1,12 +1,22 @@
 <template>
         <div class="page-container">
                 <AppHeader :title="isNew ? '创建新角色' : '编辑资料'">
+                        <template #left>
+                                <button class="header-action-button" @click="handleBack">
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                                stroke-width="1.5" stroke="currentColor" width="24" height="24">
+                                                <path stroke-linecap="round" stroke-linejoin="round"
+                                                        d="M15.75 19.5L8.25 12l7.5-7.5" />
+                                        </svg>
+                                </button>
+                        </template>
                         <template #right>
                                 <button @click="saveChanges" class="header-action-button">保存</button>
                         </template>
                 </AppHeader>
 
                 <main class="edit-content content" v-if="actor">
+                        <!-- 头像部分 -->
                         <section class="form-section avatar-section">
                                 <div class="avatar-wrapper">
                                         <div class="avatar">
@@ -16,7 +26,8 @@
                                 <p class="avatar-prompt">更换头像</p>
                         </section>
 
-                        <section class="form-section">
+                        <!-- 基本信息与人设 -->
+                        <AccordionItem title="基本信息与人设" :default-expanded="true">
                                 <div class="form-group">
                                         <label for="nickname">昵称</label>
                                         <input id="nickname" type="text" v-model="actor.name" placeholder="必填" />
@@ -37,7 +48,7 @@
                                                 placeholder="选择性别"
                                         />
                                 </div>
-                                <div class="form-group">
+                                <div class="form-group dropdown-group">
                                         <label for="group">分组</label>
                                         <MainDropdown
                                                 v-model="actor.groupIds[0]"
@@ -46,49 +57,203 @@
                                                 @change="handleGroupChange"
                                         />
                                 </div>
-                        </section>
-
-                        <section class="form-section">
                                 <div class="form-group textarea-group">
-                                        <label for="persona">人设 (Persona)</label>
-                                        <textarea id="persona" v-model="actor.persona" rows="8"></textarea>
+                                        <label for="persona">人设描述</label>
+                                        <textarea 
+                                                id="persona" 
+                                                v-model="actor.persona" 
+                                                rows="8"
+                                                placeholder="描述角色的性格、背景、特点等..."
+                                        ></textarea>
                                 </div>
-                        </section>
+                        </AccordionItem>
 
-                        <section class="form-section placeholder-section">
-                                <h2>语音设定</h2>
-                                <p>此功能待开发。</p>
-                        </section>
-                        <section class="form-section placeholder-section">
-                                <h2>单人世界书</h2>
-                                <p>此功能待开发。</p>
-                        </section>
-                        <section class="form-section placeholder-section">
-                                <h2>上下文记忆条数</h2>
-                                <p>此功能待开发。</p>
-                        </section>
+                        <!-- 单人世界书 -->
+                        <AccordionItem title="单人世界书">
+                                <div class="worldbook-section">
+                                        <p class="section-description">
+                                                为此角色选择专属的世界书，这些世界书只对该角色有效。
+                                        </p>
+                                        <CheckboxList
+                                                v-model="actor.worldbookIds"
+                                                :options="worldbookOptions"
+                                                @change="handleWorldbookChange"
+                                        />
+                                        <button @click="openWorldbookManagement" class="secondary-btn">
+                                                管理世界书
+                                        </button>
+                                </div>
+                        </AccordionItem>
 
-                        <section v-if="isNew" class="form-section placeholder-section">
-                                <h2>初始关系设定</h2>
-                                <p>此功能待开发。</p>
-                        </section>
-                        <section v-else class="form-section placeholder-section">
-                                <h2>好感印象</h2>
-                                <p>此功能待开发。</p>
-                        </section>
-                        <section class="form-section placeholder-section">
-                                <h2>记忆摘要管理</h2>
-                                <p>此功能待开发。</p>
-                        </section>
-                        <section class="form-section placeholder-section">
-                                <h2>聊天背景</h2>
-                                <p>此功能待开发。</p>
-                        </section>
-                        <section class="form-section placeholder-section">
-                                <h2>聊天气泡样式</h2>
-                                <p>此功能待开发。</p>
-                        </section>
+                        <!-- 初始关系设定/好感印象 -->
+                        <AccordionItem v-if="isNew" title="初始关系设定" :default-expanded="true">
+                                <div class="relationship-section">
+                                        <!-- 对用户的初始好感度 -->
+                                        <div class="relationship-item">
+                                                <h4>对你的好感度</h4>
+                                                <RangeSlider
+                                                        v-model="initialUserRelationship.score"
+                                                        :min="-1000"
+                                                        :max="1000"
+                                                        label="好感度"
+                                                />
+                                        </div>
+                                        
+                                        <!-- 对用户的关系 -->
+                                        <div class="form-group">
+                                                <label for="userRelationType">对你的关系</label>
+                                                <input 
+                                                        id="userRelationType" 
+                                                        type="text" 
+                                                        v-model="initialUserRelationship.type"
+                                                        placeholder="例如：朋友、恋人、陌生人..."
+                                                />
+                                        </div>
+                                </div>
+                        </AccordionItem>
 
+                        <!-- 好感印象与记忆管理（编辑模式） -->
+                        <AccordionItem v-else title="好感印象与记忆管理">
+                                <div class="impression-section">
+                                        <!-- 对用户的好感度（只读） -->
+                                        <div class="relationship-display">
+                                                <h4>对你的好感度</h4>
+                                                <div class="score-display">
+                                                        <span class="score-value">{{ userRelationship?.score || 0 }}</span>
+                                                        <div class="score-bar">
+                                                                <div 
+                                                                        class="score-fill"
+                                                                        :style="{ width: getScorePercentage(userRelationship?.score || 0) }"
+                                                                ></div>
+                                                        </div>
+                                                </div>
+                                                <p class="relationship-type">关系：{{ userRelationship?.type || '未设置' }}</p>
+                                        </div>
+
+                                        <!-- 印象标签 -->
+                                        <div class="tags-section">
+                                                <h4>印象标签</h4>
+                                                <TagsManager
+                                                        v-model:tags="userRelationship.tags"
+                                                        :editable="true"
+                                                        @tag-added="handleTagAdded"
+                                                        @tag-removed="handleTagRemoved"
+                                                        @tag-edited="handleTagEdited"
+                                                />
+                                        </div>
+
+                                        <!-- 记忆摘要管理 -->
+                                        <div class="memory-section">
+                                                <h4>记忆摘要管理</h4>
+                                                <div class="placeholder-content">
+                                                        <p>此功能待开发。</p>
+                                                </div>
+                                        </div>
+                                </div>
+                        </AccordionItem>
+
+                        <!-- 聊天设置 -->
+                        <AccordionItem title="聊天设置">
+                                <div class="chat-settings-section">
+                                        <!-- 聊天背景 -->
+                                        <div class="setting-item">
+                                                <h4>聊天背景</h4>
+                                                <div class="placeholder-content">
+                                                        <p>此功能待开发。</p>
+                                                </div>
+                                        </div>
+
+                                        <!-- 聊天气泡样式 -->
+                                        <div class="setting-item">
+                                                <h4>聊天气泡样式</h4>
+                                                <div class="placeholder-content">
+                                                        <p>此功能待开发。</p>
+                                                </div>
+                                        </div>
+                                </div>
+                        </AccordionItem>
+
+                        <!-- 高级设置 -->
+                        <AccordionItem title="高级设置">
+                                <div class="advanced-settings-section">
+                                        <!-- 上下文记忆条数 -->
+                                        <div class="setting-item">
+                                                <h4>上下文记忆条数</h4>
+                                                <div class="memory-settings">
+                                                        <div class="memory-setting-row">
+                                                                <label>私聊</label>
+                                                                <input 
+                                                                        type="number" 
+                                                                        v-model.number="actor.contextMemorySettings.privateChat"
+                                                                        min="1"
+                                                                        max="200"
+                                                                        class="memory-input"
+                                                                />
+                                                        </div>
+                                                        <div class="memory-setting-row">
+                                                                <label>群聊</label>
+                                                                <input 
+                                                                        type="number" 
+                                                                        v-model.number="actor.contextMemorySettings.groupChat"
+                                                                        min="1"
+                                                                        max="100"
+                                                                        class="memory-input"
+                                                                />
+                                                        </div>
+                                                        <div class="memory-setting-row">
+                                                                <label>记忆</label>
+                                                                <input 
+                                                                        type="number" 
+                                                                        v-model.number="actor.contextMemorySettings.memory"
+                                                                        min="1"
+                                                                        max="20"
+                                                                        class="memory-input"
+                                                                />
+                                                        </div>
+                                                        <div class="memory-setting-row">
+                                                                <label>日记</label>
+                                                                <input 
+                                                                        type="number" 
+                                                                        v-model.number="actor.contextMemorySettings.diary"
+                                                                        min="1"
+                                                                        max="20"
+                                                                        class="memory-input"
+                                                                />
+                                                        </div>
+                                                        <div class="memory-setting-row">
+                                                                <label>回忆</label>
+                                                                <input 
+                                                                        type="number" 
+                                                                        v-model.number="actor.contextMemorySettings.recall"
+                                                                        min="1"
+                                                                        max="20"
+                                                                        class="memory-input"
+                                                                />
+                                                        </div>
+                                                        <div class="memory-setting-row">
+                                                                <label>动态</label>
+                                                                <input 
+                                                                        type="number" 
+                                                                        v-model.number="actor.contextMemorySettings.moments"
+                                                                        min="1"
+                                                                        max="20"
+                                                                        class="memory-input"
+                                                                />
+                                                        </div>
+                                                </div>
+                                        </div>
+
+                                        <!-- 语音设定 -->
+                                        <div class="setting-item">
+                                                <h4>语音设定</h4>
+                                                <div class="placeholder-content">
+                                                        <p>此功能待开发。</p>
+                                                </div>
+                                        </div>
+                                </div>
+                        </AccordionItem>
+
+                        <!-- 危险操作 -->
                         <section v-if="!isNew" class="form-section danger-zone">
                                 <button class="danger-btn">拉黑</button>
                                 <button class="danger-btn">清空聊天记录</button>
@@ -106,7 +271,11 @@ import { liveQuery } from 'dexie';
 import db from '../services/database.js';
 import AppHeader from '../components/layout/Header.vue';
 import MainDropdown from '../components/ui/MainDropdown.vue';
-import { showToast, showConfirm } from '../services/uiService.js';
+import AccordionItem from '../components/ui/AccordionItem.vue';
+import RangeSlider from '../components/ui/RangeSlider.vue';
+import TagsManager from '../components/ui/TagsManager.vue';
+import CheckboxList from '../components/ui/CheckboxList.vue';
+import { showToast, showConfirm, showWorldbookEditModal, showManageGroupsModal } from '../services/uiService.js';
 
 const route = useRoute();
 const router = useRouter();
@@ -116,10 +285,38 @@ const isNew = computed(() => !actorId.value);
 
 const actor = ref(null);
 
+// 获取当前用户ID（假设为固定值，实际应用中需要从用户系统获取）
+const currentUserId = 'user_persona_1';
+
+// 获取可用分组
 const availableGroups = useObservable(
         liveQuery(() => db.groups.filter(g => g.id !== 'group_special').toArray()),
         { initialValue: [] }
 );
+
+// 获取世界书数据
+const allWorldbooks = useObservable(
+        liveQuery(() => db.worldbooks.toArray()),
+        { initialValue: [] }
+);
+
+// 获取分组已绑定的世界书
+const groupWorldbooks = useObservable(
+        liveQuery(() => db.groups.toArray()),
+        { initialValue: [] }
+);
+
+// 关系数据
+const initialUserRelationship = ref({
+        score: 0,
+        type: '朋友'
+});
+
+const userRelationship = ref({
+        score: 0,
+        type: '',
+        tags: []
+});
 
 // 下拉菜单选项
 const genderOptions = [
@@ -151,6 +348,25 @@ const groupOptions = computed(() => {
         return options;
 });
 
+// 世界书选项
+const worldbookOptions = computed(() => {
+        const currentGroupId = actor.value?.groupIds?.[0];
+        const groupBindings = groupWorldbooks.value.find(g => g.id === currentGroupId)?.worldbookIds || [];
+        
+        return allWorldbooks.value.map(wb => ({
+                label: wb.name,
+                value: wb.id,
+                disabled: groupBindings.includes(wb.id),
+                description: groupBindings.includes(wb.id) ? '(已通过分组绑定)' : ''
+        }));
+});
+
+// 监听分组变化，更新世界书选项
+watch(() => actor.value?.groupIds?.[0], async (newGroupId) => {
+        // 这里可以添加分组变化时的逻辑
+        console.log('分组已变更为:', newGroupId);
+}, { immediate: true });
+
 const getInitial = (name) => {
         if (!name) return '#';
         return name.charAt(0).toUpperCase();
@@ -171,7 +387,8 @@ const handleGroupChange = async (option) => {
                         try {
                                 const newGroupId = await db.groups.add({
                                         id: `group_${Date.now()}`,
-                                        name: groupName
+                                        name: groupName,
+                                        order: (await db.groups.orderBy('order').last())?.order + 1 || 1
                                 });
                                 actor.value.groupIds = [newGroupId];
                         } catch (error) {
@@ -185,6 +402,59 @@ const handleGroupChange = async (option) => {
         }
 };
 
+// 世界书相关方法
+const handleWorldbookChange = (selectedIds) => {
+        // 确保 actor.worldbookIds 存在
+        if (!actor.value.worldbookIds) {
+                actor.value.worldbookIds = [];
+        }
+        actor.value.worldbookIds = selectedIds;
+};
+
+const openWorldbookManagement = () => {
+        showManageGroupsModal('worldbookGroups');
+};
+
+// 关系管理方法
+const getScorePercentage = (score) => {
+        const percentage = ((score + 1000) / 2000) * 100;
+        return `${Math.max(0, Math.min(100, percentage))}%`;
+};
+
+// 标签管理方法
+const handleTagAdded = async (tag) => {
+        if (!isNew.value) {
+                await updateRelationshipTags();
+        }
+};
+
+const handleTagRemoved = async (tagName) => {
+        if (!isNew.value) {
+                await updateRelationshipTags();
+        }
+};
+
+const handleTagEdited = async ({ oldTag, newTag }) => {
+        if (!isNew.value) {
+                await updateRelationshipTags();
+        }
+};
+
+const updateRelationshipTags = async () => {
+        if (!userRelationship.value) return;
+        
+        try {
+                await db.relationships
+                        .where(['sourceId', 'targetId'])
+                        .equals([actorId.value, currentUserId])
+                        .modify({ tags: userRelationship.value.tags || [] });
+        } catch (error) {
+                console.error('更新标签失败:', error);
+                showToast('更新标签失败', 'error');
+        }
+};
+
+// 加载数据
 onMounted(async () => {
         if (isNew.value) {
                 actor.value = {
@@ -195,7 +465,16 @@ onMounted(async () => {
                         groupIds: [],
                         persona: '',
                         specialCare: 0,
-                        isGroup: 0
+                        isGroup: 0,
+                        worldbookIds: [],
+                        contextMemorySettings: {
+                                privateChat: 50,
+                                groupChat: 20,
+                                memory: 2,
+                                diary: 2,
+                                recall: 3,
+                                moments: 3
+                        }
                 };
         } else {
                 const data = await db.actors.get(actorId.value);
@@ -203,6 +482,41 @@ onMounted(async () => {
                         actor.value = { ...data };
                         if (!Array.isArray(actor.value.groupIds)) {
                                 actor.value.groupIds = [];
+                        }
+                        if (!Array.isArray(actor.value.worldbookIds)) {
+                                actor.value.worldbookIds = [];
+                        }
+                        // 确保上下文记忆设置存在
+                        if (!actor.value.contextMemorySettings) {
+                                actor.value.contextMemorySettings = {
+                                        privateChat: 50,
+                                        groupChat: 20,
+                                        memory: 2,
+                                        diary: 2,
+                                        recall: 3,
+                                        moments: 3
+                                };
+                        }
+                        
+                        // 加载用户关系数据
+                        const relationship = await db.relationships
+                                .where('sourceId')
+                                .equals(actorId.value)
+                                .and(rel => rel.targetId === currentUserId)
+                                .first();
+                        
+                        if (relationship) {
+                                userRelationship.value = {
+                                        score: relationship.score || 0,
+                                        type: relationship.type || '',
+                                        tags: relationship.tags || []
+                                };
+                        } else {
+                                userRelationship.value = {
+                                        score: 0,
+                                        type: '',
+                                        tags: []
+                                };
                         }
                 } else {
                         showToast('找不到该角色', 'error');
@@ -216,12 +530,31 @@ const saveChanges = async () => {
                 showToast('昵称不能为空', 'error');
                 return;
         }
+        
         try {
-                const dataToSave = { ...actor.value };
-                dataToSave.groupIds = dataToSave.groupIds?.[0] ? [dataToSave.groupIds[0]] : [];
+                // 只保存可克隆的普通对象和数组
+                const dataToSave = JSON.parse(JSON.stringify({
+                        ...actor.value,
+                        groupIds: actor.value.groupIds?.[0] ? [actor.value.groupIds[0]] : [],
+                        worldbookIds: Array.isArray(actor.value.worldbookIds) ? [...actor.value.worldbookIds] : []
+                }));
+                
                 if (isNew.value) {
                         dataToSave.id = `char_${Date.now()}`;
                         await db.actors.add(dataToSave);
+                        
+                        // 简单创建基本关系
+                        try {
+                                await db.relationships.add({
+                                        sourceId: dataToSave.id,
+                                        targetId: currentUserId,
+                                        score: initialUserRelationship.value.score,
+                                        type: initialUserRelationship.value.type
+                                });
+                        } catch (relationError) {
+                                console.warn('创建关系失败，但角色已创建:', relationError);
+                        }
+                        
                         showToast('角色创建成功', 'success');
                         router.push(`/profile/${dataToSave.id}`);
                 } else {
@@ -259,10 +592,33 @@ const deleteCharacter = async () => {
                 }
         }
 };
+
+// 处理返回导航
+const handleBack = () => {
+        // 检查是否从profile页面来的
+        const fromProfile = route.query.from === 'profile';
+        
+        if (!isNew.value && actorId.value) {
+                // 编辑模式
+                if (fromProfile) {
+                        // 从profile来的，返回到profile页面并添加标识避免循环
+                        router.push(`/profile/${actorId.value}?from=edit`);
+                } else {
+                        // 其他来源，返回上一页或联系人页面
+                        if (window.history.length > 1) {
+                                router.back();
+                        } else {
+                                router.push('/chat/contacts');
+                        }
+                }
+        } else {
+                // 新建模式，返回联系人页面
+                router.push('/chat/contacts');
+        }
+};
 </script>
 
 <style scoped>
-
 .header-action-button {
         font-size: 16px;
         font-weight: 600;
@@ -270,6 +626,15 @@ const deleteCharacter = async () => {
         background: none;
         border: none;
         cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 8px;
+}
+
+.header-action-button svg {
+        width: 24px;
+        height: 24px;
 }
 
 .edit-content {
@@ -280,13 +645,7 @@ const deleteCharacter = async () => {
         padding-bottom: 50px;
 }
 
-.form-section {
-        background-color: var(--bg-card);
-        border-radius: 8px;
-        padding: 0 15px;
-        margin-bottom: 20px;
-}
-
+/* 头像部分 */
 .avatar-section {
         background: none;
         padding: 0;
@@ -318,15 +677,17 @@ const deleteCharacter = async () => {
         cursor: pointer;
 }
 
+/* 表单组件 */
 .form-group {
         display: flex;
         justify-content: space-between;
         align-items: center;
         padding: 12px 0;
         border-bottom: 1px solid var(--border-color);
+        position: relative;
 }
 
-.form-section .form-group:last-child {
+.form-group:last-child {
         border-bottom: none;
 }
 
@@ -335,57 +696,200 @@ const deleteCharacter = async () => {
         align-items: flex-start;
 }
 
+/* 确保下拉菜单有足够的 z-index */
+.dropdown-group {
+        z-index: 100;
+        position: relative;
+}
+
 .form-group label {
         color: var(--text-primary);
+        font-weight: 500;
+        margin-bottom: 0;
 }
 
 .form-group input,
-.form-group select,
 .form-group textarea {
         flex-grow: 1;
-        padding: 8px;
-        border-radius: 4px;
-        border: none;
-        background-color: transparent;
-        color: var(--text-secondary);
+        padding: 8px 12px;
+        border-radius: 6px;
+        border: 1px solid var(--border-color);
+        background-color: var(--bg-secondary);
+        color: var(--text-primary);
         text-align: right;
         font-size: 16px;
+        transition: all 0.2s ease;
 }
 
-.form-group input::placeholder {
-        color: #555;
+.form-group input::placeholder,
+.form-group textarea::placeholder {
+        color: var(--text-secondary);
 }
 
 .form-group textarea {
         width: 100%;
         box-sizing: border-box;
         text-align: left;
-        background-color: var(--bg-primary);
         margin-top: 10px;
         height: 120px;
-        color: var(--text-primary);
+        resize: vertical;
 }
 
 .form-group input:focus,
-.form-group select:focus,
 .form-group textarea:focus {
         outline: none;
+        border-color: var(--accent-primary);
+        box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
 }
 
-.placeholder-section {
-        padding: 15px;
+/* 部分样式 */
+.section-description {
+        color: var(--text-secondary);
+        font-size: 14px;
+        margin-bottom: 15px;
+        line-height: 1.5;
+}
+
+.placeholder-content {
         text-align: center;
         color: var(--text-secondary);
+        padding: 20px;
 }
 
-.placeholder-section h2 {
+/* 世界书部分 */
+.worldbook-section {
+        padding: 0;
+}
+
+.secondary-btn {
+        padding: 8px 16px;
+        background-color: var(--bg-secondary);
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        color: var(--text-primary);
+        cursor: pointer;
+        font-size: 14px;
+        margin-top: 15px;
+        transition: all 0.2s ease;
+}
+
+.secondary-btn:hover {
+        background-color: var(--bg-primary);
+        border-color: var(--accent-primary);
+}
+
+/* 关系设定部分 */
+.relationship-section {
+        padding: 0;
+}
+
+.relationship-item {
+        margin-bottom: 25px;
+}
+
+.relationship-item h4 {
+        margin: 0 0 15px 0;
+        color: var(--text-primary);
         font-size: 16px;
-        margin: 0 0 5px 0;
 }
 
+/* 好感印象部分 */
+.impression-section {
+        padding: 0;
+}
+
+.relationship-display {
+        background-color: var(--bg-secondary);
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 20px;
+}
+
+.relationship-display h4 {
+        margin: 0 0 15px 0;
+        color: var(--text-primary);
+        font-size: 16px;
+}
+
+.score-display {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        margin-bottom: 10px;
+}
+
+.score-value {
+        font-size: 24px;
+        font-weight: 600;
+        color: var(--accent-primary);
+        min-width: 60px;
+}
+
+.score-bar {
+        flex: 1;
+        height: 8px;
+        background-color: var(--bg-primary);
+        border-radius: 4px;
+        overflow: hidden;
+        position: relative;
+}
+
+.score-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #ff4444 0%, #ffaa00 50%, #44ff44 100%);
+        transition: width 0.3s ease;
+        border-radius: 4px;
+}
+
+.relationship-type {
+        color: var(--text-secondary);
+        font-size: 14px;
+        margin: 0;
+}
+
+.tags-section h4 {
+        margin: 0 0 15px 0;
+        color: var(--text-primary);
+        font-size: 16px;
+}
+
+/* 设置项样式 */
+.setting-item {
+        margin-bottom: 25px;
+}
+
+.setting-item:last-child {
+        margin-bottom: 0;
+}
+
+.setting-item h4 {
+        margin: 0 0 15px 0;
+        color: var(--text-primary);
+        font-size: 16px;
+}
+
+.chat-settings-section,
+.advanced-settings-section {
+        padding: 0;
+}
+
+.memory-section {
+        margin-top: 25px;
+        padding-top: 20px;
+        border-top: 1px solid var(--border-color);
+}
+
+.memory-section h4 {
+        margin: 0 0 15px 0;
+        color: var(--text-primary);
+        font-size: 16px;
+}
+
+/* 危险操作区域 */
 .danger-zone {
         background: none;
         padding: 0;
+        margin-top: 30px;
 }
 
 .danger-btn {
@@ -399,9 +903,84 @@ const deleteCharacter = async () => {
         background-color: var(--bg-card);
         color: var(--text-primary);
         margin-bottom: 10px;
+        transition: all 0.2s ease;
+}
+
+.danger-btn:hover {
+        background-color: var(--bg-secondary);
 }
 
 .danger-btn.delete {
         color: #f44336;
+}
+
+.danger-btn.delete:hover {
+        background-color: rgba(244, 67, 54, 0.1);
+}
+
+/* 记忆设置样式 */
+.memory-settings {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+        margin-top: 1rem;
+}
+
+.memory-item {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+}
+
+.memory-item label {
+        font-weight: 500;
+        font-size: 0.9rem;
+        color: var(--text-secondary);
+}
+
+.memory-input {
+        padding: 0.5rem;
+        border: 1px solid var(--border-light);
+        border-radius: 8px;
+        background: var(--bg-card);
+        color: var(--text-primary);
+        font-size: 0.9rem;
+        text-align: center;
+}
+
+.memory-input:focus {
+        outline: none;
+        border-color: var(--accent-primary);
+        box-shadow: 0 0 0 2px var(--accent-primary)20;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+        .edit-content {
+                padding: 15px;
+                padding-top: calc(var(--header-height) + 15px);
+        }
+        
+        .form-group {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 8px;
+        }
+        
+        .form-group input {
+                text-align: left;
+                width: 100%;
+                box-sizing: border-box;
+        }
+        
+        .relationship-controls {
+                gap: 12px;
+        }
+        
+        .score-display {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+        }
 }
 </style>

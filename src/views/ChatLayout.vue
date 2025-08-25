@@ -92,6 +92,9 @@ watch(actors, async (newActors) => {
 const handleDropdownAction = (action) => {
         isDropdownOpen.value = false;
         switch (action) {
+                case 'addFriend':
+                        router.push('/edit');
+                        break;
                 case 'manageGroups':
                         showManageGroupsModal('groups');
                         break;

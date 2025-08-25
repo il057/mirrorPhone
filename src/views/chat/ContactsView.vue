@@ -20,7 +20,7 @@
                                         </div>
                                         <ul v-if="openGroups.includes(group.id)" class="group-members-list">
                                                 <li v-for="member in group.members" :key="member.id"
-                                                        class="contact-item">
+                                                        class="contact-item" @click="goToProfile(member.id)">
                                                         <div class="avatar">
                                                                 <span class="avatar-initial">{{ getInitial(member.name)
                                                                         }}</span>
@@ -35,7 +35,7 @@
                                         <div class="alphabet-header">特别关心</div>
                                         <ul>
                                                 <li v-for="friend in specialCareFriends" :key="friend.id"
-                                                        class="contact-item">
+                                                        class="contact-item" @click="goToProfile(friend.id)">
                                                         <div class="avatar">
                                                                 <span class="avatar-initial">{{ getInitial(friend.name)
                                                                         }}</span>
@@ -47,7 +47,7 @@
                                 <div v-for="(group, letter) in groupedFriends" :key="letter">
                                         <div class="alphabet-header">{{ letter }}</div>
                                         <ul>
-                                                <li v-for="friend in group" :key="friend.id" class="contact-item">
+                                                <li v-for="friend in group" :key="friend.id" class="contact-item" @click="goToProfile(friend.id)">
                                                         <div class="avatar">
                                                                 <span class="avatar-initial">{{ getInitial(friend.name)
                                                                         }}</span>
@@ -59,7 +59,7 @@
                         </div>
                         <div v-if="activeTab === 'groupChats'" class="contact-list">
                                 <ul>
-                                        <li v-for="chat in groupChats" :key="chat.id" class="contact-item">
+                                        <li v-for="chat in groupChats" :key="chat.id" class="contact-item" @click="goToProfile(chat.id)">
                                                 <div class="avatar group-avatar">
                                                         <span class="avatar-initial">#</span>
                                                 </div>
@@ -73,10 +73,13 @@
 
 <script setup>
 import { ref, computed } from 'vue';
+import { useRouter } from 'vue-router';
 import { pinyin } from 'pinyin-pro';
 import { useObservable } from '@vueuse/rxjs';
 import { liveQuery } from 'dexie';
 import db from '../../services/database.js';
+
+const router = useRouter();
 
 const activeTab = ref('groups');
 const openGroups = ref(['group_special', 'group_family']); // Let's default a couple groups to open
@@ -187,6 +190,11 @@ const groupedFriends = computed(() => {
 // --- Group Chats Tab Logic ---
 const groupChats = computed(() => allActors.value.filter(a => a.isGroup).sort((a, b) => a.createdAt - b.createdAt));
 
+// 跳转到profile页面
+const goToProfile = (actorId) => {
+        router.push(`/profile/${actorId}`);
+};
+
 </script>
 
 <style scoped>
@@ -241,6 +249,12 @@ const groupChats = computed(() => allActors.value.filter(a => a.isGroup).sort((a
         align-items: center;
         padding: 12px 15px;
         border-bottom: 1px solid var(--border-color);
+        cursor: pointer;
+        transition: background-color 0.2s;
+}
+
+.contact-item:hover {
+        background-color: var(--bg-secondary);
 }
 
 .group-avatar .avatar-initial {

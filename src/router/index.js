@@ -87,6 +87,15 @@ const router = createRouter({
                         props: true // 关键！这会将 :id 作为 prop 传递给组件
                 },
 
+                // 聊天室页面
+                {
+                        path: '/chatroom/:id',
+                        name: 'chatroom',
+                        component: () => import('../views/ChatRoomView.vue'),
+                        meta: { title: '聊天' },
+                        props: true
+                },
+
                 // 新建/编辑 统一界面
                 {
                         // :id? '?'表示id参数是可选的。没有id时，我们就认为是“新建”模式。

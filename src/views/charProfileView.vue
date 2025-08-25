@@ -1,8 +1,9 @@
 <template>
         <div class="page-container">
-                <AppHeader :title="actor?.name || '详细资料'">
+                <AppHeader :title=" ' ' || '详细资料'" :override-back-action="goBack">
+
                         <template #right>
-                                <router-link :to="`/edit/${actorId}`" class="header-action-button">编辑</router-link>
+                                <button class="header-action-button" @click="goToEdit">编辑</button>
                         </template>
                 </AppHeader>
 
@@ -14,8 +15,32 @@
                                         </div>
                                 </div>
                                 <div class="name-section">
-                                        <h1 class="nickname">{{ actor.name }}</h1>
+                                        <div class="name-with-gender">
+                                                <h1 class="nickname">{{ actor.name }}</h1>
+                                                <svg v-if="actor.gender === '男'" class="gender-icon male"
+                                                        xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"
+                                                        width="24px" fill="currentColor">
+                                                        <path
+                                                                d="M480-660q-29 0-49.5-20.5T410-730q0-29 20.5-49.5T480-800q29 0 49.5 20.5T550-730q0 29-20.5 49.5T480-660Zm-80 500v-200h-40v-180q0-33 23.5-56.5T440-620h80q33 0 56.5 23.5T600-540v180h-40v200H400Z" />
+                                                </svg>
+                                                <svg v-else-if="actor.gender === '女'" class="gender-icon female"
+                                                        xmlns="http://www.w3.org/2000/svg" height="24px"
+                                                        viewBox="0 -960 960 960" width="24px" fill="currentColor">
+                                                        <path
+                                                                d="M480-660q-29 0-49.5-20.5T410-730q0-29 20.5-49.5T480-800q29 0 49.5 20.5T550-730q0 29-20.5 49.5T480-660Zm-80 500v-160h-80l95-255q8-20 25.5-32.5T480-620q22 0 39.5 12.5T545-575l95 255h-80v160H400Z" />
+                                                </svg>
+                                        </div>
                                         <p v-if="actor.realName" class="realname">名字: {{ actor.realName }}</p>
+                                        <p v-if="relationshipScore !== null" class="affection">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14"
+                                                        fill="currentColor" class="bi bi-heart-fill"
+                                                        viewBox="0 0 16 16">
+                                                        <path fill-rule="evenodd"
+                                                                d="M8 1.314C12.438-3.248 23.534 4.735 8 15-7.534 4.736 3.562-3.248 8 1.314" />
+                                                </svg>
+
+                                                {{ relationshipScore }}
+                                        </p>
                                 </div>
                                 <div class="special-care-toggle" @click="toggleSpecialCare">
                                         <svg :class="{ active: actor.specialCare }" xmlns="http://www.w3.org/2000/svg"
@@ -28,28 +53,26 @@
                         </section>
 
                         <section class="details-section">
-                                <div class="detail-item">
-                                        <span class="label">年龄</span>
-                                        <span class="value">{{ calculatedAge }}岁</span>
-                                </div>
                                 <div class="detail-item" v-if="actor.birthday">
                                         <span class="label">星座</span>
                                         <span class="value">{{ zodiacSign }}</span>
                                 </div>
                                 <div class="detail-item">
-                                        <span class="label">性别</span>
-                                        <span class="value">{{ actor.gender || '未设置' }}</span>
+                                        <span class="label">年龄</span>
+                                        <span class="value">{{ calculatedAge }}岁</span>
                                 </div>
                                 <div class="detail-item">
                                         <span class="label">分组</span>
                                         <span class="value">{{ groupNames || '未分组' }}</span>
                                 </div>
                         </section>
-
-                        <div class="action-buttons">
-                                <button class="action-btn primary">发消息</button>
-                        </div>
                 </main>
+
+                <!-- 底部发消息按钮 -->
+                <div class="bottom-actions" v-if="actor">
+                        <button class="action-btn primary" @click="goToChat">发消息</button>
+                </div>
+
                 <div v-else class="loading-state">
                         <p>正在加载角色信息...</p>
                 </div>
@@ -58,7 +81,7 @@
 
 <script setup>
 import { ref, computed } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { useObservable } from '@vueuse/rxjs';
 import { liveQuery } from 'dexie';
 import db from '../services/database.js';
@@ -66,6 +89,7 @@ import AppHeader from '../components/layout/Header.vue';
 import { calculateAge, getZodiacSign } from '../utils/datetime.js';
 
 const route = useRoute();
+const router = useRouter();
 const actorId = ref(route.params.id);
 
 const actor = useObservable(
@@ -76,6 +100,19 @@ const actor = useObservable(
 const allGroups = useObservable(
         liveQuery(() => db.groups.toArray()),
         { initialValue: [] }
+);
+
+// 查询好感度
+const relationshipScore = useObservable(
+        liveQuery(async () => {
+                // 假设当前用户ID为 'user_main'，实际应用中可能需要从全局状态获取
+                const relationship = await db.relationships
+                        .where('sourceId').equals(actorId.value)
+                        .and(r => r.targetId === 'user_main')
+                        .first();
+                return relationship ? relationship.score : null;
+        }),
+        { initialValue: null }
 );
 
 const getInitial = (name) => {
@@ -100,6 +137,37 @@ const groupNames = computed(() => {
                 .map(g => g.name)
                 .join(', ');
 });
+
+// 返回上一页
+const goBack = () => {
+        // 使用路由历史记录进行智能判断
+        const historyLength = window.history.length;
+        
+        // 如果历史记录长度大于1，尝试返回上一页
+        if (historyLength > 1) {
+                // 检查路由历史，防止从edit页面返回时的无限循环
+                const fromEdit = router.currentRoute.value.query.from === 'edit';
+                if (fromEdit) {
+                        router.push('/chat/contacts');
+                } else {
+                        router.back();
+                }
+        } else {
+                // 没有历史记录时，返回到联系人页面
+                router.push('/chat/contacts');
+        }
+};
+
+// 跳转到编辑页面
+const goToEdit = () => {
+        // 添加query参数标识来源，防止无限循环
+        router.push(`/edit/${actorId.value}?from=profile`);
+};
+
+// 跳转到聊天室
+const goToChat = () => {
+        router.push(`/chatroom/${actorId.value}`);
+};
 </script>
 
 <style scoped>
@@ -109,6 +177,18 @@ const groupNames = computed(() => {
         font-weight: 400;
         text-decoration: none;
         color: var(--accent-primary);
+        background: none;
+        border: none;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 8px;
+}
+
+.header-action-button svg {
+        width: 24px;
+        height: 24px;
 }
 
 .profile-content {
@@ -122,22 +202,16 @@ const groupNames = computed(() => {
         display: flex;
         align-items: center;
         gap: 15px;
+        margin-top: 30px;
         margin-bottom: 30px;
 }
 
 .avatar-wrapper .avatar {
         width: 80px;
         height: 80px;
-        border-radius: 12px;
-        background-color: #555;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        font-weight: bold;
 }
 
 .avatar-wrapper .avatar-initial {
-        color: var(--accent-primary);
         font-size: 40px;
 }
 
@@ -145,16 +219,43 @@ const groupNames = computed(() => {
         flex-grow: 1;
 }
 
+.name-with-gender {
+        display: flex;
+        align-items: center;
+}
+
+.gender-icon {
+        width: 24px;
+        height: 24px;
+        flex-shrink: 0;
+        display: block;
+}
+
+.gender-icon.male {
+        color: #2196F3;
+}
+
+.gender-icon.female {
+        color: #E91E63;
+}
+
 .nickname {
         font-size: 24px;
         font-weight: 600;
-        margin: 0 0 5px 0;
+        margin: 0;
 }
 
 .realname {
         font-size: 14px;
         color: var(--text-secondary);
-        margin: 0;
+        margin: 5px 0 0 0;
+}
+
+.affection {
+        font-size: 14px;
+        color: var(--accent-primary);
+        margin: 5px 0 0 0;
+        font-weight: 500;
 }
 
 .special-care-toggle svg {
@@ -218,6 +319,16 @@ const groupNames = computed(() => {
         display: flex;
         flex-direction: column;
         gap: 15px;
+}
+
+/* 底部按钮样式 */
+.bottom-actions {
+        position: fixed;
+        bottom: calc(var(--safe-bottom) + 20px);
+        left: var(--safe-left);
+        right: var(--safe-right);
+        padding: 0 20px;
+        z-index: 100;
 }
 
 .action-btn {

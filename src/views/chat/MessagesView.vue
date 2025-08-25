@@ -8,14 +8,14 @@
                 </div>
                 <ul v-if="conversations" class="conversation-list">
                         <li v-for="convo in conversations" :key="convo.id" class="conversation-item">
-                                <div class="avatar">
+                                <div class="avatar" @click="goToProfile(convo.id)">
                                         <span class="avatar-initial">{{ convo.actor?.name[0] }}</span>
                                 </div>
-                                <div class="convo-details">
+                                <div class="convo-details" @click="goToChat(convo.id)">
                                         <div class="convo-header">
                                                 <span class="convo-name">{{ convo.actor?.name }}</span>
                                                 <span class="convo-timestamp">{{
-                                                        formatTimestamp(convo.lastEventTimestamp) }}</span>
+                                                        formatTimestamp(convo.lastEventTimestamp, false) }}</span>
                                         </div>
                                         <div class="convo-body">
                                                 <p class="convo-last-message">{{ convo.lastEventContent.content
@@ -32,10 +32,13 @@
 
 <script setup>
 import { computed } from 'vue';
+import { useRouter } from 'vue-router';
 import db from '../../services/database.js';
 import { useObservable } from '@vueuse/rxjs';
 import { liveQuery } from 'dexie';
 import { formatTimestamp } from '../../utils/datetime.js';
+
+const router = useRouter();
 
 const conversations = useObservable(
         liveQuery(async () => {
@@ -47,6 +50,16 @@ const conversations = useObservable(
                 return convos;
         })
 );
+
+// 跳转到profile页面
+const goToProfile = (actorId) => {
+        router.push(`/profile/${actorId}`);
+};
+
+// 跳转到聊天室
+const goToChat = (actorId) => {
+        router.push(`/chatroom/${actorId}`);
+};
 
 
 </script>
@@ -81,9 +94,19 @@ const conversations = useObservable(
     background-color: var(--bg-secondary);
 }
 
+.conversation-item .avatar {
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.conversation-item .avatar:hover {
+    opacity: 0.8;
+}
+
 .convo-details {
     flex-grow: 1;
     overflow: hidden;
+    cursor: pointer;
     
 }
 

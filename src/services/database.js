@@ -19,6 +19,7 @@ db.version(1).stores({
          * aliases: 别名数组
          * isGroup: 是否为群组 (0,1)
          * groupIds: 关联的群组ID数组
+         * contextMemorySettings: 上下文记忆条数设置
          */
         actors: `
         &id,
@@ -27,7 +28,9 @@ db.version(1).stores({
         *aliases,
         isGroup,
         *groupIds,
-        specialCare
+        specialCare,
+        contextMemorySettings,
+        status
         `,
 
         /**
@@ -83,14 +86,16 @@ db.version(1).stores({
          * 表：relationships (动态关系)
          * 存储角色之间的动态关系和认知。
          * ++id: 自增主键
-         * [sourceId+targetId]: 复合主键，确保 A->B 的关系唯一
+         * sourceId: 关系发起者ID
+         * targetId: 关系目标者ID
          * type: 关系类型 (自由文本，如 "朋友", "欢喜冤家")
          * score: 好感度数值
-         * tags: 印象标签数组, 格式: [{ name: "有趣", strength: 5 }]
          */
         relationships: `
         ++id,
-        [sourceId+targetId],
+        sourceId,
+        targetId,
+        type,
         score
         `,
 
