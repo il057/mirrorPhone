@@ -154,60 +154,61 @@ export async function initializeDefaultFonts() {
                 await db.fonts.bulkAdd(defaultFonts.slice(1)); // 添加除默认字体外的字体
                 await db.fonts.put(defaultFonts[0]); // 单独添加ID为1的默认字体
         }
-    }
+}
 
 export async function initializeGlobalSettings() {
-  const settings = await db.globalSettings.get('global');
-  if (!settings) {
-    console.log('Initializing global settings...');
-    await db.globalSettings.put({
-      id: 'global',
-      activeApiProfileId: null,
-      activeTtsProfileId: null,
-      cloudinaryCloudName: '',
-      cloudinaryUploadPreset: '',
-      githubGistId: '',
-      githubToken: '',
-      // 使用统一的壁纸和主题设置
-            wallpaper: 'linear-gradient(to top, #2c3e50, #bdc3c7)', // 默认渐变壁纸
-            themeColor: '#778088', // 默认主题色
-      themeMode: 'auto', // 默认主题模式
-      activeFontId: 1,
-      // 使用统一的、包含类型的预设数组
-        wallpaperPresets: [
-                { type: 'image', name: '天空', info: 'https://w.wallhaven.cc/full/og/wallhaven-og3d99.jpg', theme: '#3986acff', isDefault: false },
-                // 渐变类型
-                { "type": "gradient", "name": "黑白", "info": ["#000000", "#ffffff"], "theme": "#808080", "isDefault": false },
-                { "type": "gradient", "name": "红黑", "info": ["#ff0000", "#000000"], "theme": "#b22222", "isDefault": false },
-                { "type": "gradient", "name": "黄紫", "info": ["#ffff00", "#4b0082"], "theme": "#9400d3", "isDefault": false },
-                { "type": "gradient", "name": "青黑", "info": ["#00ffff", "#000000"], "theme": "#008b8b", "isDefault": false },
-                { "type": "gradient", "name": "橙蓝", "info": ["#ffa500", "#00008b"], "theme": "#ff8c00", "isDefault": false },
-                // 动态渐变类型
-                { "type": "animated", "name": "光与影", "info": ["#ffffff", "#000000", 45], "theme": "#808080", "isDefault": false },
-                { "type": "animated", "name": "赛博", "info": ["#ff00ff", "#00ffff", 60], "theme": "#ff00ff", "isDefault": false },
-                { "type": "animated", "name": "熔岩", "info": ["#ff4500", "#000000", 30], "theme": "#ff4500", "isDefault": false },
-                { "type": "animated", "name": "霓虹", "info": ["#39ff14", "#000000", 45], "theme": "#39ff14", "isDefault": false },
-                { "type": "animated", "name": "闪电", "info": ["#ffd700", "#191970", 60], "theme": "#ffd700", "isDefault": false }
-        ]
-    });
-  } else {
-    // 如果设置已存在，检查并更新动态渐变预设的格式
-    let needsUpdate = false;
-    if (settings.wallpaperPresets) {
-      settings.wallpaperPresets = settings.wallpaperPresets.map(preset => {
-        if (preset.type === 'animated' && Array.isArray(preset.info) && preset.info.length === 2) {
-          // 为没有角度的动态渐变预设添加默认角度
-          needsUpdate = true;
-          return { ...preset, info: [...preset.info, 45] };
+        const settings = await db.globalSettings.get('global');
+        if (!settings) {
+                console.log('Initializing global settings...');
+                await db.globalSettings.put({
+                        id: 'global',
+                        activeApiProfileId: null,
+                        activeTtsProfileId: null,
+                        cloudinaryCloudName: '',
+                        cloudinaryUploadPreset: '',
+                        githubGistId: '',
+                        githubToken: '',
+                        // 使用统一的壁纸和主题设置
+                        wallpaper: 'linear-gradient(to top, #2c3e50, #bdc3c7)', // 默认渐变壁纸
+                        themeColor: '#778088', // 默认主题色
+                        themeMode: 'auto', // 默认主题模式
+                        activeFontId: 1,
+                        appIconSettings: {},
+                        // 使用统一的、包含类型的预设数组
+                        wallpaperPresets: [
+                                { type: 'image', name: '天空', info: 'https://w.wallhaven.cc/full/og/wallhaven-og3d99.jpg', theme: '#3986ac', isDefault: true },
+                                // 渐变类型
+                                { "type": "gradient", "name": "黑白", "info": ["#000000", "#ffffff"], "theme": "#808080", "isDefault": true },
+                                { "type": "gradient", "name": "红黑", "info": ["#ff0000", "#000000"], "theme": "#b22222", "isDefault": true },
+                                { "type": "gradient", "name": "黄紫", "info": ["#ffff00", "#4b0082"], "theme": "#9400d3", "isDefault": true },
+                                { "type": "gradient", "name": "青黑", "info": ["#00ffff", "#000000"], "theme": "#008b8b", "isDefault": true },
+                                { "type": "gradient", "name": "橙蓝", "info": ["#ffa500", "#00008b"], "theme": "#ff8c00", "isDefault": true },
+                                // 动态渐变类型
+                                { "type": "animated", "name": "光与影", "info": ["#ffffff", "#000000", 45], "theme": "#808080", "isDefault": true },
+                                { "type": "animated", "name": "赛博", "info": ["#ff00ff", "#00ffff", 60], "theme": "#ff00ff", "isDefault": true },
+                                { "type": "animated", "name": "熔岩", "info": ["#ff4500", "#000000", 30], "theme": "#ff4500", "isDefault": true },
+                                { "type": "animated", "name": "霓虹", "info": ["#39ff14", "#000000", 45], "theme": "#39ff14", "isDefault": true },
+                                { "type": "animated", "name": "闪电", "info": ["#ffd700", "#191970", 60], "theme": "#ffd700", "isDefault": true }
+                        ]
+                });
+        } else {
+                // 如果设置已存在，检查并更新动态渐变预设的格式
+                let needsUpdate = false;
+                if (settings.wallpaperPresets) {
+                        settings.wallpaperPresets = settings.wallpaperPresets.map(preset => {
+                                if (preset.type === 'animated' && Array.isArray(preset.info) && preset.info.length === 2) {
+                                        // 为没有角度的动态渐变预设添加默认角度
+                                        needsUpdate = true;
+                                        return { ...preset, info: [...preset.info, 45] };
+                                }
+                                return preset;
+                        });
+
+                        if (needsUpdate) {
+                                await db.globalSettings.put(settings);
+                        }
+                }
         }
-        return preset;
-      });
-      
-      if (needsUpdate) {
-        await db.globalSettings.put(settings);
-      }
-    }
-  }
 }
 
 // 3. 导出数据库实例

@@ -1,17 +1,21 @@
 <template>
         <div class="app-icon">
                 <div class="icon-wrapper">
-                        <slot></slot>
+                        <img v-if="iconSrc" :src="iconSrc" class="custom-icon-image" alt="App Icon" />
+                        <slot v-else></slot>
                 </div>
         </div>
         <span class="app-name">{{ name }}</span>
 </template>
-
 <script setup>
 defineProps({
         name: {
                 type: String,
                 required: true,
+        },
+        iconSrc: {
+                type: String,
+                default: ''
         }
         });
 </script>
@@ -41,9 +45,17 @@ defineProps({
         transition: all 0.3s ease;
 }
 
-.icon-wrapper svg {
+/* 默认SVG图标样式 */
+.icon-wrapper :deep(svg) {
         width: 60%;
         height: 60%;
+}
+
+/* 自定义图片样式 */
+.custom-icon-image {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
 }
 
 .app-name {

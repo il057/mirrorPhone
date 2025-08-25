@@ -1,9 +1,4 @@
-<!-- src/components/ui/Toast.vue -->
 <template>
-        <!-- 
-    我们不再使用 <transition> 标签，而是通过手动切换 class 来精确控制 CSS 过渡。
-    v-if="isMounted" 确保元素在动画开始前已存在于DOM中。
-  -->
         <div v-if="isMounted" :class="['toast-notification', `toast-${type}`, { 'toast-visible': isVisible }]">
                 {{ message }}
         </div>

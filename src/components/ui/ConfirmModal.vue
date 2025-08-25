@@ -1,4 +1,3 @@
-<!-- src/components/ui/ConfirmModal.vue -->
 <template>
         <transition name="modal-fade">
                 <div class="modal-overlay" @click.self="cancel">

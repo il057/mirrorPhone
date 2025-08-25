@@ -52,6 +52,12 @@
 
                         <!-- 播放控制 -->
                         <div class="playback-controls">
+                                <a @click="toggleShuffle" :disabled="!canControl" class="control-btn" :class="{ 'active': isShuffleOn }">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                                <path fill-rule="evenodd" d="M0 3.5A.5.5 0 0 1 .5 3H1c2.202 0 3.827 1.24 4.874 2.418.49.552.865 1.102 1.126 1.532.26-.43.636-.98 1.126-1.532C9.173 4.24 10.798 3 13 3v1c-1.798 0-3.173 1.01-4.126 2.082A9.6 9.6 0 0 0 7.556 8a9.6 9.6 0 0 0 1.317 1.918C9.828 10.99 11.204 12 13 12v1c-2.202 0-3.827-1.24-4.874-2.418A10.6 10.6 0 0 1 7 9.05c-.26.43-.636.98-1.126 1.532C4.827 11.76 3.202 13 1 13H.5a.5.5 0 0 1 0-1H1c1.798 0 3.173-1.01 4.126-2.082A9.6 9.6 0 0 0 6.444 8a9.6 9.6 0 0 0-1.317-1.918C4.172 5.01 2.796 4 1 4H.5a.5.5 0 0 1-.5-.5"/>
+                                                <path d="M13 5.466V1.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384l-2.36 1.966a.25.25 0 0 1-.41-.192m0 9v-3.932a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384l-2.36 1.966a.25.25 0 0 1-.41-.192"/>
+                                        </svg>
+                                </a>
                                 <a @click="previousTrack" :disabled="!canControl" class="control-btn">
                                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
                                                 fill="currentColor" class="bi bi-skip-backward-fill"
@@ -74,6 +80,12 @@
                                                 fill="currentColor" class="bi bi-skip-forward-fill" viewBox="0 0 16 16">
                                                 <path
                                                         d="M15.5 3.5a.5.5 0 0 1 .5.5v8a.5.5 0 0 1-1 0V8.753l-6.267 3.636c-.54.313-1.233-.066-1.233-.697v-2.94l-6.267 3.636C.693 12.703 0 12.324 0 11.693V4.308c0-.63.693-1.01 1.233-.696L7.5 7.248v-2.94c0-.63.693-1.01 1.233-.696L15 7.248V4a.5.5 0 0 1 .5-.5" />
+                                        </svg>
+                                </a>
+                                <a @click="toggleRepeat" :disabled="!canControl" class="control-btn" :class="{ 'active': repeatMode !== 'off' }">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                                <path d="M11 5.466V4H5a4 4 0 0 0-3.584 5.777.5.5 0 1 1-.896.446A5 5 0 0 1 5 3h6V1.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384l-2.36 1.966a.25.25 0 0 1-.41-.192Zm3.81.086a.5.5 0 0 1 .67.225A5 5 0 0 1 11 13H5v1.466a.25.25 0 0 1-.41.192l-2.36-1.966a.12.12 0 0 1 0-.384l2.36-1.966a.25.25 0 0 1 .41.192V12h6a4 4 0 0 0 3.585-5.777.5.5 0 0 1 .225-.67Z"/>
+                                                <path v-if="repeatMode === 'track'" d="M7.5 8.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 0 1H8a.5.5 0 0 1-.5-.5Z"/>
                                         </svg>
                                 </a>
                         </div>
@@ -168,6 +180,8 @@ const volume = ref(0.5);
 const deviceStatus = ref('');
 const canControl = ref(false);
 const playlists = ref([]);
+const isShuffleOn = ref(false);
+const repeatMode = ref('off'); // 'off', 'context', 'track'
 
 // 自动刷新定时器
 let refreshInterval = null;
@@ -242,6 +256,44 @@ const seekTo = async (positionMs) => {
         }
 };
 
+const toggleShuffle = async () => {
+        try {
+                const newShuffleState = !isShuffleOn.value;
+                await spotifyService.apiRequest(`/me/player/shuffle?state=${newShuffleState}`, {
+                        method: 'PUT'
+                });
+                isShuffleOn.value = newShuffleState;
+        } catch (error) {
+                emit('error', '切换随机播放失败: ' + error.message);
+        }
+};
+
+const toggleRepeat = async () => {
+        try {
+                let newRepeatState;
+                switch (repeatMode.value) {
+                        case 'off':
+                                newRepeatState = 'context';
+                                break;
+                        case 'context':
+                                newRepeatState = 'track';
+                                break;
+                        case 'track':
+                                newRepeatState = 'off';
+                                break;
+                        default:
+                                newRepeatState = 'off';
+                }
+                
+                await spotifyService.apiRequest(`/me/player/repeat?state=${newRepeatState}`, {
+                        method: 'PUT'
+                });
+                repeatMode.value = newRepeatState;
+        } catch (error) {
+                emit('error', '切换重复播放失败: ' + error.message);
+        }
+};
+
 const setVolume = async (event) => {
         const rect = event.target.getBoundingClientRect();
         const percent = (event.clientX - rect.left) / rect.width;
@@ -288,6 +340,8 @@ const updatePlaybackState = async () => {
                         duration.value = playback.item.duration_ms || 0;
                         canControl.value = true;
                         deviceStatus.value = playback.device?.name || '';
+                        isShuffleOn.value = playback.shuffle_state || false;
+                        repeatMode.value = playback.repeat_state || 'off';
 
                         // 发出事件
                         if (!prevTrack || prevTrack.id !== playback.item.id) {
@@ -529,6 +583,11 @@ watch(() => props.showPlaylistSelector, (newVal) => {
 .control-btn:disabled {
         opacity: 0.5;
         cursor: not-allowed;
+}
+
+.control-btn.active {
+        background: var(--accent-primary);
+        color: white;
 }
 
 

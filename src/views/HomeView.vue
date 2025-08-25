@@ -38,7 +38,7 @@
                                                 @dragover.prevent
                                                 @drop.prevent="currentPage === pageIndex && handleDrop(index)"
                                                 @dragend="currentPage === pageIndex && handleDragEnd"
-                                                @mousedown="currentPage === pageIndex && onMouseDown(item, index)"
+                                                @mousedown="currentPage === pageIndex && onMouseDown(item, index, $event)"
                                                 @mouseup="currentPage === pageIndex && onMouseUp"
                                                 @mousemove="currentPage === pageIndex && onMouseMove"
                                                 @touchstart="currentPage === pageIndex && onTouchStart(item, index, $event)"
@@ -51,7 +51,8 @@
                                                         class="delete-button">×</button>
 
                                                 <!-- 如果是 App，渲染 AppIcon -->
-                                                <AppIcon v-if="item.type === 'app'" :name="item.name">
+                                                <AppIcon v-if="item.type === 'app'" :name="item.name"
+                                                        :icon-src="appIconSettings[item.id]">
                                                         <component :is="item.component" />
                                                 </AppIcon>
 
@@ -121,7 +122,7 @@ import IconWorldbook from '../components/icons/IconWorldbook.vue';
 // Import widget components
 import ClockWidget from '../components/widgets/ClockWidget.vue';
 import PhotoWidget from '../components/widgets/PhotoWidget.vue';
-//import MusicPlayerWidget from '../components/widgets/MusicPlayerWidget.vue';
+import MusicPlayerWidget from '../components/widgets/MusicPlayerWidget.vue';
 import CalendarWidget from '../components/widgets/CalendarWidget.vue';
 
 // --- State Management ---
@@ -131,6 +132,8 @@ const isWidgetDrawerOpen = ref(false); // State for the new widget drawer
 const currentPage = ref(0); // 当前页面索引（从0开始）
 const gridConfig = ref({ cols: 4, rows: 4, itemsPerPage: 16 }); // 动态网格配置
 const router = useRouter();
+const appIconSettings = ref({}); 
+const screenItems = shallowRef([]);
 
 // 滑动相关状态
 const isSwipeInProgress = ref(false);
@@ -155,10 +158,10 @@ const componentMap = {
         'IconWorldbook': IconWorldbook,
         'ClockWidget': ClockWidget,
         'PhotoWidget': PhotoWidget,
+        'MusicPlayerWidget': MusicPlayerWidget,
         'CalendarWidget': CalendarWidget
 };
 
-const screenItems = shallowRef([]);
 
 // 动态计算网格配置
 const calculateGridConfig = () => {
@@ -519,7 +522,12 @@ onMounted(async () => {
         await loadLayout();
         // 加载全局设置以应用个性化设置
         await loadGlobalSettings();
-        
+
+        const settings = await db.globalSettings.get('global');
+        if (settings && settings.appIconSettings) {
+                appIconSettings.value = settings.appIconSettings;
+        }
+
         // 计算网格配置
         calculateGridConfig();
         
@@ -644,6 +652,8 @@ async function loadGlobalSettings() {
   try {
     const settings = await db.globalSettings.get('global');
     if (settings) {
+            // 应用图标设置
+            appIconSettings.value = settings.appIconSettings || {};
       // 应用壁纸
       if (settings.wallpaper) {
         const homeScreen = document.querySelector('.home-screen');
@@ -714,8 +724,24 @@ let isDragging = false;
 let touchStartTime = 0;
 let touchStartPos = { x: 0, y: 0 };
 
-const onMouseDown = (item, index) => {
+const onMouseDown = (item, index, event) => {
         if (isEditMode.value) return;
+        
+        // 检查是否点击的是小部件内的交互元素
+        const target = event.target;
+        const isInteractiveElement = target.tagName === 'BUTTON' || 
+                                    target.closest('button') || 
+                                    target.closest('.progress-bar') ||
+                                    target.closest('.controls') ||
+                                    target.closest('.album-art') ||  // 添加专辑封面检测
+                                    target.hasAttribute('role') ||
+                                    target.closest('[role]');
+        
+        // 如果点击的是交互元素，不启动编辑模式
+        if (isInteractiveElement) {
+                return;
+        }
+        
         isDragging = false;
         pressTimer = setTimeout(() => {
                 if (!isDragging) {
@@ -735,6 +761,21 @@ const onMouseMove = () => {
 
 // 触摸事件处理 - 简化版本
 const onTouchStart = (item, index, event) => {
+        // 检查是否点击的是小部件内的交互元素
+        const target = event.target;
+        const isInteractiveElement = target.tagName === 'BUTTON' || 
+                                    target.closest('button') || 
+                                    target.closest('.progress-bar') ||
+                                    target.closest('.controls') ||
+                                    target.closest('.album-art') ||  // 添加专辑封面检测
+                                    target.hasAttribute('role') ||
+                                    target.closest('[role]');
+        
+        // 如果点击的是交互元素，不启动编辑模式
+        if (isInteractiveElement && !isEditMode.value) {
+                return;
+        }
+        
         const touch = event.touches[0];
         touchStartTime = Date.now();
         touchStartPos = { x: touch.clientX, y: touch.clientY };
@@ -1322,14 +1363,25 @@ const availableWidgets = [
                         <path d="M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h1a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h1V.5a.5.5 0 0 1 .5-.5M1 4v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4z"/>
                 </svg>`
         },
+        {
+                name: '音乐播放器',
+                component: MusicPlayerWidget,
+                gridSpan: { col: 4, row: 2 },
+                previewSvg: `
+                <svg xmlns="http://www.w3.org/2000/svg" fill="#1DB954" class="bi bi-spotify" viewBox="0 0 16 16">
+                        <path d="M8 0a8 8 0 1 0 0 16A8 8 0 0 0 8 0m3.669 11.538a.5.5 0 0 1-.686.165c-1.879-1.147-4.243-1.407-7.028-.77a.499.499 0 0 1-.222-.973c3.048-.696 5.662-.397 7.77.892a.5.5 0 0 1 .166.686m.979-2.178a.624.624 0 0 1-.858.205c-2.15-1.321-5.428-1.704-7.972-.932a.625.625 0 0 1-.362-1.194c2.905-.881 6.517-.454 8.986 1.063a.624.624 0 0 1 .206.858m.084-2.268C10.154 5.56 5.9 5.419 3.438 6.166a.748.748 0 1 1-.434-1.432c2.825-.857 7.523-.692 10.492 1.07a.747.747 0 1 1-.764 1.288"/>
+                </svg>`
+        },
         // 未来可以添加更多小组件
 ];
 
 const addWidgetToScreen = (widgetBlueprint) => {
         const newWidget = {
-                ...widgetBlueprint,
+                component: componentMap[widgetBlueprint.component.name] || widgetBlueprint.component,
                 id: `widget-${widgetBlueprint.name}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                name: widgetBlueprint.name,
                 type: 'widget',
+                gridSpan: widgetBlueprint.gridSpan
         };
 
         // 使用扩展运算符创建新数组，以正确触发 shallowRef 的更新

@@ -11,154 +11,213 @@
 
                 <main class="settings-content content">
                         <section class="settings-card">
-                                <h2 class="card-title">壁纸与主题</h2>
-                                <div id="wallpaper-preview" ref="wallpaperPreviewRef" class="wallpaper-preview"></div>
-
                                 <div class="form-group">
-                                        <label>选择壁纸模式</label>
+                                        <label>选择自定义内容</label>
                                         <div class="segmented-control">
-                                                <label :class="{ active: activeWallpaperMode === 'image' }">
-                                                        <input type="radio" v-model="activeWallpaperMode" value="image"
-                                                                @change="handleModeChange"><span>图片</span>
+                                                <label :class="{ active: activeMainMode === 'wallpaper' }">
+                                                        <input type="radio" v-model="activeMainMode" value="wallpaper">
+                                                        <span>壁纸与主题</span>
                                                 </label>
-                                                <label :class="{ active: activeWallpaperMode === 'gradient' }">
-                                                        <input type="radio" v-model="activeWallpaperMode"
-                                                                value="gradient"
-                                                                @change="handleModeChange"><span>渐变</span>
-                                                </label>
-                                                <label :class="{ active: activeWallpaperMode === 'animated' }">
-                                                        <input type="radio" v-model="activeWallpaperMode"
-                                                                value="animated"
-                                                                @change="handleModeChange"><span>动态</span>
+                                                <label :class="{ active: activeMainMode === 'icon' }">
+                                                        <input type="radio" v-model="activeMainMode" value="icon">
+                                                        <span>图标</span>
                                                 </label>
                                         </div>
                                 </div>
 
-                                <div v-if="activeWallpaperMode === 'image'">
+                                <div id="wallpaper-preview" ref="wallpaperPreviewRef" class="wallpaper-preview">
+                                        <div ref="wallpaperEffectRef" class="wallpaper-effect-container"></div>
 
-                                        <!-- 为图片模式也添加预设功能 -->
+                                        <div class="icon-preview-grid"
+                                                :class="{ 'is-wallpaper-mode': activeMainMode === 'wallpaper' }">
+                                                <div v-for="app in homeScreenApps" :key="app.id"
+                                                        class="preview-app-icon"
+                                                        @click="activeMainMode === 'icon' && selectAppIcon(app)">
+                                                        <div class="icon-image-container">
+                                                                <img v-if="appIconSettings[app.id]"
+                                                                        :src="appIconSettings[app.id]"
+                                                                        class="icon-image" alt="App Icon Preview" />
+                                                                <component v-else :is="app.component" />
+                                                        </div>
+                                                        <span class="icon-name">{{ app.name }}</span>
+                                                </div>
+                                        </div>
+                                </div>
+
+                                <div v-if="activeMainMode === 'wallpaper'">
+
                                         <div class="form-group">
-                                                <label>从图片预设中选择</label>
-                                                <div class="preset-grid" @mousedown="startLongPress('wallpaper')"
-                                                        @mouseup="cancelLongPress" @mouseleave="cancelLongPress"
-                                                        @touchstart="startLongPress('wallpaper')"
-                                                        @touchend="cancelLongPress" @touchmove="cancelLongPress">
-                                                        <div v-for="(p, index) in currentPresets" :key="p.name + index"
-                                                                class="preset-swatch-container">
-                                                                <div class="preset-swatch image-preset"
-                                                                        :class="{ 'active-preset': isActivePreset(p) }"
-                                                                        :style="{ 
+                                                <label>选择壁纸模式</label>
+                                                <div class="segmented-control">
+                                                        <label :class="{ active: activeWallpaperMode === 'image' }">
+                                                                <input type="radio" v-model="activeWallpaperMode"
+                                                                        value="image"
+                                                                        @change="handleModeChange"><span>图片</span>
+                                                        </label>
+                                                        <label :class="{ active: activeWallpaperMode === 'gradient' }">
+                                                                <input type="radio" v-model="activeWallpaperMode"
+                                                                        value="gradient"
+                                                                        @change="handleModeChange"><span>渐变</span>
+                                                        </label>
+                                                        <label :class="{ active: activeWallpaperMode === 'animated' }">
+                                                                <input type="radio" v-model="activeWallpaperMode"
+                                                                        value="animated"
+                                                                        @change="handleModeChange"><span>动态</span>
+                                                        </label>
+                                                </div>
+                                        </div>
+
+                                        <div v-if="activeWallpaperMode === 'image'">
+
+                                                <!-- 为图片模式也添加预设功能 -->
+                                                <div class="form-group">
+                                                        <label>从图片预设中选择</label>
+                                                        <div class="preset-grid"
+                                                                @mousedown="startLongPress('wallpaper')"
+                                                                @mouseup="cancelLongPress" @mouseleave="cancelLongPress"
+                                                                @touchstart="startLongPress('wallpaper')"
+                                                                @touchend="cancelLongPress"
+                                                                @touchmove="cancelLongPress">
+                                                                <div v-for="(p, index) in currentPresets"
+                                                                        :key="p.name + index"
+                                                                        class="preset-swatch-container">
+                                                                        <div class="preset-swatch image-preset"
+                                                                                :class="{ 'active-preset': isActivePreset(p) }"
+                                                                                :style="{ 
                                                                         backgroundImage: `url('${p.info}')`,
                                                                         borderColor: isActivePreset(p) ? p.theme : 'transparent' 
                                                                      }" @click="handlePresetClick(p)"></div>
-                                                                <a v-if="isEditMode" @click="deleteWallpaperPreset(p)"
-                                                                        class="delete-preset-btn">
-                                                                        <svg xmlns="http://www.w3.org/2000/svg"
-                                                                                width="16" height="16"
-                                                                                fill="currentColor" class="bi bi-dash"
-                                                                                viewBox="0 0 16 16">
-                                                                                <path
-                                                                                        d="M4 8a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7A.5.5 0 0 1 4 8" />
-                                                                        </svg>
-                                                                </a>
-                                                        </div>
-                                                        <div class="preset-swatch-container">
-                                                                <div class="preset-swatch custom-btn"
-                                                                        @click="saveCurrentAsPreset">
-                                                                        <svg xmlns="http://www.w3.org/2000/svg"
-                                                                                width="24" height="24"
-                                                                                fill="currentColor" viewBox="0 0 16 16">
-                                                                                <path
-                                                                                        d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2Z" />
-                                                                        </svg>
+                                                                        <a v-if="isEditMode"
+                                                                                @click="deleteWallpaperPreset(p)"
+                                                                                class="delete-preset-btn">
+                                                                                <svg xmlns="http://www.w3.org/2000/svg"
+                                                                                        width="16" height="16"
+                                                                                        fill="currentColor"
+                                                                                        class="bi bi-dash"
+                                                                                        viewBox="0 0 16 16">
+                                                                                        <path
+                                                                                                d="M4 8a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7A.5.5 0 0 1 4 8" />
+                                                                                </svg>
+                                                                        </a>
+                                                                </div>
+                                                                <div class="preset-swatch-container">
+                                                                        <div class="preset-swatch custom-btn"
+                                                                                @click="saveCurrentAsPreset">
+                                                                                <svg xmlns="http://www.w3.org/2000/svg"
+                                                                                        width="24" height="24"
+                                                                                        fill="currentColor"
+                                                                                        viewBox="0 0 16 16">
+                                                                                        <path
+                                                                                                d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2Z" />
+                                                                                </svg>
+                                                                        </div>
                                                                 </div>
                                                         </div>
                                                 </div>
-                                        </div>
-                                        <div class="form-group">
-                                                <label>图片 URL</label>
-                                                <div class="input-with-button">
-                                                        <input type="url" v-model="editablePreset.info"
-                                                                @input="handleSettingsChange"
-                                                                placeholder="https://example.com/image.png">
-                                                        <button @click="openAlbumPicker" class="save-button">相册</button>
+                                                <div class="form-group">
+                                                        <label>图片 URL</label>
+                                                        <div class="input-with-button">
+                                                                <input type="url" v-model="editablePreset.info"
+                                                                        @input="handleSettingsChange"
+                                                                        placeholder="https://example.com/image.png">
+                                                                <button @click="openAlbumPicker"
+                                                                        class="save-button">相册</button>
+                                                        </div>
+                                                </div>
+                                                <div class="form-group">
+                                                        <label>主题色</label>
+                                                        <input type="color" class="color-picker full-width"
+                                                                v-model="editablePreset.theme"
+                                                                @input="handleSettingsChange">
                                                 </div>
                                         </div>
-                                        <div class="form-group">
-                                                <label>主题色</label>
-                                                <input type="color" class="color-picker full-width"
-                                                        v-model="editablePreset.theme" @input="handleSettingsChange">
-                                        </div>
-                                </div>
 
-                                <div v-else>
-                                        <div class="form-group">
-                                                <label>从预设中选择</label>
-                                                <div class="preset-grid" @mousedown="startLongPress('wallpaper')"
-                                                        @mouseup="cancelLongPress" @mouseleave="cancelLongPress"
-                                                        @touchstart="startLongPress('wallpaper')"
-                                                        @touchend="cancelLongPress" @touchmove="cancelLongPress">
-                                                        <div v-for="(p, index) in currentPresets" :key="p.name + index"
-                                                                class="preset-swatch-container">
-                                                                <div class="preset-swatch"
-                                                                        :class="{ 'active-preset': isActivePreset(p) }"
-                                                                        :style="{ 
+                                        <div v-else>
+                                                <div class="form-group">
+                                                        <label>从预设中选择</label>
+                                                        <div class="preset-grid"
+                                                                @mousedown="startLongPress('wallpaper')"
+                                                                @mouseup="cancelLongPress" @mouseleave="cancelLongPress"
+                                                                @touchstart="startLongPress('wallpaper')"
+                                                                @touchend="cancelLongPress"
+                                                                @touchmove="cancelLongPress">
+                                                                <div v-for="(p, index) in currentPresets"
+                                                                        :key="p.name + index"
+                                                                        class="preset-swatch-container">
+                                                                        <div class="preset-swatch"
+                                                                                :class="{ 'active-preset': isActivePreset(p) }"
+                                                                                :style="{ 
                                                                         background: getPresetBackground(p),
                                                                         borderColor: isActivePreset(p) ? p.theme : 'transparent' 
                                                                      }" @click="handlePresetClick(p)"></div>
-                                                                <a v-if="isEditMode" @click="deleteWallpaperPreset(p)"
-                                                                        class="delete-preset-btn">
-                                                                        <svg xmlns="http://www.w3.org/2000/svg"
-                                                                                width="16" height="16"
-                                                                                fill="currentColor" class="bi bi-dash"
-                                                                                viewBox="0 0 16 16">
-                                                                                <path
-                                                                                        d="M4 8a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7A.5.5 0 0 1 4 8" />
-                                                                        </svg>
-                                                                </a>
-                                                        </div>
-                                                        <div class="preset-swatch-container">
-                                                                <div class="preset-swatch custom-btn"
-                                                                        @click="showCustomPresetEditor">
-                                                                        <svg xmlns="http://www.w3.org/2000/svg"
-                                                                                width="24" height="24"
-                                                                                fill="currentColor" viewBox="0 0 16 16">
-                                                                                <path
-                                                                                        d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2Z" />
-                                                                        </svg>
+                                                                        <a v-if="isEditMode"
+                                                                                @click="deleteWallpaperPreset(p)"
+                                                                                class="delete-preset-btn">
+                                                                                <svg xmlns="http://www.w3.org/2000/svg"
+                                                                                        width="16" height="16"
+                                                                                        fill="currentColor"
+                                                                                        class="bi bi-dash"
+                                                                                        viewBox="0 0 16 16">
+                                                                                        <path
+                                                                                                d="M4 8a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7A.5.5 0 0 1 4 8" />
+                                                                                </svg>
+                                                                        </a>
+                                                                </div>
+                                                                <div class="preset-swatch-container">
+                                                                        <div class="preset-swatch custom-btn"
+                                                                                @click="showCustomPresetEditor">
+                                                                                <svg xmlns="http://www.w3.org/2000/svg"
+                                                                                        width="24" height="24"
+                                                                                        fill="currentColor"
+                                                                                        viewBox="0 0 16 16">
+                                                                                        <path
+                                                                                                d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2Z" />
+                                                                                </svg>
+                                                                        </div>
                                                                 </div>
                                                         </div>
                                                 </div>
-                                        </div>
-                                        <button v-if="isEditMode" @click="restoreDefaultPresets"
-                                                class="manage-button full-width">恢复默认预设</button>
+                                                <button v-if="isEditMode" @click="restoreDefaultPresets"
+                                                        class="manage-button full-width">恢复默认预设</button>
 
-                                        <div v-if="expandedAccordion === 'wallpaperEditor'" class="accordion-content">
-                                                <div class="color-editor">
-                                                        <div class="form-group color-group">
-                                                                <label>{{ activeWallpaperMode === 'gradient' ? '渐变1' :
-                                                                        '左下' }}</label>
-                                                                <input type="color" class="color-picker"
-                                                                        v-model="editablePreset.info[0]"
-                                                                        @input="handleSettingsChange">
+                                                <div v-if="expandedAccordion === 'wallpaperEditor'"
+                                                        class="accordion-content">
+                                                        <div class="color-editor">
+                                                                <div class="form-group color-group">
+                                                                        <label>{{ activeWallpaperMode === 'gradient' ?
+                                                                                '渐变1' :
+                                                                                '左下' }}</label>
+                                                                        <input type="color" class="color-picker"
+                                                                                v-model="editablePreset.info[0]"
+                                                                                @input="handleSettingsChange">
+                                                                </div>
+                                                                <div class="form-group color-group">
+                                                                        <label>{{ activeWallpaperMode === 'gradient' ?
+                                                                                '渐变2' :
+                                                                                '右上' }}</label>
+                                                                        <input type="color" class="color-picker"
+                                                                                v-model="editablePreset.info[1]"
+                                                                                @input="handleSettingsChange">
+                                                                </div>
+                                                                <div class="form-group color-group">
+                                                                        <label>主题色</label>
+                                                                        <input type="color" class="color-picker"
+                                                                                v-model="editablePreset.theme"
+                                                                                @input="handleSettingsChange">
+                                                                </div>
                                                         </div>
-                                                        <div class="form-group color-group">
-                                                                <label>{{ activeWallpaperMode === 'gradient' ? '渐变2' :
-                                                                        '右上' }}</label>
-                                                                <input type="color" class="color-picker"
-                                                                        v-model="editablePreset.info[1]"
-                                                                        @input="handleSettingsChange">
-                                                        </div>
-                                                        <div class="form-group color-group">
-                                                                <label>主题色</label>
-                                                                <input type="color" class="color-picker"
-                                                                        v-model="editablePreset.theme"
-                                                                        @input="handleSettingsChange">
-                                                        </div>
+                                                        <button v-if="isAddingNewPreset" @click="saveCustomPreset"
+                                                                class="manage-button primary full-width">另存为新预设</button>
                                                 </div>
-                                                <button v-if="isAddingNewPreset" @click="saveCustomPreset"
-                                                        class="manage-button primary full-width">另存为新预设</button>
                                         </div>
+                                </div>
+                                <div v-if="activeMainMode === 'icon'">
+                                        <div class="form-group">
+                                                <label>自定义App图标</label>
+                                                <p class="description">点击上方预览区域中的图标即可为其更换新图片。推荐使用正方形的图片。</p>
+                                        </div>
+                                        <button @click="restoreDefaultIcons"
+                                                class="manage-button full-width">恢复默认图标</button>
                                 </div>
                         </section>
 
@@ -231,14 +290,38 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, onUnmounted, nextTick, watchEffect, createApp } from 'vue';
+import { ref, shallowRef, reactive, computed, onMounted, onUnmounted, nextTick } from 'vue';
 import db from '../services/database.js';
-import { showToast, showConfirm, promptForInput, showAlbumPickerModal } from '../services/uiService.js';
+import { showToast, showConfirm, promptForInput, showAlbumPickerModal, showUploadChoiceModal } from '../services/uiService.js';
 import AppHeader from '../components/layout/Header.vue';
 import { getContrastTextColor, generateColorScheme } from '../utils/colorUtils.js';
 
+import AppIcon from '../components/AppIcon.vue';
+import IconChat from '../components/icons/IconChat.vue';
+import IconSettings from '../components/icons/IconSettings.vue';
+import IconPersonalization from '../components/icons/IconPersonalization.vue';
+import IconAlbum from '../components/icons/IconAlbum.vue';
+import IconMusic from '../components/icons/IconMusic.vue';
+import IconWorldbook from '../components/icons/IconWorldbook.vue';
+import { uploadToCloudinary } from '../services/cloudinaryService.js';
+
+
 // --- State Management ---
 const wallpaperPreviewRef = ref(null);
+const wallpaperEffectRef = ref(null);
+
+const activeMainMode = ref('wallpaper'); // 'wallpaper' or 'icon'
+
+// 图标设置状态
+const appIconSettings = ref({});
+const homeScreenApps = shallowRef([
+        { id: 'chat', component: IconChat, name: '见我' },
+        { id: 'settings', component: IconSettings, name: '设置' },
+        { id: 'personalization', component: IconPersonalization, name: '个性化' },
+        { id: 'album', component: IconAlbum, name: '相册' },
+        { id: 'music', component: IconMusic, name: '音乐' },
+        { id: 'worldbook', component: IconWorldbook, name: '世界书' }
+]);
 
 const activeWallpaperMode = ref('gradient');
 const wallpaperPresets = ref([]);
@@ -291,12 +374,15 @@ onUnmounted(() => {
 async function loadSettings() {
         const settings = await db.globalSettings.get('global') || {};
 
+        // 加载已保存的图标设置
+        appIconSettings.value = settings.appIconSettings || {};
+
         // 加载壁纸和主题
         wallpaperPresets.value = settings.wallpaperPresets || [];
         
         const savedWallpaper = settings.wallpaper || modeConfigs.gradient.wallpaper;
         const savedTheme = settings.themeColor || modeConfigs.gradient.theme;
-
+        
         // 设置当前壁纸模式
         if (savedWallpaper.startsWith('url(')) {
                 activeWallpaperMode.value = 'image';
@@ -342,6 +428,8 @@ async function saveAllSettings() {
                         themeMode: themeMode.value,
                         wallpaperPresets: JSON.parse(JSON.stringify(wallpaperPresets.value)),
                         activeFontId: activeFontId.value,
+                        appIconSettings: JSON.parse(JSON.stringify(appIconSettings.value)), // 保存图标设置
+
                 };
                 await db.globalSettings.put(settingsToSave);
 
@@ -356,6 +444,38 @@ async function saveAllSettings() {
                 showToast(`保存失败: ${error.message}`, 'error');
         }
 }
+
+async function selectAppIcon(app) {
+        const choice = await showUploadChoiceModal();
+        if (!choice) return;
+
+        try {
+                let imageUrl;
+                if (choice.type === 'local') {
+                        showToast('正在上传...', 'info');
+                        imageUrl = await uploadToCloudinary(choice.value);
+                } else {
+                        imageUrl = choice.value;
+                }
+
+                if (imageUrl) {
+                        appIconSettings.value[app.id] = imageUrl;
+                        showToast(`“${app.name}”的图标已更新`, 'info');
+                }
+        } catch (error) {
+                console.error('更换图标失败:', error);
+                showToast(`更换失败: ${error.message}`, 'error');
+        }
+}
+
+async function restoreDefaultIcons() {
+        const confirmed = await showConfirm('恢复默认图标', '确定要移除所有自定义图标吗？此操作会立即生效，但需要点击右上角的“保存”按钮来永久保存更改。');
+        if (confirmed) {
+                appIconSettings.value = {};
+                showToast('已恢复默认图标，请点击保存。', 'info');
+        }
+}
+
 
 // 添加查找和设置当前活动预设的函数
 function findAndSetActivePreset() {
@@ -576,8 +696,8 @@ function updateEditablePreset() {
 
 // 修改壁纸预览函数，简化实现
 function updateWallpaperPreview(style) {
-  const previewEl = wallpaperPreviewRef.value;
-  if (!previewEl || typeof style !== 'string') return;
+        const previewEl = wallpaperEffectRef.value;
+        if (!previewEl || typeof style !== 'string') return;
   
   // 清理预览元素样式
   previewEl.innerHTML = '';
@@ -759,19 +879,19 @@ async function deleteWallpaperPreset(presetToDelete) {
 
 function restoreDefaultPresets() {
         const defaultPresets = [
-                { type: 'image', name: '天空', info: 'https://w.wallhaven.cc/full/og/wallhaven-og3d99.jpg', theme: '#3986acff', isDefault: false },
+                { type: 'image', name: '天空', info: 'https://w.wallhaven.cc/full/og/wallhaven-og3d99.jpg', theme: '#3986ac', isDefault: true },
                 // 渐变类型
-                { "type": "gradient", "name": "黑白", "info": ["#000000", "#ffffff"], "theme": "#808080", "isDefault": false },
-                { "type": "gradient", "name": "红黑", "info": ["#ff0000", "#000000"], "theme": "#b22222", "isDefault": false },
-                { "type": "gradient", "name": "黄紫", "info": ["#ffff00", "#4b0082"], "theme": "#9400d3", "isDefault": false },
-                { "type": "gradient", "name": "青黑", "info": ["#00ffff", "#000000"], "theme": "#008b8b", "isDefault": false },
-                { "type": "gradient", "name": "橙蓝", "info": ["#ffa500", "#00008b"], "theme": "#ff8c00", "isDefault": false },
+                { "type": "gradient", "name": "黑白", "info": ["#000000", "#ffffff"], "theme": "#808080", "isDefault": true },
+                { "type": "gradient", "name": "红黑", "info": ["#ff0000", "#000000"], "theme": "#b22222", "isDefault": true },
+                { "type": "gradient", "name": "黄紫", "info": ["#ffff00", "#4b0082"], "theme": "#9400d3", "isDefault": true },
+                { "type": "gradient", "name": "青黑", "info": ["#00ffff", "#000000"], "theme": "#008b8b", "isDefault": true },
+                { "type": "gradient", "name": "橙蓝", "info": ["#ffa500", "#00008b"], "theme": "#ff8c00", "isDefault": true },
                 // 动态渐变类型
-                { "type": "animated", "name": "光与影", "info": ["#ffffff", "#000000", 45], "theme": "#808080", "isDefault": false },
-                { "type": "animated", "name": "赛博", "info": ["#ff00ff", "#00ffff", 60], "theme": "#ff00ff", "isDefault": false },
-                { "type": "animated", "name": "熔岩", "info": ["#ff4500", "#000000", 30], "theme": "#ff4500", "isDefault": false },
-                { "type": "animated", "name": "霓虹", "info": ["#39ff14", "#000000", 45], "theme": "#39ff14", "isDefault": false },
-                { "type": "animated", "name": "闪电", "info": ["#ffd700", "#191970", 60], "theme": "#ffd700", "isDefault": false }
+                { "type": "animated", "name": "光与影", "info": ["#ffffff", "#000000", 45], "theme": "#808080", "isDefault": true },
+                { "type": "animated", "name": "赛博", "info": ["#ff00ff", "#00ffff", 60], "theme": "#ff00ff", "isDefault": true },
+                { "type": "animated", "name": "熔岩", "info": ["#ff4500", "#000000", 30], "theme": "#ff4500", "isDefault": true },
+                { "type": "animated", "name": "霓虹", "info": ["#39ff14", "#000000", 45], "theme": "#39ff14", "isDefault": true },
+                { "type": "animated", "name": "闪电", "info": ["#ffd700", "#191970", 60], "theme": "#ffd700", "isDefault": true }
        ];
 
         // 过滤掉所有非默认预设
@@ -783,7 +903,7 @@ function restoreDefaultPresets() {
                 if (!wallpaperPresets.value.some(p => p.name === dp.name && p.type === dp.type)) {
                         wallpaperPresets.value.push(dp);
                 }
-        });d
+        });
 
         // 重新添加用户的非默认预设
         wallpaperPresets.value.push(...userPresets);
@@ -883,12 +1003,16 @@ function showCustomPresetEditor() {
 
 .wallpaper-preview {
         width: 100%;
-        height: 150px;
+        height: 200px;
         border-radius: 8px;
         margin-bottom: 20px;
         background-size: cover;
         background-position: center;
         border: 1px solid var(--border-color);
+        position: relative;
+        display: flex;
+        justify-content: center;
+        align-items: center;
 }
 
 .form-group {
@@ -1182,5 +1306,97 @@ function showCustomPresetEditor() {
         font-size: 12px;
         color: var(--text-secondary);
         text-align: center;
+}
+
+.wallpaper-effect-container {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 1;
+        /* 确保在图标下方 */
+}
+
+.icon-preview-grid {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 12px;
+        /* 稍微减小间距以适应预览框 */
+        padding: 15px;
+        /* 增加内边距 */
+        box-sizing: border-box;
+        align-content: start;
+        transition: opacity 0.3s ease;
+        /* 添加过渡效果 */
+        z-index: 2;
+        overflow: hidden;
+}
+
+/* 当处于壁纸编辑模式时，让图标半透明 */
+.icon-preview-grid.is-wallpaper-mode {
+        opacity: 0;
+        pointer-events: none;
+        /* 防止在壁纸模式下点击图标 */
+}
+.preview-app-icon {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 6px;
+        /* 减小间距 */
+        cursor: pointer;
+        padding: 4px;
+        border-radius: 8px;
+        transition: background-color 0.2s ease;
+}
+
+.preview-app-icon:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* 稍微缩小图标和字体以适应预览框 */
+.icon-image-container {
+        width: 50px;
+        height: 50px;
+        background: var(--app-bg);
+        border: 1px solid var(--app-border);
+        border-radius: 10px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        color: white;
+        overflow: hidden;
+        backdrop-filter: blur(15px);
+        -webkit-backdrop-filter: blur(15px);
+}
+
+.icon-image-container .icon-image {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+}
+
+.icon-image-container svg {
+        width: 55%;
+        height: 55%;
+}
+
+.icon-name {
+        font-size: 10px;
+        color: #fff;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+        /* 给文字添加阴影以提高可读性 */
+}
+
+.description {
+        font-size: 14px;
+        color: var(--text-secondary);
+        line-height: 1.6;
 }
 </style>

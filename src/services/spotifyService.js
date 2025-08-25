@@ -1,353 +1,451 @@
 import { SPOTIFY_CONFIG, SPOTIFY_AUTH_URL, SPOTIFY_API_BASE } from '../config/spotify.js';
 import spotifyWebPlayer from './spotifyWebPlayer.js';
 
-// PKCE 辅助函数
+// PKCE 辅助函数 - iOS兼容版本
 function generateCodeVerifier() {
-  const array = new Uint8Array(32);
-  crypto.getRandomValues(array);
-  return btoa(String.fromCharCode.apply(null, array))
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=/g, '');
+        const array = new Uint8Array(32);
+        if (window.crypto && window.crypto.getRandomValues) {
+                window.crypto.getRandomValues(array);
+        } else {
+                // 降级方案
+                for (let i = 0; i < array.length; i++) {
+                        array[i] = Math.floor(Math.random() * 256);
+                }
+        }
+        return btoa(String.fromCharCode.apply(null, array))
+                .replace(/\+/g, '-')
+                .replace(/\//g, '_')
+                .replace(/=/g, '');
 }
 
 async function generateCodeChallenge(verifier) {
-  const data = new TextEncoder().encode(verifier);
-  const digest = await crypto.subtle.digest('SHA-256', data);
-  return btoa(String.fromCharCode.apply(null, new Uint8Array(digest)))
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=/g, '');
+        try {
+                // 检查是否支持crypto.subtle
+                if (window.crypto && window.crypto.subtle && window.crypto.subtle.digest) {
+                        const data = new TextEncoder().encode(verifier);
+                        const digest = await window.crypto.subtle.digest('SHA-256', data);
+                        return btoa(String.fromCharCode.apply(null, new Uint8Array(digest)))
+                                .replace(/\+/g, '-')
+                                .replace(/\//g, '_')
+                                .replace(/=/g, '');
+                } else {
+                        // iOS Safari降级方案 - 使用简单的hash
+                        return verifier; // 在不支持crypto.subtle的情况下，直接使用verifier
+                }
+        } catch (error) {
+                console.warn('crypto.subtle不可用，使用降级方案:', error);
+                return verifier;
+        }
 }
 
 class SpotifyService {
-  constructor() {
-    this.accessToken = localStorage.getItem('spotify_access_token');
-    this.refreshToken = localStorage.getItem('spotify_refresh_token');
-    this.tokenExpiry = localStorage.getItem('spotify_token_expiry');
-    this.codeVerifier = localStorage.getItem('spotify_code_verifier');
-    this.webPlayerReady = false;
-  }
+        constructor() {
+                this.accessToken = localStorage.getItem('spotify_access_token');
+                this.refreshToken = localStorage.getItem('spotify_refresh_token');
+                this.tokenExpiry = localStorage.getItem('spotify_token_expiry');
+                this.codeVerifier = localStorage.getItem('spotify_code_verifier');
+                this.webPlayerReady = false;
+        }
 
-  // 初始化Web播放器
-  async initializeWebPlayer() {
-    if (!this.accessToken || this.webPlayerReady) {
-      return;
-    }
+        // 初始化Web播放器
+        async initializeWebPlayer() {
+                if (!this.accessToken || this.webPlayerReady) {
+                        return;
+                }
 
-    try {
-      const deviceId = await spotifyWebPlayer.initialize(this.accessToken);
-      console.log('Web播放器初始化成功，设备ID:', deviceId);
-      
-      // 激活设备
-      await spotifyWebPlayer.activateDevice(this.accessToken);
-      this.webPlayerReady = true;
-      
-      return deviceId;
-    } catch (error) {
-      console.error('Web播放器初始化失败:', error);
-      throw error;
-    }
-  }
+                try {
+                        const deviceId = await spotifyWebPlayer.initialize(this.accessToken);
+                        console.log('Web播放器初始化成功，设备ID:', deviceId);
 
-  // 获取Web播放器实例
-  getWebPlayer() {
-    return spotifyWebPlayer;
-  }
+                        // 激活设备
+                        await spotifyWebPlayer.activateDevice(this.accessToken);
+                        this.webPlayerReady = true;
 
-  // 生成登录 URL
-  async getAuthUrl() {
-    if (!SPOTIFY_CONFIG.CLIENT_ID) {
-      throw new Error('Spotify Client ID 未配置');
-    }
+                        return deviceId;
+                } catch (error) {
+                        console.error('Web播放器初始化失败:', error);
+                        throw error;
+                }
+        }
 
-    // 生成 PKCE 参数
-    this.codeVerifier = generateCodeVerifier();
-    const codeChallenge = await generateCodeChallenge(this.codeVerifier);
-    
-    // 保存 code_verifier 供回调时使用
-    localStorage.setItem('spotify_code_verifier', this.codeVerifier);
+        // 获取Web播放器实例
+        getWebPlayer() {
+                return spotifyWebPlayer;
+        }
 
-    const params = new URLSearchParams({
-      client_id: SPOTIFY_CONFIG.CLIENT_ID,
-      response_type: 'code',
-      redirect_uri: SPOTIFY_CONFIG.REDIRECT_URI,
-      scope: SPOTIFY_CONFIG.SCOPES,
-      code_challenge_method: 'S256',
-      code_challenge: codeChallenge,
-      show_dialog: 'true'
-    });
+        // 生成登录 URL
+        async getAuthUrl() {
+                if (!SPOTIFY_CONFIG.CLIENT_ID) {
+                        throw new Error('Spotify Client ID 未配置');
+                }
 
-    return `${SPOTIFY_AUTH_URL}?${params.toString()}`;
-  }
+                // 生成 PKCE 参数
+                this.codeVerifier = generateCodeVerifier();
+                const codeChallenge = await generateCodeChallenge(this.codeVerifier);
 
-  // 处理授权回调
-  async handleAuthCallback(code) {
-    try {
-      // 获取保存的 code_verifier
-      const savedCodeVerifier = localStorage.getItem('spotify_code_verifier');
-      if (!savedCodeVerifier) {
-        throw new Error('缺少 code_verifier');
-      }
+                // 保存 code_verifier 供回调时使用
+                localStorage.setItem('spotify_code_verifier', this.codeVerifier);
 
-      const response = await fetch('https://accounts.spotify.com/api/token', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: new URLSearchParams({
-          grant_type: 'authorization_code',
-          code: code,
-          redirect_uri: SPOTIFY_CONFIG.REDIRECT_URI,
-          client_id: SPOTIFY_CONFIG.CLIENT_ID,
-          code_verifier: savedCodeVerifier,
-        }),
-      });
+                const params = new URLSearchParams({
+                        client_id: SPOTIFY_CONFIG.CLIENT_ID,
+                        response_type: 'code',
+                        redirect_uri: SPOTIFY_CONFIG.REDIRECT_URI,
+                        scope: SPOTIFY_CONFIG.SCOPES,
+                        code_challenge_method: 'S256',
+                        code_challenge: codeChallenge,
+                        show_dialog: 'true'
+                });
 
-      if (!response.ok) {
-        const errorData = await response.text();
-        console.error('Token request failed:', errorData);
-        throw new Error(`获取访问令牌失败: ${response.status}`);
-      }
+                return `${SPOTIFY_AUTH_URL}?${params.toString()}`;
+        }
 
-      const data = await response.json();
-      this.saveTokens(data);
-      
-      // 清除 code_verifier
-      localStorage.removeItem('spotify_code_verifier');
-      
-      return data;
-    } catch (error) {
-      console.error('授权回调处理失败:', error);
-      throw error;
-    }
-  }
+        // 处理授权回调
+        async handleAuthCallback(code) {
+                try {
+                        // 获取保存的 code_verifier
+                        const savedCodeVerifier = localStorage.getItem('spotify_code_verifier');
+                        if (!savedCodeVerifier) {
+                                throw new Error('缺少 code_verifier');
+                        }
 
-  // 保存令牌
-  saveTokens(tokenData) {
-    this.accessToken = tokenData.access_token;
-    this.refreshToken = tokenData.refresh_token;
-    this.tokenExpiry = Date.now() + (tokenData.expires_in * 1000);
+                        const response = await fetch('https://accounts.spotify.com/api/token', {
+                                method: 'POST',
+                                headers: {
+                                        'Content-Type': 'application/x-www-form-urlencoded',
+                                },
+                                body: new URLSearchParams({
+                                        grant_type: 'authorization_code',
+                                        code: code,
+                                        redirect_uri: SPOTIFY_CONFIG.REDIRECT_URI,
+                                        client_id: SPOTIFY_CONFIG.CLIENT_ID,
+                                        code_verifier: savedCodeVerifier,
+                                }),
+                        });
 
-    localStorage.setItem('spotify_access_token', this.accessToken);
-    localStorage.setItem('spotify_refresh_token', this.refreshToken);
-    localStorage.setItem('spotify_token_expiry', this.tokenExpiry);
-  }
+                        if (!response.ok) {
+                                const errorData = await response.text();
+                                console.error('Token request failed:', errorData);
+                                throw new Error(`获取访问令牌失败: ${response.status}`);
+                        }
 
-  // 检查是否已登录
-  isLoggedIn() {
-    return this.accessToken && this.tokenExpiry && Date.now() < this.tokenExpiry;
-  }
+                        const data = await response.json();
+                        this.saveTokens(data);
 
-  // 退出登录
-  logout() {
-    this.accessToken = null;
-    this.refreshToken = null;
-    this.tokenExpiry = null;
-    this.codeVerifier = null;
+                        // 清除 code_verifier
+                        localStorage.removeItem('spotify_code_verifier');
 
-    localStorage.removeItem('spotify_access_token');
-    localStorage.removeItem('spotify_refresh_token');
-    localStorage.removeItem('spotify_token_expiry');
-    localStorage.removeItem('spotify_code_verifier');
-  }
+                        return data;
+                } catch (error) {
+                        console.error('授权回调处理失败:', error);
+                        throw error;
+                }
+        }
 
-  // 发起API请求
-  async apiRequest(endpoint, options = {}) {
-    if (!this.isLoggedIn()) {
-      throw new Error('未登录 Spotify');
-    }
+        // 保存令牌
+        saveTokens(tokenData) {
+                this.accessToken = tokenData.access_token;
+                this.refreshToken = tokenData.refresh_token;
+                this.tokenExpiry = Date.now() + (tokenData.expires_in * 1000);
 
-    const url = `${SPOTIFY_API_BASE}${endpoint}`;
-    const response = await fetch(url, {
-      ...options,
-      headers: {
-        'Authorization': `Bearer ${this.accessToken}`,
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
-    });
+                localStorage.setItem('spotify_access_token', this.accessToken);
+                localStorage.setItem('spotify_refresh_token', this.refreshToken);
+                localStorage.setItem('spotify_token_expiry', this.tokenExpiry);
+        }
 
-    if (!response.ok) {
-      if (response.status === 401) {
-        // 令牌过期，尝试刷新
-        await this.refreshAccessToken();
-        // 重试请求
-        return this.apiRequest(endpoint, options);
-      }
-      throw new Error(`API 请求失败: ${response.status}`);
-    }
+        // 检查是否已登录
+        isLoggedIn() {
+                return this.accessToken && this.tokenExpiry && Date.now() < this.tokenExpiry;
+        }
 
-    // 检查响应内容类型和长度
-    const contentType = response.headers.get('content-type');
-    const contentLength = response.headers.get('content-length');
-    
-    // 如果是PUT/POST请求且没有内容，返回空对象
-    if ((options.method === 'PUT' || options.method === 'POST') && 
-        (contentLength === '0' || !contentType?.includes('application/json'))) {
-      return {};
-    }
+        // 退出登录
+        logout() {
+                this.accessToken = null;
+                this.refreshToken = null;
+                this.tokenExpiry = null;
+                this.codeVerifier = null;
 
-    // 检查是否有JSON内容
-    if (!contentType?.includes('application/json')) {
-      const text = await response.text();
-      if (!text.trim()) {
-        return {};
-      }
-      throw new Error('响应不是JSON格式');
-    }
+                localStorage.removeItem('spotify_access_token');
+                localStorage.removeItem('spotify_refresh_token');
+                localStorage.removeItem('spotify_token_expiry');
+                localStorage.removeItem('spotify_code_verifier');
+        }
 
-    try {
-      const text = await response.text();
-      if (!text.trim()) {
-        return {};
-      }
-      return JSON.parse(text);
-    } catch (error) {
-      console.error('JSON解析失败:', error);
-      throw new Error('响应数据格式错误');
-    }
-  }
+        // 发起API请求
+        async apiRequest(endpoint, options = {}) {
+                if (!this.isLoggedIn()) {
+                        throw new Error('未登录 Spotify');
+                }
 
-  // 刷新访问令牌
-  async refreshAccessToken() {
-    if (!this.refreshToken) {
-      throw new Error('没有刷新令牌');
-    }
+                const url = `${SPOTIFY_API_BASE}${endpoint}`;
+                const response = await fetch(url, {
+                        ...options,
+                        headers: {
+                                'Authorization': `Bearer ${this.accessToken}`,
+                                'Content-Type': 'application/json',
+                                ...options.headers,
+                        },
+                });
 
-    try {
-      const response = await fetch('https://accounts.spotify.com/api/token', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: new URLSearchParams({
-          grant_type: 'refresh_token',
-          refresh_token: this.refreshToken,
-          client_id: SPOTIFY_CONFIG.CLIENT_ID,
-        }),
-      });
+                if (!response.ok) {
+                        if (response.status === 401) {
+                                // 令牌过期，尝试刷新
+                                await this.refreshAccessToken();
+                                // 重试请求
+                                return this.apiRequest(endpoint, options);
+                        }
 
-      if (!response.ok) {
-        throw new Error('刷新令牌失败');
-      }
+                        // 提供更具体的错误信息
+                        let errorMessage = `API 请求失败: ${response.status}`;
+                        try {
+                                const errorData = await response.json();
+                                if (errorData.error && errorData.error.message) {
+                                        errorMessage += ` - ${errorData.error.message}`;
+                                }
+                        } catch (e) {
+                                // 如果无法解析错误响应，使用默认错误信息
+                        }
 
-      const data = await response.json();
-      this.saveTokens({
-        ...data,
-        refresh_token: this.refreshToken // 保持原有的刷新令牌
-      });
-    } catch (error) {
-      console.error('刷新令牌失败:', error);
-      this.logout();
-      throw error;
-    }
-  }
+                        // 针对特定错误码提供更友好的错误信息
+                        if (response.status === 404) {
+                                errorMessage = '没有找到活跃的播放设备';
+                        } else if (response.status === 403) {
+                                errorMessage = '播放操作被禁止，请检查Spotify Premium订阅状态';
+                        }
 
-  // 获取用户信息
-  async getCurrentUser() {
-    return this.apiRequest('/me');
-  }
+                        throw new Error(errorMessage);
+                }
 
-  // 获取用户的播放列表
-  async getUserPlaylists(limit = 20) {
-    return this.apiRequest(`/me/playlists?limit=${limit}`);
-  }
+                // 检查响应内容类型和长度
+                const contentType = response.headers.get('content-type');
+                const contentLength = response.headers.get('content-length');
 
-  // 获取当前播放信息
-  async getCurrentPlayback() {
-    return this.apiRequest('/me/player');
-  }
+                // 如果是PUT/POST请求且没有内容，返回空对象
+                if ((options.method === 'PUT' || options.method === 'POST') &&
+                        (contentLength === '0' || !contentType?.includes('application/json'))) {
+                        return {};
+                }
 
-  // 获取用户的设备列表
-  async getDevices() {
-    return this.apiRequest('/me/player/devices');
-  }
+                // 检查是否有JSON内容
+                if (!contentType?.includes('application/json')) {
+                        const text = await response.text();
+                        if (!text.trim()) {
+                                return {};
+                        }
+                        throw new Error('响应不是JSON格式');
+                }
 
-  // 获取播放列表详情
-  async getPlaylistTracks(playlistId, limit = 50) {
-    return this.apiRequest(`/playlists/${playlistId}/tracks?limit=${limit}`);
-  }
+                try {
+                        const text = await response.text();
+                        if (!text.trim()) {
+                                return {};
+                        }
+                        return JSON.parse(text);
+                } catch (error) {
+                        console.error('JSON解析失败:', error);
+                        throw new Error('响应数据格式错误');
+                }
+        }
 
-  // 播放指定歌曲
-  async playTrack(trackUri, deviceId = null) {
-    // 优先使用Web播放器
-    const webDeviceId = spotifyWebPlayer.getDeviceId();
-    if (webDeviceId && spotifyWebPlayer.isPlayerReady()) {
-      const targetDeviceId = deviceId || webDeviceId;
-      const body = { uris: [trackUri] };
-      
-      return this.apiRequest(`/me/player/play?device_id=${targetDeviceId}`, {
-        method: 'PUT',
-        body: JSON.stringify(body)
-      });
-    }
+        // 刷新访问令牌
+        async refreshAccessToken() {
+                if (!this.refreshToken) {
+                        throw new Error('没有刷新令牌');
+                }
 
-    // 回退到检查其他设备
-    const devices = await this.getDevices();
-    const activeDevice = devices.devices?.find(d => d.is_active);
-    
-    if (!activeDevice && !deviceId) {
-      throw new Error('没有找到活跃的播放设备，请先初始化播放器或在Spotify应用中开始播放');
-    }
+                try {
+                        const response = await fetch('https://accounts.spotify.com/api/token', {
+                                method: 'POST',
+                                headers: {
+                                        'Content-Type': 'application/x-www-form-urlencoded',
+                                },
+                                body: new URLSearchParams({
+                                        grant_type: 'refresh_token',
+                                        refresh_token: this.refreshToken,
+                                        client_id: SPOTIFY_CONFIG.CLIENT_ID,
+                                }),
+                        });
 
-    const body = { uris: [trackUri] };
-    const targetDeviceId = deviceId || activeDevice?.id;
-    const endpoint = targetDeviceId ? `/me/player/play?device_id=${targetDeviceId}` : '/me/player/play';
-    
-    return this.apiRequest(endpoint, {
-      method: 'PUT',
-      body: JSON.stringify(body)
-    });
-  }
+                        if (!response.ok) {
+                                throw new Error('刷新令牌失败');
+                        }
 
-  // 播放播放列表
-  async playPlaylist(playlistUri, deviceId = null) {
-    // 优先使用Web播放器
-    const webDeviceId = spotifyWebPlayer.getDeviceId();
-    if (webDeviceId && spotifyWebPlayer.isPlayerReady()) {
-      const targetDeviceId = deviceId || webDeviceId;
-      const body = { context_uri: playlistUri };
-      
-      return this.apiRequest(`/me/player/play?device_id=${targetDeviceId}`, {
-        method: 'PUT',
-        body: JSON.stringify(body)
-      });
-    }
+                        const data = await response.json();
+                        this.saveTokens({
+                                ...data,
+                                refresh_token: this.refreshToken // 保持原有的刷新令牌
+                        });
+                } catch (error) {
+                        console.error('刷新令牌失败:', error);
+                        this.logout();
+                        throw error;
+                }
+        }
 
-    // 回退到检查其他设备
-    const devices = await this.getDevices();
-    const activeDevice = devices.devices?.find(d => d.is_active);
-    
-    if (!activeDevice && !deviceId) {
-      throw new Error('没有找到活跃的播放设备，请先初始化播放器或在Spotify应用中开始播放');
-    }
+        // 获取用户信息
+        async getCurrentUser() {
+                return this.apiRequest('/me');
+        }
 
-    const body = { context_uri: playlistUri };
-    const targetDeviceId = deviceId || activeDevice?.id;
-    const endpoint = targetDeviceId ? `/me/player/play?device_id=${targetDeviceId}` : '/me/player/play';
-    
-    return this.apiRequest(endpoint, {
-      method: 'PUT',
-      body: JSON.stringify(body)
-    });
-  }
+        // 获取用户的播放列表
+        async getUserPlaylists(limit = 20) {
+                return this.apiRequest(`/me/playlists?limit=${limit}`);
+        }
 
-  // 暂停播放（优先使用Web播放器）
-  async pausePlayback() {
-    if (spotifyWebPlayer.isPlayerReady()) {
-      return spotifyWebPlayer.pause();
-    }
-    return this.apiRequest('/me/player/pause', { method: 'PUT' });
-  }
+        // 获取当前播放信息
+        async getCurrentPlayback() {
+                return this.apiRequest('/me/player');
+        }
 
-  // 恢复播放（优先使用Web播放器）
-  async resumePlayback() {
-    if (spotifyWebPlayer.isPlayerReady()) {
-      return spotifyWebPlayer.play();
-    }
-    return this.apiRequest('/me/player/play', { method: 'PUT' });
-  }
+        // 获取用户的设备列表
+        async getDevices() {
+                return this.apiRequest('/me/player/devices');
+        }
+
+        // 获取播放列表详情
+        async getPlaylistTracks(playlistId, limit = 50) {
+                return this.apiRequest(`/playlists/${playlistId}/tracks?limit=${limit}`);
+        }
+
+        // 播放指定歌曲
+        async playTrack(trackUri, deviceId = null) {
+                // 优先使用Web播放器
+                const webDeviceId = spotifyWebPlayer.getDeviceId();
+                if (webDeviceId && spotifyWebPlayer.isPlayerReady()) {
+                        const targetDeviceId = deviceId || webDeviceId;
+                        const body = { uris: [trackUri] };
+
+                        return this.apiRequest(`/me/player/play?device_id=${targetDeviceId}`, {
+                                method: 'PUT',
+                                body: JSON.stringify(body)
+                        });
+                }
+
+                // 回退到检查其他设备
+                const devices = await this.getDevices();
+                const activeDevice = devices.devices?.find(d => d.is_active);
+
+                if (!activeDevice && !deviceId) {
+                        throw new Error('没有找到活跃的播放设备，请先初始化播放器或在Spotify应用中开始播放');
+                }
+
+                const body = { uris: [trackUri] };
+                const targetDeviceId = deviceId || activeDevice?.id;
+                const endpoint = targetDeviceId ? `/me/player/play?device_id=${targetDeviceId}` : '/me/player/play';
+
+                return this.apiRequest(endpoint, {
+                        method: 'PUT',
+                        body: JSON.stringify(body)
+                });
+        }
+
+        // 播放播放列表
+        async playPlaylist(playlistUri, deviceId = null) {
+                // 优先使用Web播放器
+                const webDeviceId = spotifyWebPlayer.getDeviceId();
+                if (webDeviceId && spotifyWebPlayer.isPlayerReady()) {
+                        const targetDeviceId = deviceId || webDeviceId;
+                        const body = { context_uri: playlistUri };
+
+                        return this.apiRequest(`/me/player/play?device_id=${targetDeviceId}`, {
+                                method: 'PUT',
+                                body: JSON.stringify(body)
+                        });
+                }
+
+                // 回退到检查其他设备
+                const devices = await this.getDevices();
+                const activeDevice = devices.devices?.find(d => d.is_active);
+
+                if (!activeDevice && !deviceId) {
+                        throw new Error('没有找到活跃的播放设备，请先初始化播放器或在Spotify应用中开始播放');
+                }
+
+                const body = { context_uri: playlistUri };
+                const targetDeviceId = deviceId || activeDevice?.id;
+                const endpoint = targetDeviceId ? `/me/player/play?device_id=${targetDeviceId}` : '/me/player/play';
+
+                return this.apiRequest(endpoint, {
+                        method: 'PUT',
+                        body: JSON.stringify(body)
+                });
+        }
+
+        // 暂停播放（优先使用Web播放器）
+        async pausePlayback() {
+                if (spotifyWebPlayer.isPlayerReady()) {
+                        return spotifyWebPlayer.pause();
+                }
+                return this.apiRequest('/me/player/pause', { method: 'PUT' });
+        }
+
+        // 安全的播放操作 - 自动处理设备问题
+        async safePlaybackOperation(operation) {
+                try {
+                        return await operation();
+                } catch (error) {
+                        if (error.message.includes('404') || error.message.includes('设备')) {
+                                // 尝试初始化Web播放器
+                                try {
+                                        if (!this.webPlayerReady) {
+                                                await this.initializeWebPlayer();
+                                        }
+                                        // 重试操作
+                                        return await operation();
+                                } catch (retryError) {
+                                        throw new Error('播放操作失败，请确保有可用的播放设备');
+                                }
+                        }
+                        throw error;
+                }
+        }
+
+        // 恢复播放（优先使用Web播放器）
+        async resumePlayback() {
+                return this.safePlaybackOperation(async () => {
+                        if (spotifyWebPlayer.isPlayerReady()) {
+                                return spotifyWebPlayer.play();
+                        }
+
+                        try {
+                                // 首先尝试简单的恢复播放
+                                return await this.apiRequest('/me/player/play', { method: 'PUT' });
+                        } catch (error) {
+                                // 如果失败，尝试获取设备并指定设备ID
+                                if (error.message.includes('404') || error.message.includes('No active device')) {
+                                        const devicesResponse = await this.getDevices();
+                                        const devices = devicesResponse.devices || [];
+                                        const activeDevice = devices.find(d => d.is_active);
+
+                                        if (activeDevice) {
+                                                return await this.apiRequest(`/me/player/play?device_id=${activeDevice.id}`, { method: 'PUT' });
+                                        } else if (devices.length > 0) {
+                                                // 如果没有活跃设备，尝试使用第一个可用设备
+                                                const firstDevice = devices[0];
+                                                // 先传输播放到该设备
+                                                await this.apiRequest('/me/player', {
+                                                        method: 'PUT',
+                                                        body: JSON.stringify({
+                                                                device_ids: [firstDevice.id],
+                                                                play: true
+                                                        })
+                                                });
+                                                return await this.apiRequest(`/me/player/play?device_id=${firstDevice.id}`, { method: 'PUT' });
+                                        } else {
+                                                // 尝试初始化Web播放器
+                                                if (!this.webPlayerReady) {
+                                                        await this.initializeWebPlayer();
+                                                        const webDeviceId = spotifyWebPlayer.getDeviceId();
+                                                        if (webDeviceId) {
+                                                                return await this.apiRequest(`/me/player/play?device_id=${webDeviceId}`, { method: 'PUT' });
+                                                        }
+                                                }
+                                                throw new Error('没有可用的播放设备');
+                                        }
+                                }
+                                throw error;
+                        }
+                });
+        }
 }
 
 export default new SpotifyService();
