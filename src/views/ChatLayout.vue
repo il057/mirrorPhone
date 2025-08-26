@@ -98,6 +98,14 @@ const handleDropdownAction = (action) => {
                 case 'manageGroups':
                         showManageGroupsModal('groups');
                         break;
+                case 'writePost':
+                        // 发送事件给MomentsView
+                        window.dispatchEvent(new CustomEvent('openWritePostModal', { detail: { type: 'text' } }));
+                        break;
+                case 'postPhoto':
+                        // 发送事件给MomentsView
+                        window.dispatchEvent(new CustomEvent('openWritePostModal', { detail: { type: 'image' } }));
+                        break;
                 default:
                         showToast(`${action} 功能待开发`, 'info');
                         break;

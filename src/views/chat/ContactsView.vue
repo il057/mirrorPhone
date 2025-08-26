@@ -268,6 +268,9 @@ const goToProfile = (actorId) => {
         cursor: pointer;
         background-color: var(--bg-secondary);
         height: 10px;
+        position: sticky;
+        top: 0;
+        z-index: 1;
 }
 
 .arrow {
@@ -298,5 +301,8 @@ const goToProfile = (actorId) => {
         background-color: var(--bg-primary);
         color: var(--text-secondary);
         font-weight: 600;
+        position: sticky;
+        top: 0;
+        z-index: 1;
 }
 </style>

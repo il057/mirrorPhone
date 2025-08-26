@@ -1,5 +1,5 @@
 // 因为我们通过 <script> 标签全局引入了 Dexie，所以可以直接使用 Dexie 这个全局变量。
-// 如果未来你通过 npm 安装，这里就需要写 import Dexie from 'dexie';
+// 如果未来你通过         ort Dexie from 'dexie';
 import Dexie from "dexie";
 
 // 1. 创建数据库实例
@@ -20,6 +20,7 @@ db.version(1).stores({
          * isGroup: 是否为群组 (0,1)
          * groupIds: 关联的群组ID数组
          * contextMemorySettings: 上下文记忆条数设置
+         * avatarLibrary: 头像库数组（用于用户人格和角色）
          */
         actors: `
         &id,
@@ -30,7 +31,8 @@ db.version(1).stores({
         *groupIds,
         specialCare,
         contextMemorySettings,
-        status
+        status,
+        *avatarLibrary
         `,
 
         /**
@@ -79,6 +81,7 @@ db.version(1).stores({
         actorId,
         contextId,
         type,
+        [contextId+type],
         [contextId+timestamp]
         `,
 
@@ -90,13 +93,16 @@ db.version(1).stores({
          * targetId: 关系目标者ID
          * type: 关系类型 (自由文本，如 "朋友", "欢喜冤家")
          * score: 好感度数值
+         * tags: 印象标签数组 (包含 name 和 strength)
          */
         relationships: `
         ++id,
         sourceId,
         targetId,
         type,
-        score
+        score,
+        tags,
+        [sourceId+targetId]
         `,
 
         /**
@@ -179,6 +185,8 @@ export async function initializeGlobalSettings() {
                         themeMode: 'auto', // 默认主题模式
                         activeFontId: 1,
                         appIconSettings: {},
+                        // 分离moments头图设置
+                        momentsHeaderImage: null, // moments独立头图设置
                         // 使用统一的、包含类型的预设数组
                         wallpaperPresets: [
                                 { type: 'image', name: '天空', info: 'https://w.wallhaven.cc/full/og/wallhaven-og3d99.jpg', theme: '#3986ac', isDefault: true },
@@ -219,3 +227,56 @@ export async function initializeGlobalSettings() {
 // 3. 导出数据库实例
 // 我们导出这个 db 对象，这样应用的任何部分都可以导入它来与数据库通信。
 export default db;
+
+// 用户动态相关常量
+export const USER_ACTOR_ID = '__USER__'; // 特殊标识符，表示用户操作
+
+/**
+ * 获取用户在指定上下文中应该使用的实际人格ID
+ * @param {string} contextId - 上下文ID（如分组ID、聊天ID等）
+ * @returns {Promise<string>} 实际的人格ID
+ */
+export async function resolveUserPersonaForContext(contextId) {
+        try {
+                // 首先尝试获取该上下文绑定的用户人格
+                const boundPersona = await db.actors
+                        .filter(actor => 
+                                actor.id && 
+                                actor.id.startsWith('user_persona_') && 
+                                actor.groupIds && 
+                                actor.groupIds.includes(contextId)
+                        )
+                        .first();
+                
+                if (boundPersona) {
+                        return boundPersona.id;
+                }
+                
+                // 如果没有绑定的人格，返回默认人格
+                const defaultPersona = await db.actors
+                        .filter(actor => actor.id && actor.id.startsWith('user_persona_') && actor.isDefault)
+                        .first();
+                
+                return defaultPersona ? defaultPersona.id : 'user_persona_default';
+        } catch (error) {
+                console.error('Failed to resolve user persona for context:', error);
+                return 'user_persona_default';
+        }
+}
+
+/**
+ * 获取用户在动态场景中使用的实际人格ID（始终使用默认人格）
+ * @returns {Promise<string>} 默认人格ID
+ */
+export async function resolveUserPersonaForMoments() {
+        try {
+                const defaultPersona = await db.actors
+                        .filter(actor => actor.id && actor.id.startsWith('user_persona_') && actor.isDefault)
+                        .first();
+                
+                return defaultPersona ? defaultPersona.id : 'user_persona_default';
+        } catch (error) {
+                console.error('Failed to resolve user persona for moments:', error);
+                return 'user_persona_default';
+        }
+}

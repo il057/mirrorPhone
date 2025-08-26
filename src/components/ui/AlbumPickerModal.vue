@@ -14,6 +14,7 @@
                                                 class="album-grid">
                                                 <div v-for="photo in photos" :key="photo.id || photo.url"
                                                         class="album-item group cursor-pointer"
+                                                        :class="{ selected: selectedUrl === photo.url }"
                                                         @click="handleSelect(photo.url)">
                                                         <img :src="photo.url" :title="photo.description || ''"
                                                                 class="album-image"
@@ -105,6 +106,18 @@ const handleCancel = () => {
         overflow: hidden;
         border-radius: 6px;
         position: relative;
+        border: 2px solid transparent;
+        transition: all 0.2s ease;
+}
+
+.album-item:hover {
+        transform: scale(1.02);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.album-item.selected {
+        border-color: var(--accent-primary);
+        box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.3);
 }
 
 .album-image {
@@ -118,9 +131,41 @@ const handleCancel = () => {
         transform: scale(1.05);
 }
 
-.selected-image {
-        border: 3px solid var(--accent-primary);
-        box-shadow: 0 0 8px var(--accent-primary);
+.modal-actions {
+        display: flex;
+        gap: 10px;
+        padding: 15px 20px;
+        border-top: 1px solid var(--border-color);
+        background-color: var(--bg-secondary);
+}
+
+.modal-btn {
+        flex: 1;
+        padding: 10px 16px;
+        border: none;
+        border-radius: 6px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+}
+
+.modal-btn.cancel {
+        background-color: var(--bg-card);
+        color: var(--text-primary);
+        border: 1px solid var(--border-color);
+}
+
+.modal-btn.cancel:hover {
+        background-color: var(--bg-primary);
+}
+
+.modal-btn.confirm {
+        background-color: var(--accent-primary);
+        color: white;
+}
+
+.modal-btn.confirm:hover:not(:disabled) {
+        background-color: var(--accent-darker);
 }
 
 .modal-btn.confirm:disabled {

@@ -11,12 +11,12 @@
   "dependencies": {
     "@vueuse/rxjs": "^13.7.0",
     "dexie": "^4.2.0",
+    "epic-spinners": "^2.0.0",
     "pinyin-pro": "^3.27.0",
     "three": "^0.179.1",
     "vanta": "^0.5.24",
     "vue": "^3.5.18",
     "vue-draggable-next": "^2.3.0",
-    "vue-gradient": "^0.0.1",
     "vue-router": "^4.5.1",
     "vuedraggable": "^4.1.0"
   },

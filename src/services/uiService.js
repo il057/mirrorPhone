@@ -5,8 +5,10 @@ import ConfirmModal from '../components/ui/ConfirmModal.vue';
 import PromptModal from '../components/ui/PromptModal.vue';
 import UploadChoiceModal from '../components/ui/UploadChoiceModal.vue';
 import AlbumPickerModal from '../components/ui/AlbumPickerModal.vue';
+import AvatarPickerModal from '../components/ui/AvatarPickerModal.vue';
 import ManageGroupsModal from '../components/ui/ManageGroupsModal.vue';
 import WorldbookEditModal from '../components/ui/WorldbookEditModal.vue';
+import UserPersonaModal from '../components/ui/UserPersonaModal.vue';
 
 // 确保有一个容器来挂载这些动态组件
 function getModalsContainer() {
@@ -240,4 +242,158 @@ export function showWorldbookEditModal(worldbook = null) {
 
                 modalApp.mount(modalWrapper);
         });
+}
+
+/**
+ * 显示用户人格预设管理模态框
+ * @returns {Promise<void>}
+ */
+export function showUserPersonaModal() {
+        return new Promise((resolve) => {
+                const container = getModalsContainer();
+                const modalWrapper = document.createElement('div');
+                container.appendChild(modalWrapper);
+
+                const cleanup = () => {
+                        modalApp.unmount();
+                        if (container.contains(modalWrapper)) {
+                                container.removeChild(modalWrapper);
+                        }
+                };
+
+                const modalApp = createApp(UserPersonaModal, {
+                        onClose: () => {
+                                cleanup();
+                                resolve();
+                        },
+                        onPersonaChanged: (persona) => {
+                                // 可以在这里处理人格变更事件
+                                console.log('Default persona changed:', persona);
+                        }
+                });
+
+                modalApp.mount(modalWrapper);
+        });
+}
+
+/**
+ * 显示用户头像选择器模态框
+ * @param {string} actorId - 用户ID，用于加载特定的头像库
+ * @returns {Promise<string|null>} 用户选择则返回图片URL，否则返回null
+ */
+export function showUserAvatarPickerModal(actorId) {
+        return new Promise(async (resolve) => {
+                const container = getModalsContainer();
+                const modalWrapper = document.createElement('div');
+                container.appendChild(modalWrapper);
+
+                // 从数据库异步加载用户头像
+                const userAvatars = await getUserAvatars(actorId);
+
+                const cleanup = () => {
+                        pickerApp.unmount();
+                        if (container.contains(modalWrapper)) {
+                                container.removeChild(modalWrapper);
+                        }
+                };
+
+                const pickerApp = createApp(AvatarPickerModal, {
+                        avatars: userAvatars,
+                        onSelect: (url) => {
+                                cleanup();
+                                resolve(url);
+                        },
+                        onCancel: () => {
+                                cleanup();
+                                resolve(null);
+                        },
+                        onUpload: async () => {
+                                cleanup();
+                                // 使用上传选择模态框
+                                const uploadResult = await showUploadChoiceModal();
+                                if (uploadResult) {
+                                        // 保存到用户头像库
+                                        await saveUserAvatar(actorId, uploadResult.value);
+                                        resolve(uploadResult.value);
+                                } else {
+                                        resolve(null);
+                                }
+                        },
+                        onDelete: async (urlsToDelete) => {
+                                try {
+                                        await deleteUserAvatars(actorId, urlsToDelete);
+                                        showToast(`已删除 ${urlsToDelete.length} 个头像`, 'success');
+                                        // 重新加载头像
+                                        const updatedAvatars = await getUserAvatars(actorId);
+                                        pickerApp.$forceUpdate(); // 或者重新创建组件
+                                } catch (error) {
+                                        console.error('删除头像失败:', error);
+                                        showToast('删除头像失败', 'error');
+                                }
+                        }
+                });
+
+                pickerApp.mount(modalWrapper);
+        });
+}
+
+/**
+ * 获取用户头像库
+ * @param {string} actorId - 用户ID
+ * @returns {Promise<Array>} 头像数组
+ */
+async function getUserAvatars(actorId) {
+        try {
+                // 获取用户专属头像
+                const userAvatars = await db.actors
+                        .filter(actor => actor.id === actorId)
+                        .first();
+                
+                if (userAvatars && userAvatars.avatarLibrary) {
+                        return userAvatars.avatarLibrary.map(url => ({ url, id: url }));
+                }
+                
+                return [];
+        } catch (error) {
+                console.error('Failed to load user avatars:', error);
+                return [];
+        }
+}
+
+/**
+ * 保存用户头像到头像库
+ * @param {string} actorId - 用户ID
+ * @param {string} avatarUrl - 头像URL
+ */
+async function saveUserAvatar(actorId, avatarUrl) {
+        try {
+                const user = await db.actors.get(actorId);
+                if (user) {
+                        const avatarLibrary = user.avatarLibrary || [];
+                        if (!avatarLibrary.includes(avatarUrl)) {
+                                avatarLibrary.push(avatarUrl);
+                                await db.actors.update(actorId, { avatarLibrary });
+                        }
+                }
+        } catch (error) {
+                console.error('Failed to save user avatar:', error);
+        }
+}
+
+/**
+ * 删除用户头像库中的头像
+ * @param {string} actorId - 用户ID
+ * @param {string[]} avatarUrls - 要删除的头像URL数组
+ */
+async function deleteUserAvatars(actorId, avatarUrls) {
+        try {
+                const user = await db.actors.get(actorId);
+                if (user && user.avatarLibrary) {
+                        const avatarLibrary = user.avatarLibrary.filter(url => !avatarUrls.includes(url));
+                        await db.actors.update(actorId, { avatarLibrary });
+                }
+        } catch (error) {
+                console.error('Failed to delete user avatars:', error);
+                throw error;
+        }
 }

@@ -71,6 +71,23 @@ const mockActors = [
         },
         { id: 'group_family_chat', name: '相亲相爱一家人', isGroup: 1, createdAt: Date.now() - 200000, groupIds: [] },
         { id: 'group_work_chat', name: '镜华科技项目组', isGroup: 1, createdAt: Date.now() - 100000, groupIds: [] },
+        
+        // 默认用户人格预设
+        {
+                id: 'user_persona_default',
+                name: 'User',
+                realName: '用户',
+                aliases: [],
+                gender: '',
+                birthday: '',
+                persona: '默认用户人格',
+                avatar: '',
+                groupIds: [],
+                isDefault: true,
+                type: 'user_persona',
+                isGroup: 0,
+                specialCare: 0
+        }
     ];
 const mockGroups = [
         { id: 'group_special', name: '特别关心', order: 1, worldbookIds: [] },
@@ -131,6 +148,166 @@ const mockEvents = [
                 contextId: 'char_bill',
                 type: 'privateMessage',
                 content: { content: '晚上吃什么？' }
+        },
+        
+        // 动态相关事件
+        // Bill 发布的动态
+        {
+                timestamp: Date.now() - 86400000, // 1天前
+                actorId: 'char_bill',
+                contextId: 'post_1',
+                type: 'post',
+                content: { 
+                        text: '今天天气真不错，适合出去走走！',
+                        images: ['https://picsum.photos/400/300?random=1']
+                }
+        },
+        // 用户对Bill动态的点赞
+        {
+                timestamp: Date.now() - 86300000,
+                actorId: '__USER__',
+                contextId: 'post_1',
+                type: 'like',
+                content: {}
+        },
+        // Alex 对Bill动态的回复
+        {
+                timestamp: Date.now() - 86200000,
+                actorId: 'char_alex',
+                contextId: 'post_1',
+                type: 'reply',
+                content: { text: '确实，我也想出去走走' }
+        },
+        
+        // 赵四发布的动态
+        {
+                timestamp: Date.now() - 172800000, // 2天前
+                actorId: 'char_zhao',
+                contextId: 'post_2',
+                type: 'post',
+                content: { 
+                        text: '今天做了一顿大餐，色香味俱全！',
+                        images: [
+                                'https://picsum.photos/400/300?random=2',
+                                'https://picsum.photos/400/300?random=3'
+                        ]
+                }
+        },
+        // 孙一对赵四动态的点赞
+        {
+                timestamp: Date.now() - 172700000,
+                actorId: 'char_sun',
+                contextId: 'post_2',
+                type: 'like',
+                content: {}
+        },
+        // 用户对赵四动态的回复
+        {
+                timestamp: Date.now() - 172600000,
+                actorId: '__USER__',
+                contextId: 'post_2',
+                type: 'reply',
+                content: { text: '看起来很好吃，下次教教我' }
+        },
+        // 赵四对用户的回复
+        {
+                timestamp: Date.now() - 172500000,
+                actorId: 'char_zhao',
+                contextId: 'post_2',
+                type: 'reply',
+                content: { text: '没问题，周末来我家' }
+        },
+        
+        // 钱二发布的动态
+        {
+                timestamp: Date.now() - 259200000, // 3天前
+                actorId: 'char_qian',
+                contextId: 'post_3',
+                type: 'post',
+                content: { 
+                        text: '工作虽然忙碌，但生活还是要有仪式感。今天给自己买了束花 🌸'
+                }
+        },
+        // 多个人对钱二动态的点赞
+        {
+                timestamp: Date.now() - 259100000,
+                actorId: 'char_sun',
+                contextId: 'post_3',
+                type: 'like',
+                content: {}
+        },
+        {
+                timestamp: Date.now() - 259000000,
+                actorId: 'char_alex',
+                contextId: 'post_3',
+                type: 'like',
+                content: {}
+        },
+        {
+                timestamp: Date.now() - 258900000,
+                actorId: '__USER__',
+                contextId: 'post_3',
+                type: 'like',
+                content: {}
+        },
+        // 孙一的回复
+        {
+                timestamp: Date.now() - 258800000,
+                actorId: 'char_sun',
+                contextId: 'post_3',
+                type: 'reply',
+                content: { text: '女孩子就应该对自己好一点' }
+        },
+        
+        // 用户发布的动态
+        {
+                timestamp: Date.now() - 432000000, // 5天前
+                actorId: '__USER__',
+                contextId: 'post_user_1',
+                type: 'post',
+                content: { 
+                        text: '分享一些美好的瞬间 ✨',
+                        images: ['https://picsum.photos/400/300?random=7']
+                }
+        },
+        // 其他人对用户动态的点赞和回复
+        {
+                timestamp: Date.now() - 431900000,
+                actorId: 'char_bill',
+                contextId: 'post_user_1',
+                type: 'like',
+                content: {}
+        },
+        {
+                timestamp: Date.now() - 431800000,
+                actorId: 'char_zhao',
+                contextId: 'post_user_1',
+                type: 'reply',
+                content: { text: '生活需要这样的美好记录' }
+        },
+        
+        // Alex发布的动态
+        {
+                timestamp: Date.now() - 345600000, // 4天前
+                actorId: 'char_alex',
+                contextId: 'post_4',
+                type: 'post',
+                content: { 
+                        text: '周末和朋友们一起去爬山，虽然累但很开心！',
+                        images: [
+                                'https://picsum.photos/400/300?random=4',
+                                'https://picsum.photos/400/300?random=5',
+                                'https://picsum.photos/400/300?random=6'
+                        ]
+                }
+        },
+        // Bill对Alex动态的回复
+        {
+                timestamp: Date.now() - 345500000,
+                actorId: 'char_bill',
+                contextId: 'post_4',
+                type: 'reply',
+                content: { text: '风景真美，下次叫上我一起' }
         }
 ];
 

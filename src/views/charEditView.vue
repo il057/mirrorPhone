@@ -657,7 +657,6 @@ const handleBack = () => {
         width: 100px;
         height: 100px;
         border-radius: 12px;
-        background-color: #555;
         display: flex;
         justify-content: center;
         align-items: center;
@@ -836,7 +835,7 @@ const handleBack = () => {
 
 .score-fill {
         height: 100%;
-        background: linear-gradient(90deg, #ff4444 0%, #ffaa00 50%, #44ff44 100%);
+        background: linear-gradient(90deg, var(--accent-lighter) 0%, var(--accent-primary) 50%, var(--accent-darker) 100%);
         transition: width 0.3s ease;
         border-radius: 4px;
 }
