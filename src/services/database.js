@@ -18,8 +18,10 @@ db.version(1).stores({
          * realName: 真实姓名
          * aliases: 别名数组
          * isGroup: 是否为群组 (0,1)
+         * specialCare: 特别关心设置
          * groupIds: 关联的群组ID数组
          * contextMemorySettings: 上下文记忆条数设置
+         * status: 当前状态
          * avatarLibrary: 头像库数组（用于用户人格和角色）
          * currentAvatar: 当前使用的头像URL
          * chatBackground: 聊天背景URL

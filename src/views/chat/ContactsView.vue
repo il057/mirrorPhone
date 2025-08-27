@@ -22,10 +22,21 @@
                                                 <li v-for="member in group.members" :key="member.id"
                                                         class="contact-item" @click="goToProfile(member.id)">
                                                         <div class="avatar">
-                                                                <img v-if="member.currentAvatar" :src="member.currentAvatar" :alt="member.name" class="avatar-image">
-                                                                <span v-else class="avatar-initial">{{ getInitial(member.name) }}</span>
+                                                                <img v-if="member.currentAvatar"
+                                                                        :src="member.currentAvatar" :alt="member.name"
+                                                                        class="avatar-image">
+                                                                <span v-else class="avatar-initial">{{
+                                                                        getInitial(member.name) }}</span>
                                                         </div>
-                                                        <span>{{ member.name }}</span>
+                                                        <div class="contact-info">
+                                                                <span class="contact-name">{{ member.name }}</span>
+                                                                <div class="contact-signature">
+                                                                        <div class="status-dot"
+                                                                                :style="{ backgroundColor: member.status?.color || '#607D8B' }">
+                                                                        </div>
+                                                                        <span>{{ member.signature }}</span>
+                                                                </div>
+                                                        </div>
                                                 </li>
                                         </ul>
                                 </div>
@@ -37,29 +48,53 @@
                                                 <li v-for="friend in specialCareFriends" :key="friend.id"
                                                         class="contact-item" @click="goToProfile(friend.id)">
                                                         <div class="avatar">
-                                                                <img v-if="friend.currentAvatar" :src="friend.currentAvatar" :alt="friend.name" class="avatar-image">
-                                                                <span v-else class="avatar-initial">{{ getInitial(friend.name) }}</span>
+                                                                <img v-if="friend.currentAvatar"
+                                                                        :src="friend.currentAvatar" :alt="friend.name"
+                                                                        class="avatar-image">
+                                                                <span v-else class="avatar-initial">{{
+                                                                        getInitial(friend.name) }}</span>
                                                         </div>
-                                                        <span>{{ friend.name }}</span>
+                                                        <div class="contact-info">
+                                                                <span class="contact-name">{{ friend.name }}</span>
+                                                                <div class="contact-signature">
+                                                                        <div class="status-dot"
+                                                                                :style="{ backgroundColor: friend.status?.color || '#607D8B' }">
+                                                                        </div>
+                                                                        <span>{{ friend.signature || " "}}</span>
+                                                                </div>
+                                                        </div>
                                                 </li>
                                         </ul>
                                 </div>
                                 <div v-for="(group, letter) in groupedFriends" :key="letter">
                                         <div class="alphabet-header">{{ letter }}</div>
                                         <ul>
-                                                <li v-for="friend in group" :key="friend.id" class="contact-item" @click="goToProfile(friend.id)">
+                                                <li v-for="friend in group" :key="friend.id" class="contact-item"
+                                                        @click="goToProfile(friend.id)">
                                                         <div class="avatar">
-                                                                <img v-if="friend.currentAvatar" :src="friend.currentAvatar" :alt="friend.name" class="avatar-image">
-                                                                <span v-else class="avatar-initial">{{ getInitial(friend.name) }}</span>
+                                                                <img v-if="friend.currentAvatar"
+                                                                        :src="friend.currentAvatar" :alt="friend.name"
+                                                                        class="avatar-image">
+                                                                <span v-else class="avatar-initial">{{
+                                                                        getInitial(friend.name) }}</span>
                                                         </div>
-                                                        <span>{{ friend.name }}</span>
+                                                        <div class="contact-info">
+                                                                <span class="contact-name">{{ friend.name }}</span>
+                                                                <div class="contact-signature">
+                                                                        <div class="status-dot"
+                                                                                :style="{ backgroundColor: friend.status?.color || '#607D8B' }">
+                                                                        </div>
+                                                                        <span>{{ friend.signature || " "}}</span>
+                                                                </div>
+                                                        </div>
                                                 </li>
                                         </ul>
                                 </div>
                         </div>
                         <div v-if="activeTab === 'groupChats'" class="contact-list">
                                 <ul>
-                                        <li v-for="chat in groupChats" :key="chat.id" class="contact-item" @click="goToProfile(chat.id)">
+                                        <li v-for="chat in groupChats" :key="chat.id" class="contact-item"
+                                                @click="goToProfile(chat.id)">
                                                 <div class="avatar group-avatar">
                                                         <span class="avatar-initial">#</span>
                                                 </div>
@@ -216,7 +251,7 @@ const goToProfile = (actorId) => {
 .contacts-nav {
         display: flex;
         justify-content: space-around;
-        padding: 10px 0;
+        padding:  0;
         border-bottom: 1px solid var(--border-color);
         background-color: var(--header-secondary-bg);
         position: absolute;
@@ -226,7 +261,7 @@ const goToProfile = (actorId) => {
         width: 100%;
         backdrop-filter: blur(10px);
         -webkit-backdrop-filter: blur(10px);
-        height: 28px;
+        height: 48px;
 
 }
 
@@ -321,4 +356,28 @@ const goToProfile = (actorId) => {
         top: 0;
         z-index: 1;
 }
+
+.contact-info {
+        display: flex;
+        flex-direction: column;
+}
+
+.contact-name {
+        font-weight: 600;
+}
+
+.contact-signature {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 14px;
+        color: var(--text-secondary);
+}
+
+.status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+}
+
 </style>

@@ -20,7 +20,8 @@
                         <section class="form-section avatar-section">
                                 <div class="avatar-wrapper" @click="openAvatarPicker">
                                         <div class="avatar">
-                                                <img v-if="actor.currentAvatar" :src="actor.currentAvatar" :alt="actor.name" class="avatar-image">
+                                                <img v-if="actor.currentAvatar" :src="actor.currentAvatar"
+                                                        :alt="actor.name" class="avatar-image">
                                                 <span v-else class="avatar-initial">{{ getInitial(actor.name) }}</span>
                                         </div>
                                 </div>
@@ -42,29 +43,18 @@
                                 </div>
                                 <div class="form-group">
                                         <label for="gender">性别</label>
-                                        <MainDropdown
-                                                v-model="actor.gender"
-                                                :options="genderOptions"
-                                                placeholder="选择性别"
-                                        />
+                                        <MainDropdown v-model="actor.gender" :options="genderOptions"
+                                                placeholder="选择性别" />
                                 </div>
                                 <div class="form-group dropdown-group">
                                         <label for="group">分组</label>
-                                        <MainDropdown
-                                                v-model="actor.groupIds[0]"
-                                                :options="groupOptions"
-                                                placeholder="选择分组"
-                                                @change="handleGroupChange"
-                                        />
+                                        <MainDropdown v-model="actor.groupIds[0]" :options="groupOptions"
+                                                placeholder="选择分组" @change="handleGroupChange" />
                                 </div>
                                 <div class="form-group textarea-group">
                                         <label for="persona">人设描述</label>
-                                        <textarea 
-                                                id="persona" 
-                                                v-model="actor.persona" 
-                                                rows="8"
-                                                placeholder="描述角色的性格、背景、特点等..."
-                                        ></textarea>
+                                        <textarea id="persona" v-model="actor.persona" rows="8"
+                                                placeholder="描述角色的性格、背景、特点等..."></textarea>
                                 </div>
                         </AccordionItem>
 
@@ -74,14 +64,8 @@
                                         <p class="section-description">
                                                 为此角色选择专属的世界书分组，这些世界书只对该角色有效。
                                         </p>
-                                        <CheckboxList
-                                                v-model="actor.worldbookGroupIds"
-                                                :options="worldbookOptions"
-                                                @change="handleWorldbookChange"
-                                        />
-                                        <button @click="openWorldbookManagement" class="secondary-btn">
-                                                管理世界书分组
-                                        </button>
+                                        <CheckboxList v-model="actor.worldbookGroupIds" :options="worldbookOptions"
+                                                @change="handleWorldbookChange" />
                                 </div>
                         </AccordionItem>
 
@@ -91,23 +75,16 @@
                                         <!-- 对你的初始好感度 -->
                                         <div class="relationship-item">
                                                 <h4>对你的好感度</h4>
-                                                <RangeSlider
-                                                        v-model="initialUserRelationship.score"
-                                                        :min="-1000"
-                                                        :max="1000"
-                                                        label="好感度"
-                                                />
+                                                <RangeSlider v-model="initialUserRelationship.score" :min="-1000"
+                                                        :max="1000" label="好感度" />
                                         </div>
-                                        
+
                                         <!-- 对你的关系 -->
                                         <div class="form-group">
                                                 <label for="userRelationType">对你的关系</label>
-                                                <input 
-                                                        id="userRelationType" 
-                                                        type="text" 
+                                                <input id="userRelationType" type="text"
                                                         v-model="initialUserRelationship.type"
-                                                        placeholder="例如：朋友、恋人、陌生人..."
-                                                />
+                                                        placeholder="例如：朋友、恋人、陌生人..." />
                                         </div>
                                 </div>
                         </AccordionItem>
@@ -119,28 +96,24 @@
                                         <div class="relationship-display">
                                                 <h4>对你的好感度</h4>
                                                 <div class="score-display">
-                                                        <span class="score-value">{{ userRelationship?.score || 0 }}</span>
+                                                        <span class="score-value">{{ userRelationship?.score || 0
+                                                                }}</span>
                                                         <div class="score-bar">
-                                                                <div 
-                                                                        class="score-fill"
-                                                                        :style="{ width: getScorePercentage(userRelationship?.score || 0) }"
-                                                                ></div>
+                                                                <div class="score-fill"
+                                                                        :style="{ width: getScorePercentage(userRelationship?.score || 0) }">
+                                                                </div>
                                                         </div>
                                                 </div>
-                                                <p class="relationship-type">关系：{{ userRelationship?.type || '未设置' }}</p>
+                                                <p class="relationship-type">关系：{{ userRelationship?.type || '未设置' }}
+                                                </p>
                                         </div>
 
                                         <!-- 印象标签 -->
                                         <div class="tags-section">
                                                 <h4>印象标签</h4>
-                                                <TagsManager
-                                                        v-model:tags="userRelationship.tags"
-                                                        :editable="true"
-                                                        :allowAdd="false"
-                                                        @tag-added="handleTagAdded"
-                                                        @tag-removed="handleTagRemoved"
-                                                        @tag-edited="handleTagEdited"
-                                                />
+                                                <TagsManager v-model:tags="userRelationship.tags" :editable="true"
+                                                        :allowAdd="false" @tag-added="handleTagAdded"
+                                                        @tag-removed="handleTagRemoved" @tag-edited="handleTagEdited" />
                                         </div>
 
                                         <!-- 记忆摘要管理 -->
@@ -160,22 +133,37 @@
                                         <div class="setting-item">
                                                 <h4>聊天预览</h4>
                                                 <div class="chat-preview-wrapper">
-                                                        <div class="chat-preview" :style="{ backgroundImage: chatBackground ? `url(${chatBackground})` : 'none' }">
+                                                        <div class="chat-preview"
+                                                                :style="{ backgroundImage: chatBackground ? `url(${chatBackground})` : 'none' }">
                                                                 <!-- 用户消息气泡 -->
                                                                 <div class="message-bubble user-message">
                                                                         <div class="avatar-mini">
-                                                                                <img v-if="userAvatar" :src="userAvatar" alt="你" class="avatar-image-mini">
-                                                                                <span v-else class="avatar-initial-mini">你</span>
+                                                                                <img v-if="userAvatar" :src="userAvatar"
+                                                                                        alt="你"
+                                                                                        class="avatar-image-mini">
+                                                                                <span v-else
+                                                                                        class="avatar-initial-mini">你</span>
                                                                         </div>
-                                                                        <div class="message-content">示例消息</div>
+                                                                        <div class="message-content" :style="{ 
+                                                                                        backgroundColor: currentBubbleStyle.userBubbleBg,
+                                                                                        color: currentBubbleStyle.userBubbleText
+                                                                                }">示例消息</div>
                                                                 </div>
                                                                 <!-- 角色消息气泡 -->
                                                                 <div class="message-bubble char-message">
                                                                         <div class="avatar-mini">
-                                                                                <img v-if="actor.currentAvatar" :src="actor.currentAvatar" :alt="actor.name" class="avatar-image-mini">
-                                                                                <span v-else class="avatar-initial-mini">{{ getInitial(actor.name) }}</span>
+                                                                                <img v-if="actor.currentAvatar"
+                                                                                        :src="actor.currentAvatar"
+                                                                                        :alt="actor.name"
+                                                                                        class="avatar-image-mini">
+                                                                                <span v-else
+                                                                                        class="avatar-initial-mini">{{
+                                                                                        getInitial(actor.name) }}</span>
                                                                         </div>
-                                                                        <div class="message-content">角色回复示例</div>
+                                                                        <div class="message-content" :style="{ 
+                                                                                        backgroundColor: currentBubbleStyle.charBubbleBg,
+                                                                                        color: currentBubbleStyle.charBubbleText
+                                                                                }">角色回复示例</div>
                                                                 </div>
                                                         </div>
                                                 </div>
@@ -187,17 +175,120 @@
                                                 <div class="background-settings">
                                                         <div class="current-background">
                                                                 <span>当前背景：</span>
-                                                                <span class="background-type">{{ getChatBackgroundType() }}</span>
-                                                                <button @click="changeChatBackground" class="change-background-btn">修改</button>
+                                                                <span class="background-type">{{ getChatBackgroundType()
+                                                                        }}</span>
+                                                                <button @click="changeChatBackground"
+                                                                        class="change-background-btn">修改</button>
                                                         </div>
                                                 </div>
                                         </div>
 
                                         <!-- 聊天气泡样式 -->
                                         <div class="setting-item">
-                                                <h4>聊天气泡样式</h4>
-                                                <div class="placeholder-content">
-                                                        <p>此功能待开发。</p>
+                                                <div class="setting-header">
+                                                        <h4>聊天气泡样式</h4>
+                                                        <button 
+                                                                v-if="!isEditingBubblePresets" 
+                                                                @click="toggleEditMode" 
+                                                                class="edit-presets-btn"
+                                                        >
+                                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                                                        <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+                                                                </svg>
+                                                        </button>
+                                                        <button 
+                                                                v-else 
+                                                                @click="exitEditMode" 
+                                                                class="edit-presets-btn done"
+                                                        >
+                                                                完成
+                                                        </button>
+                                                </div>
+                                                <div class="bubble-style-section">
+                                                        <!-- 预设区域 -->
+                                                        <div class="preset-grid">
+                                                                <!-- 添加新预设按钮 -->
+                                                                <div 
+                                                                        class="preset-item add-preset" 
+                                                                        @click="toggleBubbleEditor"
+                                                                        :class="{ active: isAddingBubblePreset }"
+                                                                >
+                                                                        <div class="add-icon">+</div>
+                                                                        <span>添加预设</span>
+                                                                </div>
+                                                                
+                                                                <!-- 现有预设 -->
+                                                                <div 
+                                                                        v-for="preset in bubbleStylePresets" 
+                                                                        :key="preset.name"
+                                                                        class="preset-item bubble-preset"
+                                                                        :class="{ active: activeBubblePreset?.name === preset.name }"
+                                                                        @click="selectBubblePreset(preset)"
+                                                                >
+                                                                        <!-- 删除按钮（编辑模式下显示） -->
+                                                                        <button 
+                                                                                v-if="isEditingBubblePresets && !preset.isDefault"
+                                                                                @click.stop="deleteBubblePreset(preset)"
+                                                                                class="delete-preset-btn"
+                                                                        >
+                                                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                                                                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                                                                </svg>
+                                                                        </button>
+                                                                        
+                                                                        <div class="bubble-preview-gradient" :style="{ 
+                                                                                background: `linear-gradient(45deg, ${preset.charBubbleBg} 0%, ${preset.charBubbleText} 33%, ${preset.userBubbleBg} 66%, ${preset.userBubbleText} 100%)`
+                                                                        }"></div>
+                                                                        <span class="preset-name">{{ preset.name }}</span>
+                                                                </div>
+                                                        </div>
+
+                                                        <!-- 颜色编辑器（展开时显示） -->
+                                                        <div v-if="isAddingBubblePreset" class="bubble-color-editor-minimal">
+                                                                <div class="color-inputs-row">
+                                                                        <input 
+                                                                                type="color" 
+                                                                                v-model="editableBubbleStyle.charBubbleBg"
+                                                                                @input="handleBubbleStyleChange"
+                                                                                class="color-picker-mini"
+                                                                                title="角色气泡背景"
+                                                                        />
+                                                                        <input 
+                                                                                type="color" 
+                                                                                v-model="editableBubbleStyle.charBubbleText"
+                                                                                @input="handleBubbleStyleChange"
+                                                                                class="color-picker-mini"
+                                                                                title="角色气泡文字"
+                                                                        />
+                                                                        <input 
+                                                                                type="color" 
+                                                                                v-model="editableBubbleStyle.userBubbleBg"
+                                                                                @input="handleBubbleStyleChange"
+                                                                                class="color-picker-mini"
+                                                                                title="用户气泡背景"
+                                                                        />
+                                                                        <input 
+                                                                                type="color" 
+                                                                                v-model="editableBubbleStyle.userBubbleText"
+                                                                                @input="handleBubbleStyleChange"
+                                                                                class="color-picker-mini"
+                                                                                title="用户气泡文字"
+                                                                        />
+                                                                </div>
+                                                                
+                                                                <!-- 保存按钮 -->
+                                                                <button @click="saveBubblePreset" class="save-bubble-preset-btn-mini">
+                                                                        保存预设
+                                                                </button>
+                                                        </div>
+
+                                                        <!-- CSS样式预设占位符 -->
+                                                        <div class="css-presets-section">
+                                                                <h5>已保存的CSS样式预设</h5>
+                                                                <div class="placeholder-content">
+                                                                        <p>此功能将在后续版本中提供。</p>
+                                                                </div>
+                                                        </div>
                                                 </div>
                                         </div>
                                 </div>
@@ -212,63 +303,39 @@
                                                 <div class="memory-settings">
                                                         <div class="memory-setting-row">
                                                                 <label>私聊</label>
-                                                                <input 
-                                                                        type="number" 
+                                                                <input type="number"
                                                                         v-model.number="actor.contextMemorySettings.privateChat"
-                                                                        min="1"
-                                                                        max="200"
-                                                                        class="memory-input"
-                                                                />
+                                                                        min="1" max="200" class="memory-input" />
                                                         </div>
                                                         <div class="memory-setting-row">
                                                                 <label>群聊</label>
-                                                                <input 
-                                                                        type="number" 
+                                                                <input type="number"
                                                                         v-model.number="actor.contextMemorySettings.groupChat"
-                                                                        min="1"
-                                                                        max="100"
-                                                                        class="memory-input"
-                                                                />
+                                                                        min="1" max="100" class="memory-input" />
                                                         </div>
                                                         <div class="memory-setting-row">
                                                                 <label>记忆</label>
-                                                                <input 
-                                                                        type="number" 
+                                                                <input type="number"
                                                                         v-model.number="actor.contextMemorySettings.memory"
-                                                                        min="1"
-                                                                        max="20"
-                                                                        class="memory-input"
-                                                                />
+                                                                        min="1" max="20" class="memory-input" />
                                                         </div>
                                                         <div class="memory-setting-row">
                                                                 <label>日记</label>
-                                                                <input 
-                                                                        type="number" 
+                                                                <input type="number"
                                                                         v-model.number="actor.contextMemorySettings.diary"
-                                                                        min="1"
-                                                                        max="20"
-                                                                        class="memory-input"
-                                                                />
+                                                                        min="1" max="20" class="memory-input" />
                                                         </div>
                                                         <div class="memory-setting-row">
                                                                 <label>回忆</label>
-                                                                <input 
-                                                                        type="number" 
+                                                                <input type="number"
                                                                         v-model.number="actor.contextMemorySettings.recall"
-                                                                        min="1"
-                                                                        max="20"
-                                                                        class="memory-input"
-                                                                />
+                                                                        min="1" max="20" class="memory-input" />
                                                         </div>
                                                         <div class="memory-setting-row">
                                                                 <label>动态</label>
-                                                                <input 
-                                                                        type="number" 
+                                                                <input type="number"
                                                                         v-model.number="actor.contextMemorySettings.moments"
-                                                                        min="1"
-                                                                        max="20"
-                                                                        class="memory-input"
-                                                                />
+                                                                        min="1" max="20" class="memory-input" />
                                                         </div>
                                                 </div>
                                         </div>
@@ -294,7 +361,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed, watch } from 'vue';
+import { ref, onMounted, onUnmounted, computed, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useObservable } from '@vueuse/rxjs';
 import { liveQuery } from 'dexie';
@@ -305,8 +372,10 @@ import AccordionItem from '../components/ui/AccordionItem.vue';
 import RangeSlider from '../components/ui/RangeSlider.vue';
 import TagsManager from '../components/ui/TagsManager.vue';
 import CheckboxList from '../components/ui/CheckboxList.vue';
-import { showToast, showConfirm, showWorldbookEditModal, showManageGroupsModal, showAvatarPickerModal, showAlbumPickerModal, promptForInput } from '../services/uiService.js';
+import { showToast, showConfirm, showAvatarPickerModal, showAlbumPickerModal, promptForInput } from '../services/uiService.js';
 import { USER_ACTOR_ID } from '../services/database.js';
+import { getBubbleStylePresets, saveBubbleStylePresets, initializeDefaultBubbleStyles } from '../services/bubbleStyleService.js';
+import { applyActorTheme, restoreOriginalTheme } from '../services/themeService.js';
 
 const route = useRoute();
 const router = useRouter();
@@ -361,6 +430,50 @@ const userRelationship = ref({
 // 聊天设置相关
 const chatBackground = ref('');
 const userAvatar = ref('');
+
+// 聊天气泡样式相关
+const isAddingBubblePreset = ref(false);
+const isEditingBubblePresets = ref(false);
+const activeBubblePreset = ref(null);
+const bubbleStylePresets = ref([]);
+
+// 默认气泡样式
+const defaultBubbleStyle = {
+        charBubbleBg: '#f0f0f0',
+        charBubbleText: '#333333',
+        userBubbleBg: '#007aff',
+        userBubbleText: '#ffffff'
+};
+
+// 当前编辑的气泡样式
+const editableBubbleStyle = ref({ ...defaultBubbleStyle });
+
+// 当前应用的气泡样式
+const currentBubbleStyle = computed(() => {
+        // 如果正在编辑新预设，使用编辑中的样式实现实时预览
+        if (isAddingBubblePreset.value) {
+                return editableBubbleStyle.value;
+        }
+        // 否则使用激活的预设或默认样式
+        return activeBubblePreset.value || defaultBubbleStyle;
+});
+
+// 监听颜色编辑变化，实时应用主题色
+watch(editableBubbleStyle, async (newStyle) => {
+        if (isAddingBubblePreset.value && actor.value) {
+                // 实时应用颜色变化到主题色（用于编辑时的预览）
+                const root = document.documentElement;
+                root.style.setProperty('--accent-primary', newStyle.userBubbleBg);
+                root.style.setProperty('--accent-text', newStyle.userBubbleText);
+                root.style.setProperty('--char-bubble-bg', newStyle.charBubbleBg);
+                root.style.setProperty('--char-bubble-text', newStyle.charBubbleText);
+                root.style.setProperty('--user-bubble-bg', newStyle.userBubbleBg);
+                root.style.setProperty('--user-bubble-text', newStyle.userBubbleText);
+        }
+}, { deep: true });
+
+// 长按定时器
+let longPressTimer = null;
 
 // 下拉菜单选项
 const genderOptions = [
@@ -452,9 +565,6 @@ const handleWorldbookChange = (selectedIds) => {
         actor.value.worldbookGroupIds = selectedIds;
 };
 
-const openWorldbookManagement = () => {
-        showManageGroupsModal('worldbookGroups');
-};
 
 // 关系管理方法
 const getScorePercentage = (score) => {
@@ -561,12 +671,148 @@ const changeChatBackground = async () => {
         }
 };
 
+// 气泡样式相关方法
+const toggleEditMode = () => {
+        isEditingBubblePresets.value = true;
+};
+
+const exitEditMode = () => {
+        isEditingBubblePresets.value = false;
+};
+
+const toggleBubbleEditor = () => {
+        isAddingBubblePreset.value = !isAddingBubblePreset.value;
+        if (isAddingBubblePreset.value) {
+                // 重置编辑器
+                editableBubbleStyle.value = { ...defaultBubbleStyle };
+        }
+};
+
+const handleBubbleStyleChange = () => {
+        // 实时更新预览 - 直接更新当前气泡样式
+        // 这样在编辑时就能看到实时效果
+};
+
+const selectBubblePreset = async (preset) => {
+        activeBubblePreset.value = preset;
+        isAddingBubblePreset.value = false;
+        
+        // 立即更新角色的气泡样式预设并保存到数据库
+        if (actor.value) {
+                actor.value.bubbleStylePreset = preset.name;
+                await db.actors.update(actor.value.id, { bubbleStylePreset: preset.name });
+                
+                // 强制应用气泡样式作为主题色（立即更新界面主题）
+                await applyActorTheme(actor.value.id, true, true);
+        }
+        
+        showToast(`已应用气泡样式：${preset.name}`, 'success');
+};
+
+const saveBubblePreset = async () => {
+        const name = await promptForInput('保存气泡样式', '请为你的气泡样式命名');
+        if (name) {
+                const newPreset = {
+                        name,
+                        charBubbleBg: editableBubbleStyle.value.charBubbleBg,
+                        charBubbleText: editableBubbleStyle.value.charBubbleText,
+                        userBubbleBg: editableBubbleStyle.value.userBubbleBg,
+                        userBubbleText: editableBubbleStyle.value.userBubbleText,
+                        isDefault: false
+                };
+                
+                // 检查名称是否已存在
+                const existingIndex = bubbleStylePresets.value.findIndex(p => p.name === name);
+                if (existingIndex >= 0) {
+                        const confirmed = await showConfirm('替换预设', `预设"${name}"已存在，是否替换？`);
+                        if (confirmed) {
+                                bubbleStylePresets.value[existingIndex] = newPreset;
+                        } else {
+                                return;
+                        }
+                } else {
+                        bubbleStylePresets.value.push(newPreset);
+                }
+                
+                // 保存到数据库
+                await saveBubblePresetsToDatabase();
+                
+                // 应用新预设
+                activeBubblePreset.value = newPreset;
+                isAddingBubblePreset.value = false;
+                
+                if (actor.value) {
+                        actor.value.bubbleStylePreset = newPreset.name;
+                }
+                
+                showToast(`气泡样式"${name}"已保存`, 'success');
+        }
+};
+
+const deleteBubblePreset = async (preset) => {
+        const confirmed = await showConfirm('删除预设', `确定要删除气泡样式"${preset.name}"吗？`);
+        if (confirmed) {
+                const index = bubbleStylePresets.value.findIndex(p => p.name === preset.name);
+                if (index >= 0) {
+                        bubbleStylePresets.value.splice(index, 1);
+                        
+                        // 如果删除的是当前激活的预设，重置为默认
+                        if (activeBubblePreset.value?.name === preset.name) {
+                                activeBubblePreset.value = null;
+                                if (actor.value) {
+                                        actor.value.bubbleStylePreset = null;
+                                }
+                        }
+                        
+                        await saveBubblePresetsToDatabase();
+                        showToast(`气泡样式"${preset.name}"已删除`, 'success');
+                }
+        }
+};
+
+const loadBubblePresetsFromDatabase = async () => {
+        try {
+                bubbleStylePresets.value = await getBubbleStylePresets();
+                if (bubbleStylePresets.value.length === 0) {
+                        bubbleStylePresets.value = await initializeDefaultBubbleStyles();
+                }
+        } catch (error) {
+                console.error('加载气泡样式预设失败:', error);
+        }
+};
+
+const saveBubblePresetsToDatabase = async () => {
+        try {
+                await saveBubbleStylePresets(bubbleStylePresets.value);
+        } catch (error) {
+                console.error('保存气泡样式预设失败:', error);
+        }
+};
+
+const startLongPress = (type, preset) => {
+        if (preset.isDefault) return; // 默认预设不允许删除
+        
+        longPressTimer = setTimeout(() => {
+                if (type === 'bubble') {
+                        deleteBubblePreset(preset);
+                }
+        }, 800);
+};
+
+const cancelLongPress = () => {
+        if (longPressTimer) {
+                clearTimeout(longPressTimer);
+                longPressTimer = null;
+        }
+};
+
 // 加载数据
 onMounted(async () => {
         if (isNew.value) {
                 actor.value = {
                         name: '',
                         realName: '',
+                        signature: '',
                         birthday: '',
                         gender: '未知',
                         groupIds: [],
@@ -640,6 +886,19 @@ onMounted(async () => {
                 }
         }
         
+        // 加载气泡样式预设
+        await loadBubblePresetsFromDatabase();
+        
+        // 如果角色有保存的气泡样式预设，应用它
+        if (!isNew.value && actor.value && actor.value.bubbleStylePreset) {
+                const savedPreset = bubbleStylePresets.value.find(p => p.name === actor.value.bubbleStylePreset);
+                if (savedPreset) {
+                        activeBubblePreset.value = savedPreset;
+                        // 应用气泡样式作为主题色（使用用户保存的主题选择）
+                        await applyActorTheme(actor.value.id, null);
+                }
+        }
+        
         // 加载用户头像（从用户人格中获取）
         try {
                 const userEntity = await db.actors.get(currentUserId);
@@ -665,7 +924,8 @@ const saveChanges = async () => {
                         worldbookIds: Array.isArray(actor.value.worldbookIds) ? [...actor.value.worldbookIds] : [],
                         worldbookGroupIds: Array.isArray(actor.value.worldbookGroupIds) ? [...actor.value.worldbookGroupIds] : [],
                         currentAvatar: actor.value.currentAvatar || '',
-                        chatBackground: actor.value.chatBackground || ''
+                        chatBackground: actor.value.chatBackground || '',
+                        bubbleStylePreset: activeBubblePreset.value?.name || null
                 }));
                 
                 // 删除临时字段
@@ -767,6 +1027,11 @@ const handleBack = () => {
                 router.push('/chat/contacts');
         }
 };
+
+// 组件卸载时恢复原始主题
+onUnmounted(() => {
+        restoreOriginalTheme();
+});
 </script>
 
 <style scoped>
@@ -1248,5 +1513,309 @@ const handleBack = () => {
 
 .change-background-btn:hover {
         background-color: var(--accent-darker);
+}
+
+/* 气泡样式相关样式 */
+.setting-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+}
+
+.edit-presets-btn {
+        padding: 6px 12px;
+        background: none;
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        color: var(--text-primary);
+        cursor: pointer;
+        font-size: 12px;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        transition: all 0.2s ease;
+}
+
+.edit-presets-btn:hover {
+        border-color: var(--accent-primary);
+        color: var(--accent-primary);
+}
+
+.edit-presets-btn.done {
+        background-color: var(--accent-primary);
+        color: var(--accent-text);
+        border-color: var(--accent-primary);
+}
+
+.edit-presets-btn svg {
+        width: 14px;
+        height: 14px;
+}
+
+.bubble-style-section {
+        margin-top: 15px;
+}
+
+.preset-grid {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 8px;
+        margin-bottom: 20px;
+}
+
+.preset-item {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        background-color: var(--bg-card);
+        min-height: 80px;
+        justify-content: center;
+}
+
+.preset-item:hover {
+        transform: translateY(-1px);
+}
+
+.preset-item.active {
+        box-shadow: 0 0 0 1px var(--accent-primary);
+}
+
+.add-preset {
+        border: 2px dashed var(--border-color);
+        background-color: transparent;
+        justify-content: center;
+        min-height: 60px;
+}
+
+.add-preset:hover {
+        border-color: var(--accent-primary);
+        background-color: var(--bg-secondary);
+}
+
+.add-preset.active {
+        border-color: var(--accent-primary);
+        background-color: var(--bg-secondary);
+}
+
+.add-icon {
+        font-size: 20px;
+        font-weight: bold;
+        color: var(--accent-primary);
+        margin-bottom: 4px;
+}
+
+.preset-name {
+        font-size: 11px;
+        color: var(--text-secondary);
+        text-align: center;
+        margin-top: 6px;
+        line-height: 1.2;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        max-width: 100%;
+}
+
+.bubble-preview-gradient {
+        width: 40px;
+        height: 40px;
+        border-radius: 6px;
+        border: 1px solid var(--border-color);
+        margin-bottom: 6px;
+}
+
+.bubble-preview-compact {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        width: 100%;
+}
+
+.color-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 11px;
+}
+
+.color-row .label {
+        color: var(--text-secondary);
+        font-weight: 500;
+}
+
+.color-dots {
+        display: flex;
+        gap: 4px;
+}
+
+.color-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        border: 1px solid var(--border-color);
+}
+
+.delete-preset-btn {
+        position: absolute;
+        top: -6px;
+        right: -6px;
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background-color: #ff4444;
+        color: white;
+        border: none;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 10px;
+        z-index: 10;
+}
+
+.delete-preset-btn svg {
+        width: 10px;
+        height: 10px;
+}
+
+.bubble-color-editor {
+        background-color: var(--bg-secondary);
+        border-radius: 8px;
+        padding: 16px;
+        margin-bottom: 20px;
+        border: 1px solid var(--border-color);
+}
+
+.color-editor-compact {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        margin-bottom: 16px;
+}
+
+.color-row-editor {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+}
+
+.color-row-editor .label {
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--text-primary);
+        min-width: 80px;
+}
+
+.color-inputs {
+        display: flex;
+        gap: 8px;
+}
+
+.color-picker-compact {
+        width: 32px;
+        height: 32px;
+        border: 1px solid var(--border-color);
+        border-radius: 50%;
+        cursor: pointer;
+        background: none;
+        padding: 0;
+}
+
+.save-bubble-preset-btn {
+        width: 100%;
+        padding: 10px;
+        background-color: var(--accent-primary);
+        color: var(--accent-text);
+        border: none;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+}
+
+.save-bubble-preset-btn:hover {
+        background-color: var(--accent-darker);
+}
+
+/* 新的紧凑型颜色编辑器 */
+.bubble-color-editor-minimal {
+        background-color: var(--bg-secondary);
+        border-radius: 8px;
+        padding: 12px;
+        margin-bottom: 16px;
+        border: 1px solid var(--border-color);
+}
+
+.color-inputs-row {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 12px;
+        justify-content: center;
+}
+
+.color-picker-mini {
+        width: 24%;
+        border: 1px solid var(--border-color);
+        border-radius: 4px;
+        cursor: pointer;
+        background: none;
+        padding: 0;
+}
+
+.save-bubble-preset-btn-mini {
+        width: 100%;
+        padding: 8px;
+        background-color: var(--accent-primary);
+        color: var(--accent-text);
+        border: none;
+        border-radius: 6px;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+}
+
+.save-bubble-preset-btn-mini:hover {
+        background-color: var(--accent-darker);
+}
+
+.css-presets-section {
+        margin-top: 30px;
+        padding-top: 20px;
+        border-top: 1px solid var(--border-color);
+}
+
+.css-presets-section h5 {
+        margin: 0 0 15px 0;
+        color: var(--text-primary);
+        font-size: 16px;
+        font-weight: 600;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+        .preset-grid {
+                flex-direction: column;
+        }
+        
+        .preset-item {
+                min-width: 100%;
+        }
+        
+        .color-row-editor {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 8px;
+        }
+        
+        .color-row-editor .label {
+                min-width: auto;
+        }
 }
 </style>

@@ -374,7 +374,7 @@ input:focus, textarea:focus, select:focus {
 
 .modal-btn.confirm {
         background-color: var(--accent-primary);
-        color: var(--text-inverse);
+        color: var(--accent-text);
 }
 
 .modal-fade-enter-active,

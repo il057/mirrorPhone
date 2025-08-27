@@ -1,6 +1,6 @@
 <template>
         <div class="page-container">
-                <AppHeader title="我">
+                <AppHeader title=" ">
                         <template #right>
                                 <button class="header-action-button" @click="openPersonaManagement" title="管理人格预设">
                                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"

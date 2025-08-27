@@ -32,6 +32,7 @@
                                                         'User') }}</span>
                                         </div>
                                 </div>
+                                <p class="user-signature">{{ displayUser?.signature }}</p>
                         </div>
 
                         <!-- 动态列表 -->
@@ -54,18 +55,21 @@
                                                                 </div>
                                                                 <h3 class="moment-author">{{ moment.author.name }}</h3>
                                                         </div>
-                                                        
+
                                                         <!-- 菜单按钮 -->
                                                         <div v-if="canEditMoment(moment)" class="moment-menu">
-                                                                <button class="menu-trigger" @click.stop="toggleDropdown(moment.id)">
-                                                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                                                                                <circle cx="12" cy="5" r="2"/>
-                                                                                <circle cx="12" cy="12" r="2"/>
-                                                                                <circle cx="12" cy="19" r="2"/>
+                                                                <button class="menu-trigger"
+                                                                        @click.stop="toggleDropdown(moment.id)">
+                                                                        <svg width="20" height="20" viewBox="0 0 24 24"
+                                                                                fill="currentColor">
+                                                                                <circle cx="12" cy="5" r="2" />
+                                                                                <circle cx="12" cy="12" r="2" />
+                                                                                <circle cx="12" cy="19" r="2" />
                                                                         </svg>
                                                                 </button>
-                                                                
-                                                                <DropdownMenu :isOpen="activeDropdown === moment.id" @close="closeDropdown">
+
+                                                                <DropdownMenu :isOpen="activeDropdown === moment.id"
+                                                                        @close="closeDropdown">
                                                                         <li @click="openEditModal(moment)">编辑</li>
                                                                         <li @click="deleteMoment(moment)">删除</li>
                                                                 </DropdownMenu>
@@ -280,18 +284,21 @@
                                                                 </div>
                                                                 <h3 class="moment-author">{{ moment.author.name }}</h3>
                                                         </div>
-                                                        
+
                                                         <!-- 菜单按钮 -->
                                                         <div v-if="canEditMoment(moment)" class="moment-menu">
-                                                                <button class="menu-trigger" @click.stop="toggleDropdown(moment.id)">
-                                                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                                                                                <circle cx="12" cy="5" r="2"/>
-                                                                                <circle cx="12" cy="12" r="2"/>
-                                                                                <circle cx="12" cy="19" r="2"/>
+                                                                <button class="menu-trigger"
+                                                                        @click.stop="toggleDropdown(moment.id)">
+                                                                        <svg width="20" height="20" viewBox="0 0 24 24"
+                                                                                fill="currentColor">
+                                                                                <circle cx="12" cy="5" r="2" />
+                                                                                <circle cx="12" cy="12" r="2" />
+                                                                                <circle cx="12" cy="19" r="2" />
                                                                         </svg>
                                                                 </button>
-                                                                
-                                                                <DropdownMenu :isOpen="activeDropdown === moment.id" @close="closeDropdown">
+
+                                                                <DropdownMenu :isOpen="activeDropdown === moment.id"
+                                                                        @close="closeDropdown">
                                                                         <li @click="openEditModal(moment)">编辑</li>
                                                                         <li @click="deleteMoment(moment)">删除</li>
                                                                 </DropdownMenu>
@@ -458,13 +465,8 @@
                 </template>
 
                 <!-- 发布动态模态框 -->
-                <WritePostModal 
-                        :isVisible="showWritePostModal" 
-                        :postType="postType"
-                        :editData="editingMoment"
-                        :isEditMode="isEditMode"
-                        @close="closeWritePostModal"
-                        @publish="publishMoment" />
+                <WritePostModal :isVisible="showWritePostModal" :postType="postType" :editData="editingMoment"
+                        :isEditMode="isEditMode" @close="closeWritePostModal" @publish="publishMoment" />
         </div>
 </template><script setup>
 import { ref, onMounted, onUnmounted, computed, watch, watchEffect } from 'vue';
@@ -474,7 +476,9 @@ import { getDefaultUserPersona } from '../../services/userPersonaService.js';
 import { showAlbumPickerModal, showUploadChoiceModal, showConfirm } from '../../services/uiService.js';
 import { uploadToCloudinary } from '../../services/cloudinaryService.js';
 import { formatTimestamp } from '../../utils/datetime.js';
+import { applyActorTheme, restoreOriginalTheme } from '../../services/themeService.js';
 import { toggleFavorite as toggleFavoriteService, isFavorited } from '../../services/favoritesService.js';
+import { getActorBubbleStyle } from '../../services/bubbleStyleService.js';
 import WritePostModal from '../../components/ui/WritePostModal.vue';
 import DropdownMenu from '../../components/ui/DropdownMenu.vue';
 import AppHeader from '../../components/layout/Header.vue';
@@ -496,6 +500,7 @@ const currentPersona = ref(null);
 const moments = ref([]);
 const wallpaperSettings = ref(null);
 const momentsHeaderImage = ref(null); // moments独立头图
+const actorHeaderStyle = ref(null); // 角色头图样式
 const activeOverlay = ref(null);
 
 // 发布动态模态框
@@ -513,6 +518,22 @@ const activeDropdown = ref(null);
 const displayUser = computed(() => {
         return isPersonalFeed.value ? profileActor.value : currentPersona.value;
 });
+
+// 获取角色动态页面的头图样式
+const getActorMomentsHeaderStyle = async (actorId) => {
+        try {
+                const bubbleStyle = await getActorBubbleStyle(actorId);
+                return {
+                        background: `linear-gradient(135deg, ${bubbleStyle.userBubbleBg}, ${bubbleStyle.charBubbleBg})`
+                };
+        } catch (error) {
+                console.error('Failed to get actor bubble style for moments header:', error);
+                // 回退到默认渐变
+                return {
+                        background: 'linear-gradient(135deg, #007aff, #f0f0f0)'
+                };
+        }
+};
 
 // 计算头像显示逻辑
 const avatarToShow = computed(() => {
@@ -566,23 +587,30 @@ const handleBack = () => {
                         // 角色的动态，检查来源
                         const fromPage = router.currentRoute.value.query.from;
                         if (fromPage === 'profile') {
-                                // 从profile页面来的，需要查看profile的来源并向上返回
+                                // 从profile页面来的，查看profile的来源并直接跳转
                                 const profileFromPage = sessionStorage.getItem(`profile_${props.id}_from`);
                                 if (profileFromPage === 'contacts') {
                                         router.push('/chat/contacts');
                                 } else if (profileFromPage === 'messages') {
                                         router.push('/chat/messages');
+                                } else if (profileFromPage === 'chatroom') {
+                                        router.push(`/chatroom/${props.id}`);
                                 } else {
-                                        // 没有找到profile的来源，返回到profile页面
-                                        router.push(`/profile/${props.id}`);
+                                        // 如果没有找到profile的来源，默认返回消息页面
+                                        router.push('/chat/messages');
                                 }
+                        } else if (fromPage === 'contacts') {
+                                router.push('/chat/contacts');
+                        } else if (fromPage === 'messages') {
+                                router.push('/chat/messages');
+                        } else if (fromPage === 'chatroom') {
+                                router.push(`/chatroom/${props.id}`);
                         } else {
-                                // 其他情况，返回到角色资料页面
-                                router.push(`/profile/${props.id}`);
+                                router.push('/chat/messages');
                         }
                 }
         } else {
-                // 公共动态页面，不应该有这个问题，但以防万一
+                // 公共动态页面
                 router.push('/chat/moments');
         }
 };
@@ -904,11 +932,9 @@ const headerImageStyle = computed(() => {
                 if (profileActor.value.id === USER_ACTOR_ID || profileActor.value.id?.startsWith('user_')) {
                         // 用户动态页的头图逻辑与公共页一致，继续向下执行
                 } else {
-                        // 角色的个人动态页，使用角色主题色的渐变
-                        const charColor = profileActor.value.status?.color || '#4CAF50'; // 角色状态颜色
-                        const userColor = wallpaperSettings.value?.themeColor || '#778088'; // 用户主题色
-                        return {
-                                background: `linear-gradient(135deg, ${charColor}, ${userColor})`
+                        // 角色的个人动态页，使用角色气泡样式的渐变（用户气泡背景 -> 角色气泡背景）
+                        return actorHeaderStyle.value || {
+                                background: 'linear-gradient(135deg, var(--user-bubble-bg), var(--char-bubble-bg))'
                         };
                 }
         }
@@ -1217,6 +1243,11 @@ onMounted(async () => {
         await loadMomentsHeaderImage();
         await loadMoments();
 
+        // 如果是角色的个人动态页面，应用角色主题（使用用户保存的主题选择）
+        if (isPersonalFeed.value && props.id && props.id !== USER_ACTOR_ID && !props.id?.startsWith('user_')) {
+                await applyActorTheme(props.id, null);
+        }
+
         // 监听来自ChatLayout的发布动态事件
         const handleWritePostEvent = (event) => {
                 const { type } = event.detail;
@@ -1239,6 +1270,11 @@ onUnmounted(() => {
         if (window.removeWritePostListener) {
                 window.removeWritePostListener();
                 delete window.removeWritePostListener;
+        }
+        
+        // 如果是角色的个人动态页面，恢复原始主题
+        if (isPersonalFeed.value && props.id && props.id !== USER_ACTOR_ID && !props.id?.startsWith('user_')) {
+                restoreOriginalTheme();
         }
 });
 
@@ -1347,6 +1383,14 @@ onUnmounted(() => {
         margin: -40px 0 0 0;
         text-align: right;
         text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.user-signature {
+        color: var(--accent-text);
+        font-size: 14px;
+        margin: 10px 0 0 0;
+        text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+        text-align: right;
 }
 
 /* 头图展开时的控制按钮 */

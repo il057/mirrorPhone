@@ -95,24 +95,35 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useObservable } from '@vueuse/rxjs';
 import { liveQuery } from 'dexie';
 import db from '../services/database.js';
 import AppHeader from '../components/layout/Header.vue';
 import { calculateAge, getZodiacSign } from '../utils/datetime.js';
+import { applyActorTheme, restoreOriginalTheme } from '../services/themeService.js';
 
 const route = useRoute();
 const router = useRouter();
 const actorId = ref(route.params.id);
 
 // 保存当前页面的来源信息，用于后续导航
-onMounted(() => {
+onMounted(async () => {
         const fromPage = route.query.from;
         if (fromPage) {
                 sessionStorage.setItem(`profile_${actorId.value}_from`, fromPage);
         }
+        
+        // 应用角色主题（使用用户保存的主题选择）
+        if (actorId.value) {
+                await applyActorTheme(actorId.value, null);
+        }
+});
+
+// 组件卸载时恢复原始主题
+onUnmounted(() => {
+        restoreOriginalTheme();
 });
 
 const actor = useObservable(
@@ -378,7 +389,7 @@ const goToChat = () => {
 
 .action-btn.primary {
         background-color: var(--accent-primary);
-        color: var(--text-inverse);
+        color: var(--accent-text);
 }
 
 .action-btn:not(.primary) {

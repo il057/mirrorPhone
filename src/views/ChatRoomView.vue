@@ -81,7 +81,7 @@
                                                         <div v-else class="typing-indicator">
                                                                 <CirclesToRhombusesSpinner :animation-duration="1200"
                                                                         :circles-num="3" :circle-size="1"
-                                                                        color="var(--accent-primary)" />
+                                                                        color="var(--char-bubble-text)" />
                                                         </div>
                                                 </div>
                                         </div>
@@ -117,7 +117,7 @@
                                         <button class="function-btn" title="通话">
                                                 <span>📞</span>
                                         </button>
-                                        <button class="function-btn" title="主题">
+                                        <button class="function-btn" title="主题" @click="toggleThemeColor">
                                                 <span>🎨</span>
                                         </button>
                                 </div>
@@ -170,7 +170,7 @@
 </template>
 
 <script setup>
-import { ref, computed, nextTick, onMounted, watch } from 'vue';
+import { ref, computed, nextTick, onMounted, onUnmounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useObservable } from '@vueuse/rxjs';
 import { liveQuery } from 'dexie';
@@ -183,6 +183,8 @@ import { generateAIReply } from '../services/aiChatAPIService.js';
 import { getUserPersonaForGroup, getUserPersonaForUngrouped, getDefaultUserPersona } from '../services/userPersonaService.js';
 import { USER_ACTOR_ID } from '../services/database.js';
 import { getPersonalSettings, getTypingDelayConfig, getRandomMessageDelay } from '../services/personalSettingsService.js';
+import { getActorBubbleStyle, applyBubbleStyles } from '../services/bubbleStyleService.js';
+import { applyActorTheme, toggleActorTheme, restoreOriginalTheme, getActorThemeChoice } from '../services/themeService.js';
 
 const route = useRoute();
 const router = useRouter();
@@ -217,6 +219,11 @@ const personalSettings = ref({
                 speed: 5
         }
 });
+
+// 主题相关状态
+const currentBubbleStyle = ref(null);
+// 从localStorage读取用户对这个角色的主题选择
+const isUsingUserBubbleTheme = ref(getActorThemeChoice(actorId.value));
 
 // 获取角色信息
 const actor = useObservable(
@@ -448,6 +455,11 @@ const loadStickers = async () => {
         } catch (error) {
                 console.error('加载表情包失败:', error);
         }
+};
+
+// 主题色切换功能
+const toggleThemeColor = () => {
+        isUsingUserBubbleTheme.value = toggleActorTheme();
 };
 
 // 发送消息
@@ -948,6 +960,16 @@ onMounted(async () => {
         // 加载表情包数据
         loadStickers();
         
+        // 加载并应用气泡样式作为主题
+        if (actor.value) {
+                try {
+                        const bubbleStyle = await applyActorTheme(actor.value.id, isUsingUserBubbleTheme.value);
+                        currentBubbleStyle.value = bubbleStyle;
+                } catch (error) {
+                        console.error('Failed to load bubble style:', error);
+                }
+        }
+        
         // 监听窗口大小变化
         const handleResize = () => {
                 // 确保内容适应新的窗口大小
@@ -970,6 +992,11 @@ onMounted(async () => {
                 window.removeEventListener('resize', handleResize);
                 document.removeEventListener('visibilitychange', handleVisibilityChange);
         };
+});
+
+// 组件卸载时恢复原始主题
+onUnmounted(() => {
+        restoreOriginalTheme();
 });
 </script>
 
@@ -1003,7 +1030,7 @@ onMounted(async () => {
         width: 8px;
         height: 8px;
         border-radius: 50%;
-        box-shadow: 0 0 6px rgba(76, 175, 80, 0.6);
+        box-shadow: 0 0 6px var(--status-color, rgba(76, 175, 80, 0.6));
         animation: pulse 2s infinite;
 }
 
@@ -1096,15 +1123,16 @@ onMounted(async () => {
 }
 
 .message-bubble {
-        background-color: var(--bg-card);
+        background-color: var(--char-bubble-bg, var(--bg-card));
+        color: var(--char-bubble-text, var(--text-primary));
         padding: 12px 16px;
         border-radius: 18px;
         word-wrap: break-word;
 }
 
 .own-message .message-bubble {
-        background-color: var(--accent-primary);
-        color: var(--text-inverse);
+        background-color: var(--user-bubble-bg, var(--accent-primary));
+        color: var(--user-bubble-text, var(--text-inverse));
 }
 
 .message-bubble p {
@@ -1145,8 +1173,8 @@ onMounted(async () => {
 
 /* 打字特效样式 */
 .typing-bubble {
-        background-color: var(--bg-card);
-        border: 1px solid var(--border-color);
+        background-color: var(--char-bubble-bg);
+        border: 1px solid var(--accent-border);
         position: relative;
 }
 
