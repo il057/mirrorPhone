@@ -99,7 +99,7 @@
                                         <div v-if="hasInteractions(moment)" class="interactions-container">
                                                 <!-- 点赞列表 -->
                                                 <div v-if="moment.likeUsers && moment.likeUsers.length > 0" class="likes-section">
-                                                        <svg class="heart-icon" width="16" height="16" viewBox="0 0 24 24" fill="#ff4757" stroke="none">
+                                                        <svg class="heart-icon" width="16" height="16" viewBox="0 0 24 24" fill="var(--accent-primary)" stroke="none">
                                                                 <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
                                                         </svg>
                                                         <div class="like-avatars">
@@ -619,40 +619,35 @@ onUnmounted(() => {
         }
 });
 
-// 监听当前人格的变化，重新加载动态
-const reloadMomentsOnPersonaChange = () => {
-        loadMoments();
-};
 
-// 调试函数
-const debugUserActions = () => {
-        console.log('Current persona:', currentPersona.value);
-        console.log('Moments:', moments.value);
-};
 </script>
 
 <style scoped>
+
+.app-main-container {
+        padding-bottom: calc(var(--footer-height) + 10px);
+}
+
 .page-container {
         background-color: var(--bg-primary);
         min-height: 100vh;
-        padding-bottom: 60px; /* 为底部导航留出空间 */
 }
 
 /* 头图区域 - 跟随页面滚动 */
 .header-image-container {
         position: relative;
-        height: 200px;
-        min-height: 200px;
+        height: 300px;
+        min-height: 300px;
         width: 100%;
         transition: all 0.3s ease;
         cursor: pointer;
         overflow: hidden;
-        margin-top: calc(56px + var(--safe-top, 0px)); /* 为ChatLayout的Header留出空间 */
+        margin-top: calc(-56px - var(--safe-top, 0px));
 }
 
 .header-image-container.expanded {
-        height: 40vh;
-        min-height: 300px;
+        height: 60vh;
+        min-height: 400px;
 }
 
 .header-image {
@@ -704,7 +699,7 @@ const debugUserActions = () => {
         align-items: center;
         background-color: var(--bg-secondary);
         overflow: hidden;
-        border: 4px solid white;
+        border: 1px solid var(--border-color);
         box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
         flex-shrink: 0;
 }
@@ -722,10 +717,10 @@ const debugUserActions = () => {
 }
 
 .user-name {
-        color: var(--text-primary);
+        color: var(--accent-text);
         font-size: 20px;
         font-weight: 600;
-        margin: 0;
+        margin: -40px 0 0 0;
         text-align: right;
         text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
@@ -758,6 +753,7 @@ const debugUserActions = () => {
 /* 动态内容区域 */
 .moments-content {
         padding: 0 15px;
+        padding-bottom: calc(var(--footer-height) + 10px);
 }
 
 .empty-state {
@@ -878,16 +874,15 @@ const debugUserActions = () => {
 }
 
 .action-btn:hover {
-        background-color: var(--bg-secondary);
         color: var(--accent-primary);
 }
 
 .like-btn.liked {
-        color: #ff4757;
+        color: var(--accent-primary);
 }
 
 .like-btn.liked svg {
-        fill: #ff4757;
+        fill: var(--accent-primary);
 }
 
 /* 评论输入框行 - 紧跟在第三行后面 */
@@ -926,8 +921,8 @@ const debugUserActions = () => {
 }
 
 .like-avatar {
-        width: 24px;
-        height: 24px;
+        width: 30px;
+        height: 30px;
         border-radius: 4px;
         border: 1px solid var(--border-color);
         font-size: 10px;

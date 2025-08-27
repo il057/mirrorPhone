@@ -125,9 +125,7 @@ const handleDropdownAction = (action) => {
 
 .chat-content {
         flex: 1;
-        overflow-y: auto;
-        padding-top: var(--header-height);
-        padding-bottom: var(--footer-height);
+        overflow-y: auto;   
 }
 
 

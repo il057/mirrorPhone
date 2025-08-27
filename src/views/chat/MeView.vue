@@ -3,9 +3,10 @@
                 <AppHeader title="我">
                         <template #right>
                                 <button class="header-action-button" @click="openPersonaManagement" title="管理人格预设">
-                                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                                <circle cx="12" cy="12" r="3"/>
-                                                <path d="M12 1v6m0 6v6m11-7h-6m-6 0H1"/>
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"
+                                                fill="currentColor" class="bi bi-person-gear" viewBox="0 0 16 16">
+                                                <path
+                                                        d="M11 5a3 3 0 1 1-6 0 3 3 0 0 1 6 0M8 7a2 2 0 1 0 0-4 2 2 0 0 0 0 4m.256 7a4.5 4.5 0 0 1-.229-1.004H3c.001-.246.154-.986.832-1.664C4.484 10.68 5.711 10 8 10q.39 0 .74.025c.226-.341.496-.65.804-.918Q8.844 9.002 8 9c-5 0-6 3-6 4s1 1 1 1zm3.63-4.54c.18-.613 1.048-.613 1.229 0l.043.148a.64.64 0 0 0 .921.382l.136-.074c.561-.306 1.175.308.87.869l-.075.136a.64.64 0 0 0 .382.92l.149.045c.612.18.612 1.048 0 1.229l-.15.043a.64.64 0 0 0-.38.921l.074.136c.305.561-.309 1.175-.87.87l-.136-.075a.64.64 0 0 0-.92.382l-.045.149c-.18.612-1.048.612-1.229 0l-.043-.15a.64.64 0 0 0-.921-.38l-.136.074c-.561.305-1.175-.309-.87-.87l.075-.136a.64.64 0 0 0-.382-.92l-.148-.045c-.613-.18-.613-1.048 0-1.229l.148-.043a.64.64 0 0 0 .382-.921l-.074-.136c-.306-.561.308-1.175.869-.87l.136.075a.64.64 0 0 0 .92-.382zM14 12.5a1.5 1.5 0 1 0-3 0 1.5 1.5 0 0 0 3 0" />
                                         </svg>
                                 </button>
                         </template>
@@ -14,8 +15,10 @@
                 <main class="page-content">
                         <div class="user-profile-header">
                                 <div class="avatar">
-                                        <img v-if="currentPersona?.avatar" :src="currentPersona.avatar" :alt="currentPersona.name || 'User'">
-                                        <span v-else class="avatar-initial">{{ getInitial(currentPersona?.name || 'User') }}</span>
+                                        <img v-if="currentPersona?.avatar" :src="currentPersona.avatar"
+                                                :alt="currentPersona.name || 'User'">
+                                        <span v-else class="avatar-initial">{{ getInitial(currentPersona?.name ||
+                                                'User') }}</span>
                                 </div>
                                 <div class="user-info">
                                         <h2 class="user-name">{{ currentPersona?.name || 'User' }}</h2>
@@ -26,25 +29,25 @@
                         <div class="menu-list">
                                 <router-link to="/stickers" class="menu-item">
                                         <span>表情</span>
-                                        <svg class="chevron" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                                                stroke="currentColor">
+                                        <svg class="chevron" xmlns="http://www.w3.org/2000/svg" fill="none"
+                                                viewBox="0 0 24 24" stroke="currentColor">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                         d="M9 5l7 7-7 7" />
                                         </svg>
                                 </router-link>
                                 <div class="menu-item">
                                         <span>收藏</span>
-                                        <svg class="chevron" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                                                stroke="currentColor">
+                                        <svg class="chevron" xmlns="http://www.w3.org/2000/svg" fill="none"
+                                                viewBox="0 0 24 24" stroke="currentColor">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                         d="M9 5l7 7-7 7" />
                                         </svg>
                                 </div>
-                              
+
                                 <div class="menu-item">
                                         <span>设置</span>
-                                        <svg class="chevron" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                                                stroke="currentColor">
+                                        <svg class="chevron" xmlns="http://www.w3.org/2000/svg" fill="none"
+                                                viewBox="0 0 24 24" stroke="currentColor">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                         d="M9 5l7 7-7 7" />
                                         </svg>
@@ -142,15 +145,13 @@ const getInitial = (name) => {
 }
 
 .header-action-button:hover {
-        background-color: var(--bg-secondary);
         color: var(--accent-primary);
 }
 
 .page-content {
         flex: 1;
-        padding: 20px 15px;
+        padding: 10px 15px 0;
         background-color: var(--bg-primary);
-        padding-top: calc(var(--header-height) + 20px);
         overflow-y: auto;
 }
 
