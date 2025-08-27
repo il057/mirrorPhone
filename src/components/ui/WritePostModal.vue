@@ -221,7 +221,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { showUploadChoiceModal, showAlbumPickerModal } from '../../services/uiService.js';
 import { uploadToCloudinary } from '../../services/cloudinaryService.js';
 import db from '../../services/database.js';
@@ -244,9 +244,9 @@ const emit = defineEmits(['close', 'publish']);
 // 响应式数据
 const postText = ref('');
 const isImagePost = computed(() => props.postType === 'image');
-const imageMode = ref('description'); // 'description', 'upload', 'album'
+const imageMode = ref('upload'); // 'description', 'upload', 'album'
 const imageDescription = ref('');
-const showDescription = ref(false);
+const showDescription = ref(true);
 const selectedImages = ref([]);
 
 // 可见性设置
@@ -282,12 +282,10 @@ const visibilityText = computed(() => {
 });
 
 const canPublish = computed(() => {
-        // 文字动态：需要有文本内容
         if (!isImagePost.value) {
                 return postText.value.trim().length > 0;
         }
-        
-        // 图片动态：文字描述模式必须有描述，其他模式需要有图片或文本
+
         if (imageMode.value === 'description') {
                 return imageDescription.value.trim().length > 0;
         } else {
@@ -304,13 +302,13 @@ const closeModal = () => {
 const resetForm = () => {
         postText.value = '';
         imageDescription.value = '';
-        showDescription.value = false;
+        showDescription.value = true;
         selectedImages.value = [];
         showVisibilityOptions.value = false;
         visibilityMode.value = 'public';
         selectedGroups.value = [];
         selectedFriends.value = [];
-        imageMode.value = 'description';
+        imageMode.value = 'upload';
 };
 
 const getInitial = (name) => {
@@ -320,46 +318,89 @@ const getInitial = (name) => {
 
 const handleImageSelection = async () => {
         try {
+                let newImage = null;
+
+                // 判断当前是“上传”模式还是“相册”模式
                 if (imageMode.value === 'upload') {
+                        // “上传”模式会弹出包含“本地上传”和“URL”的选项
                         const choice = await showUploadChoiceModal();
-                        if (choice && choice.type === 'local') {
+                        if (!choice) return;
+
+                        if (choice.type === 'local') {
                                 const imageUrl = await uploadToCloudinary(choice.value);
                                 if (imageUrl) {
-                                        selectedImages.value.push({
-                                                url: imageUrl,
-                                                description: ''
-                                        });
+                                        newImage = { url: imageUrl, description: '' };
                                 }
+                        } else { // 处理 URL 输入的情况
+                                newImage = { url: choice.value, description: '' };
                         }
+
                 } else if (imageMode.value === 'album') {
-                        const imageUrl = await showAlbumPickerModal();
-                        if (imageUrl) {
-                                // 检查是否有已保存的描述
-                                const savedDescription = ''; // 这里可以从数据库获取图片描述
-                                selectedImages.value.push({
-                                        url: imageUrl,
-                                        description: savedDescription
-                                });
-                                
-                                // 如果有描述，自动填入描述框
-                                if (savedDescription) {
-                                        imageDescription.value = savedDescription;
-                                        showDescription.value = true;
-                                }
+                        // “相册”模式直接打开相册选择器
+                        const selectedPhoto = await showAlbumPickerModal();
+                        if (selectedPhoto) {
+                                newImage = {
+                                        url: selectedPhoto.url,
+                                        description: selectedPhoto.description || ''
+                                };
                         }
                 }
+
+                // 如果成功获取了新图片
+                if (newImage) {
+                        // 使用创建一个新数组的方式来确保 Vue 的响应式更新
+                        selectedImages.value = [...selectedImages.value, newImage];
+                }
+
         } catch (error) {
                 console.error('选择图片失败:', error);
         }
 };
 
+// 监听 selectedImages 的变化来构建结构化描述
+watch(selectedImages, (newImages, oldImages) => {
+        // 仅当图片数量增加时才自动更新描述
+        if (newImages.length > oldImages.length) {
+                let currentDescriptions = imageDescription.value.split('\n').filter(line => line.trim() !== '');
+
+                const newImage = newImages[newImages.length - 1];
+                const newDescriptionLine = `第${newImages.length}张：${newImage.description || ''}`;
+
+                // 查找是否已有 "第x张：" 的占位符
+                const existingLineIndex = currentDescriptions.findIndex(line => line.startsWith(`第${newImages.length}张：`));
+
+                if (existingLineIndex > -1) {
+                        // 如果存在，替换它
+                        currentDescriptions[existingLineIndex] = newDescriptionLine;
+                } else {
+                        // 否则，添加新行
+                        currentDescriptions.push(newDescriptionLine);
+                }
+
+                imageDescription.value = currentDescriptions.join('\n');
+        } else if (newImages.length < oldImages.length) {
+                // 如果图片被移除了，重新生成描述
+                imageDescription.value = newImages.map((img, index) => `第${index + 1}张：${img.description || ''}`).join('\n');
+        }
+
+        // 如果添加了图片，确保描述框可见
+        if (newImages.length > 0) {
+                showDescription.value = true;
+        }
+}, { deep: true });
+
 const removeImage = (index) => {
-        selectedImages.value.splice(index, 1);
+        const newImages = [...selectedImages.value];
+        newImages.splice(index, 1);
+        selectedImages.value = newImages;
 };
 
 const publishPost = () => {
         const postData = {
                 text: postText.value.trim(),
+                images: [],
+                imageDescription: '',
+                placeholders: [], // 存放占位符描述
                 type: isImagePost.value ? 'image' : 'text',
                 visibility: {
                         mode: visibilityMode.value,
@@ -367,18 +408,21 @@ const publishPost = () => {
                         friends: selectedFriends.value
                 }
         };
-        
+
         if (isImagePost.value) {
+                // 如果是“文字描述图片”模式
                 if (imageMode.value === 'description') {
-                        postData.imageDescription = imageDescription.value.trim();
+                        // 将换行分隔的描述拆分成数组，存入 placeholders 字段
+                        postData.placeholders = imageDescription.value.trim().split('\n').filter(d => d.trim() !== '');
                 } else {
+                        // 否则，正常添加图片和可能的描述
                         postData.images = selectedImages.value;
                         if (showDescription.value && imageDescription.value.trim()) {
                                 postData.imageDescription = imageDescription.value.trim();
                         }
                 }
         }
-        
+
         emit('publish', postData);
         closeModal();
 };
@@ -404,6 +448,11 @@ const loadFriends = async () => {
 onMounted(() => {
         loadGroups();
         loadFriends();
+        // 默认将描述框设为可见，并切换图片模式为上传
+        if (props.postType === 'image') {
+                imageMode.value = 'upload';
+                showDescription.value = true;
+        }
 });
 </script>
 

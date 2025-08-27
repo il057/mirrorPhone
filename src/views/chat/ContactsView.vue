@@ -94,7 +94,15 @@ const getInitial = (name) => {
         return /^[a-zA-Z]/.test(firstChar) ? firstChar.toUpperCase() : firstChar;
 };
 
-// FIX: Reworked logic to include "Ungrouped" and handle special care members appearing in multiple groups.
+// 辅助函数：过滤掉用户人格预设和隐藏实体
+const isValidActor = (actor) => {
+        return !actor.isGroup && 
+               !actor.isHidden && 
+               actor.id !== '__USER__' && 
+               !actor.id?.startsWith('user_');
+};
+
+// Reworked logic to include "Ungrouped" and handle special care members appearing in multiple groups.
 const contactGroups = computed(() => {
         if (!allGroups.value || !allActors.value) return [];
 
@@ -103,12 +111,18 @@ const contactGroups = computed(() => {
                 .filter(group => group.id !== 'group_special')
                 .map(group => ({
                         ...group,
-                        members: allActors.value.filter(actor => actor.groupIds?.includes(group.id) && !actor.isGroup)
+                        members: allActors.value.filter(actor => 
+                                actor.groupIds?.includes(group.id) && 
+                                isValidActor(actor)
+                        )
                 }));
 
         // 2. Build the "Special Care" group if there are any members
         let specialCareGroup = null;
-        const specialCareMembers = allActors.value.filter(actor => actor.specialCare && !actor.isGroup);
+        const specialCareMembers = allActors.value.filter(actor => 
+                actor.specialCare && 
+                isValidActor(actor)
+        );
         if (specialCareMembers.length > 0) {
                 specialCareGroup = {
                         id: 'group_special',
@@ -121,7 +135,7 @@ const contactGroups = computed(() => {
         // 3. Build the "Ungrouped" group if there are any members
         let ungroupedGroup = null;
         const ungroupedMembers = allActors.value.filter(
-                actor => !actor.isGroup && (!actor.groupIds || actor.groupIds.length === 0)
+                actor => isValidActor(actor) && (!actor.groupIds || actor.groupIds.length === 0)
         );
         if (ungroupedMembers.length > 0) {
                 ungroupedGroup = {
@@ -160,7 +174,7 @@ const getSortableName = (name) => {
 
 const friends = computed(() =>
         allActors.value
-                .filter(a => !a.isGroup)
+                .filter(a => isValidActor(a))
                 .map(a => ({ ...a, sortableName: getSortableName(a.name) })) // Add temporary sortable name
                 .sort((a, b) => a.sortableName.localeCompare(b.sortableName, 'en-US'))
 );

@@ -732,12 +732,12 @@ function updateWallpaperPreview(style) {
 // --- 从相册选择图片 ---
 async function openAlbumPicker() {
         // 调用异步模态框，等待用户选择
-        const selectedUrl = await showAlbumPickerModal();
+        const selectedResult = await showAlbumPickerModal();
 
         // 如果用户选择了图片 (返回值不是 null)
-        if (selectedUrl) {
+        if (selectedResult) {
                 // 更新当前编辑器中的图片 URL
-                editablePreset.value.info = selectedUrl;
+                editablePreset.value.info = selectedResult.url;
                 // 手动触发更新，以刷新预览和内部状态
                 handleSettingsChange();
                 showToast('壁纸已更新', 'info');

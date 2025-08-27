@@ -1,9 +1,10 @@
 <template>
         <div class="page-container">
                 <!-- 头图区域 - 会跟随页面滚动 -->
-                <div class="header-image-container" :class="{ 'expanded': isHeaderExpanded }" @click="toggleHeaderExpanded">
+                <div class="header-image-container" :class="{ 'expanded': isHeaderExpanded }"
+                        @click="toggleHeaderExpanded">
                         <div class="header-image" :style="headerImageStyle"></div>
-                        
+
                         <!-- 头图展开时的控制按钮 -->
                         <div v-if="isHeaderExpanded" class="header-controls">
                                 <button class="change-header-btn" @click.stop="changeHeaderImage">
@@ -17,8 +18,10 @@
                         <div class="user-info-container">
                                 <h2 class="user-name">{{ currentPersona?.name || 'User' }}</h2>
                                 <div class="user-avatar">
-                                        <img v-if="currentPersona?.avatar" :src="currentPersona.avatar" :alt="currentPersona.name || 'User'">
-                                        <span v-else class="avatar-initial">{{ getInitial(currentPersona?.name || 'User') }}</span>
+                                        <img v-if="currentPersona?.avatar" :src="currentPersona.avatar"
+                                                :alt="currentPersona.name || 'User'">
+                                        <span v-else class="avatar-initial">{{ getInitial(currentPersona?.name ||
+                                                'User') }}</span>
                                 </div>
                         </div>
                 </div>
@@ -28,98 +31,138 @@
                         <div v-if="moments.length === 0" class="empty-state">
                                 <p>还没有动态</p>
                         </div>
-                        
+
                         <div v-else class="moments-list">
                                 <div v-for="moment in moments" :key="moment.id" class="moment-item">
                                         <!-- 第一行：头像和名字 -->
                                         <div class="moment-row-1">
                                                 <div class="moment-avatar avatar">
-                                                        <img v-if="moment.author.avatar" :src="moment.author.avatar" :alt="moment.author.name">
-                                                        <span v-else class="avatar-initial">{{ getInitial(moment.author.name) }}</span>
+                                                        <img v-if="moment.author.avatar" :src="moment.author.avatar"
+                                                                :alt="moment.author.name">
+                                                        <span v-else class="avatar-initial">{{
+                                                                getInitial(moment.author.name) }}</span>
                                                 </div>
                                                 <h3 class="moment-author">{{ moment.author.name }}</h3>
                                         </div>
-                                        
+
                                         <!-- 第二行：动态内容 -->
                                         <div class="moment-row-2">
                                                 <div class="moment-spacer"></div>
                                                 <div class="moment-content">
-                                                        <p v-if="moment.content.text" class="moment-text">{{ moment.content.text }}</p>
-                                                        <div v-if="moment.content.images && moment.content.images.length > 0" class="moment-images">
-                                                                <img v-for="(image, index) in moment.content.images" 
-                                                                     :key="index" 
-                                                                     :src="image" 
-                                                                     :alt="`图片 ${index + 1}`"
-                                                                     class="moment-image">
+                                                        <p v-if="moment.content.text" class="moment-text">{{
+                                                                moment.content.text }}</p>
+
+                                                        <div v-if="moment.content.images && moment.content.images.length > 0"
+                                                                class="moment-images">
+                                                                <div v-for="(image, index) in moment.content.images"
+                                                                        :key="index" class="moment-image-container"
+                                                                        @click="showOverlay(moment.id, index)">
+                                                                        <img :src="image" :alt="`图片 ${index + 1}`"
+                                                                                class="moment-image">
+
+                                                                        <transition name="fade">
+                                                                                <div v-if="activeOverlay && activeOverlay.momentId === moment.id && activeOverlay.imageIndex === index"
+                                                                                        class="image-description-overlay"
+                                                                                        @click.stop="hideOverlay()">
+                                                                                        <p>{{ getDescriptions(moment)[index]
+                                                                                                || '无描述' }}</p>
+                                                                                </div>
+                                                                        </transition>
+                                                                </div>
+                                                        </div>
+
+                                                        <div v-if="moment.content.placeholders && moment.content.placeholders.length > 0"
+                                                                class="moment-placeholders">
+                                                                <div v-for="(desc, index) in moment.content.placeholders"
+                                                                        :key="index" class="placeholder-item">
+                                                                        <p class="placeholder-description">{{ desc }}
+                                                                        </p>
+                                                                </div>
                                                         </div>
                                                 </div>
                                         </div>
-                                        
+
                                         <!-- 第三行：时间和操作按钮 -->
                                         <div class="moment-row-3">
                                                 <div class="moment-spacer"></div>
                                                 <p class="moment-time">{{ formatTimestamp(moment.timestamp) }}</p>
                                                 <div class="moment-actions">
-                                                        <button 
-                                                                class="action-btn like-btn" 
+                                                        <button class="action-btn like-btn"
                                                                 :class="{ 'liked': isLikedByUser(moment) }"
-                                                                @click="toggleLike(moment)"
-                                                        >
-                                                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                                        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                                                                @click="toggleLike(moment)">
+                                                                <svg width="18" height="18" viewBox="0 0 24 24"
+                                                                        fill="none" stroke="currentColor"
+                                                                        stroke-width="2">
+                                                                        <path
+                                                                                d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z">
+                                                                        </path>
                                                                 </svg>
                                                         </button>
-                                                        <button 
-                                                                class="action-btn comment-btn"
-                                                                @click="toggleComment(moment)"
-                                                        >
-                                                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                                                        <button class="action-btn comment-btn"
+                                                                @click="toggleComment(moment)">
+                                                                <svg width="18" height="18" viewBox="0 0 24 24"
+                                                                        fill="none" stroke="currentColor"
+                                                                        stroke-width="2">
+                                                                        <path
+                                                                                d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z">
+                                                                        </path>
                                                                 </svg>
                                                         </button>
                                                 </div>
                                         </div>
-                                        
+
                                         <!-- 评论输入框 - 紧跟在第三行后面 -->
                                         <div v-if="moment.showCommentInput" class="comment-input-row">
                                                 <div class="moment-spacer"></div>
                                                 <div class="comment-input-section">
-                                                        <input 
-                                                                v-model="moment.commentText"
-                                                                type="text" 
-                                                                placeholder="写评论..."
-                                                                class="comment-input"
-                                                                @keyup.enter="submitComment(moment)"
-                                                        >
-                                                        <button @click="submitComment(moment)" class="comment-submit-btn">发送</button>
+                                                        <input v-model="moment.commentText" type="text"
+                                                                placeholder="写评论..." class="comment-input"
+                                                                @keyup.enter="submitComment(moment)">
+                                                        <button @click="submitComment(moment)"
+                                                                class="comment-submit-btn">发送</button>
                                                 </div>
                                         </div>
-                                        
+
                                         <!-- 第四行及以后：互动内容 -->
                                         <div v-if="hasInteractions(moment)" class="interactions-container">
                                                 <!-- 点赞列表 -->
-                                                <div v-if="moment.likeUsers && moment.likeUsers.length > 0" class="likes-section">
-                                                        <svg class="heart-icon" width="16" height="16" viewBox="0 0 24 24" fill="var(--accent-primary)" stroke="none">
-                                                                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                                                <div v-if="moment.likeUsers && moment.likeUsers.length > 0"
+                                                        class="likes-section">
+                                                        <svg class="heart-icon" width="16" height="16"
+                                                                viewBox="0 0 24 24" fill="var(--accent-primary)"
+                                                                stroke="none">
+                                                                <path
+                                                                        d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z">
+                                                                </path>
                                                         </svg>
                                                         <div class="like-avatars">
-                                                                <div v-for="user in moment.likeUsers" :key="user.id" class="like-avatar avatar">
-                                                                        <img v-if="user.avatar" :src="user.avatar" :alt="user.name">
-                                                                        <span v-else class="avatar-initial">{{ getInitial(user.name) }}</span>
+                                                                <div v-for="user in moment.likeUsers" :key="user.id"
+                                                                        class="like-avatar avatar">
+                                                                        <img v-if="user.avatar" :src="user.avatar"
+                                                                                :alt="user.name">
+                                                                        <span v-else class="avatar-initial">{{
+                                                                                getInitial(user.name) }}</span>
                                                                 </div>
                                                         </div>
                                                 </div>
-                                                
+
                                                 <!-- 评论列表 -->
-                                                <div v-if="moment.recentReplies && moment.recentReplies.length > 0" class="comments-section">
-                                                        <div v-for="reply in moment.recentReplies" :key="reply.id" class="comment-item">
+                                                <div v-if="moment.recentReplies && moment.recentReplies.length > 0"
+                                                        class="comments-section">
+                                                        <div v-for="reply in moment.recentReplies" :key="reply.id"
+                                                                class="comment-item">
                                                                 <div class="comment-avatar avatar">
-                                                                        <img v-if="reply.author.avatar" :src="reply.author.avatar" :alt="reply.author.name">
-                                                                        <span v-else class="avatar-initial">{{ getInitial(reply.author.name) }}</span>
+                                                                        <img v-if="reply.author.avatar"
+                                                                                :src="reply.author.avatar"
+                                                                                :alt="reply.author.name">
+                                                                        <span v-else class="avatar-initial">{{
+                                                                                getInitial(reply.author.name) }}</span>
                                                                 </div>
                                                                 <div class="comment-content">
-                                                                        <div class="comment-author">{{ reply.author.name }}</div>
-                                                                        <div class="comment-text">{{ reply.content.text }}</div>
+                                                                        <div class="comment-author">{{ reply.author.name
+                                                                                }}</div>
+                                                                        <div class="comment-text">{{ reply.content.text
+                                                                                }}</div>
                                                                 </div>
                                                         </div>
                                                 </div>
@@ -127,22 +170,16 @@
                                 </div>
                         </div>
                 </main>
-                
+
                 <!-- 发布动态模态框 -->
-                <WritePostModal 
-                        :isVisible="showWritePostModal"
-                        :postType="postType"
-                        @close="closeWritePostModal"
-                        @publish="publishMoment"
-                />
+                <WritePostModal :isVisible="showWritePostModal" :postType="postType" @close="closeWritePostModal"
+                        @publish="publishMoment" />
         </div>
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, computed } from 'vue';
+import { ref, onMounted, onUnmounted, computed, watch } from 'vue';
 import { useRouter } from 'vue-router';
-import { useObservable } from '@vueuse/rxjs';
-import { liveQuery } from 'dexie';
 import db, { USER_ACTOR_ID, resolveUserPersonaForMoments } from '../../services/database.js';
 import { getDefaultUserPersona } from '../../services/userPersonaService.js';
 import { showAlbumPickerModal, showUploadChoiceModal } from '../../services/uiService.js';
@@ -154,13 +191,11 @@ const router = useRouter();
 
 // 响应式数据
 const isHeaderExpanded = ref(false);
-const currentPersona = useObservable(
-        liveQuery(() => getDefaultUserPersona()),
-        { initialValue: null }
-);
+const currentPersona = ref(null);
 const moments = ref([]);
 const wallpaperSettings = ref(null);
 const momentsHeaderImage = ref(null); // moments独立头图
+const activeOverlay = ref(null);
 
 // 发布动态模态框
 const showWritePostModal = ref(false);
@@ -178,6 +213,23 @@ const collapseHeader = () => {
         }
 };
 
+const showOverlay = (momentId, imageIndex) => {
+        activeOverlay.value = { momentId, imageIndex };
+};
+
+const hideOverlay = () => {
+        activeOverlay.value = null;
+};
+
+// 解析结构化描述文本
+const getDescriptions = (moment) => {
+        if (!moment.content.imageDescription) return [];
+        // 假设描述格式为 "第1张：xxx\n第2张：yyy"
+        return moment.content.imageDescription.split('\n')
+                .map(line => line.replace(/^第\d+张：/, '').trim())
+                .filter(line => line);
+};
+
 // 检查是否有互动内容
 const hasInteractions = (moment) => {
         return (moment.likeUsers && moment.likeUsers.length > 0) || 
@@ -187,7 +239,11 @@ const hasInteractions = (moment) => {
 
 // 检查用户是否已点赞
 const isLikedByUser = (moment) => {
-        return moment.likeUsers && moment.likeUsers.some(user => user.id === USER_ACTOR_ID || user.id === currentPersona.value?.id);
+        return moment.likeUsers && moment.likeUsers.some(user => 
+                user.id === USER_ACTOR_ID || 
+                (currentPersona.value && user.id === currentPersona.value.id) ||
+                (user.id && user.id.startsWith('user_'))
+        );
 };
 
 // 切换点赞状态
@@ -198,12 +254,13 @@ const toggleLike = async (moment) => {
                 const isLiked = isLikedByUser(moment);
                 
                 if (isLiked) {
-                        // 取消点赞 - 查找用户的点赞事件（可能使用 __USER__ 或具体人格ID）
+                        // 取消点赞 - 查找用户的点赞事件
                         const likeEvent = await db.events
                                 .where('contextId').equals(moment.id)
                                 .and(event => 
                                         event.type === 'like' && 
-                                        (event.actorId === USER_ACTOR_ID || event.actorId === currentPersona.value.id)
+                                        (event.actorId === USER_ACTOR_ID || 
+                                         (event.actorId && event.actorId.startsWith('user_')))
                                 )
                                 .first();
                         
@@ -213,7 +270,8 @@ const toggleLike = async (moment) => {
                         
                         // 更新本地状态
                         moment.likeUsers = moment.likeUsers.filter(user => 
-                                user.id !== USER_ACTOR_ID && user.id !== currentPersona.value.id
+                                user.id !== USER_ACTOR_ID && 
+                                !(user.id && user.id.startsWith('user_'))
                         );
                         moment.likes = Math.max(0, moment.likes - 1);
                 } else {
@@ -231,7 +289,8 @@ const toggleLike = async (moment) => {
                         
                         // 移除可能存在的旧用户点赞记录
                         moment.likeUsers = moment.likeUsers.filter(user => 
-                                user.id !== USER_ACTOR_ID && user.id !== currentPersona.value.id
+                                user.id !== USER_ACTOR_ID && 
+                                !(user.id && user.id.startsWith('user_'))
                         );
                         
                         // 添加当前人格作为点赞用户
@@ -307,19 +366,23 @@ const publishMoment = async (postData) => {
         try {
                 const newMomentEvent = {
                         type: 'post',
-                        contextId: Date.now().toString(),
-                        actorId: currentPersona.value?.id || USER_ACTOR_ID,
+                        contextId: '', // 先留空，待会儿更新
+                        actorId: USER_ACTOR_ID, // 统一使用特殊标识符，显示时使用当前人格
                         content: {
                                 text: postData.text,
-                                images: Array.isArray(postData.images) ? [...postData.images] : [],
-                                imageDescription: typeof postData.imageDescription === 'string' ? postData.imageDescription : ''
+                                images: Array.isArray(postData.images) ? postData.images.map(img => img.url) : [],
+                                imageDescription: typeof postData.imageDescription === 'string' ? postData.imageDescription : '',
+                                placeholders: Array.isArray(postData.placeholders) ? postData.placeholders : []
                         },
                         timestamp: Date.now(),
-                        visibility: postData.visibility
+                        visibility: JSON.parse(JSON.stringify(postData.visibility))
                 };
 
-                // 保存到数据库
-                await db.events.add(newMomentEvent);
+                // 保存到数据库，获取自动生成的ID
+                const eventId = await db.events.add(newMomentEvent);
+                
+                // 使用事件ID作为contextId更新记录
+                await db.events.update(eventId, { contextId: "post_" + eventId.toString() });
 
                 // 重新加载动态列表
                 await loadMoments();
@@ -329,7 +392,6 @@ const publishMoment = async (postData) => {
                 console.error('发布动态失败:', error);
         }
 };
-
 // 计算头图样式
 const headerImageStyle = computed(() => {
         // 优先使用moments独立头图
@@ -426,7 +488,8 @@ const changeHeaderImage = async () => {
                 if (choice.type === 'local') {
                         imageUrl = await uploadToCloudinary(choice.value);
                 } else if (choice.type === 'album') {
-                        imageUrl = await showAlbumPickerModal();
+                        const selectedPhoto = await showAlbumPickerModal();
+                        imageUrl = selectedPhoto ? selectedPhoto.url : null;
                 } else {
                         imageUrl = choice.value;
                 }
@@ -438,6 +501,37 @@ const changeHeaderImage = async () => {
                 }
         } catch (error) {
                 console.error('更换头图失败:', error);
+        }
+};
+
+// 加载当前默认人格
+const loadCurrentPersona = async () => {
+        try {
+                const defaultPersona = await getDefaultUserPersona();
+                if (defaultPersona) {
+                        currentPersona.value = defaultPersona;
+                } else {
+                        // 创建默认人格
+                        const defaultUserPersona = {
+                                id: 'user_persona_default',
+                                name: 'User',
+                                realName: '',
+                                aliases: [],
+                                gender: '',
+                                birthday: '',
+                                persona: '',
+                                avatar: '',
+                                groupIds: [],
+                                isDefault: true,
+                                type: 'user_persona',
+                                avatarLibrary: []
+                        };
+                        
+                        await db.actors.put(defaultUserPersona);
+                        currentPersona.value = defaultUserPersona;
+                }
+        } catch (error) {
+                console.error('加载当前人格预设失败:', error);
         }
 };
 
@@ -478,8 +572,8 @@ const loadMoments = async () => {
                 for (const event of postEvents) {
                         // 获取作者信息 - 处理用户动态
                         let author;
-                        if (event.actorId === USER_ACTOR_ID) {
-                                // 用户发布的动态，使用当前默认人格
+                        if (event.actorId === USER_ACTOR_ID || (event.actorId && event.actorId.startsWith('user_'))) {
+                                // 用户发布的动态（使用特殊标识符或用户人格ID），使用当前默认人格
                                 author = currentPersona.value;
                         } else {
                                 // 其他角色发布的动态
@@ -522,9 +616,8 @@ const loadMoments = async () => {
                         const recentReplies = [];
                         for (const reply of replies.slice(-3)) {
                                 let replyAuthor;
-                                if (reply.actorId === USER_ACTOR_ID) {
-                                        // 用户的回复，需要根据上下文判断使用哪个人格
-                                        // 如果是在其他角色的动态下回复，显示当前默认人格
+                                if (reply.actorId === USER_ACTOR_ID || (reply.actorId && reply.actorId.startsWith('user_'))) {
+                                        // 用户的回复，显示当前默认人格
                                         replyAuthor = currentPersona.value;
                                 } else {
                                         // 其他角色的回复
@@ -561,8 +654,18 @@ const loadMoments = async () => {
         }
 };
 
+// 监听当前人格变化，重新加载动态以更新用户动态的显示信息
+watch(currentPersona, (newPersona, oldPersona) => {
+        if (newPersona && oldPersona && newPersona.id !== oldPersona.id) {
+                console.log('User persona changed, reloading moments...');
+                loadMoments();
+        }
+}, { deep: true });
+
 onMounted(() => {
-        loadMoments(); // 直接加载动态，人格通过响应式观察自动更新
+        loadCurrentPersona().then(() => {
+                loadMoments(); // 确保在加载当前人格后再加载动态
+        });
         loadWallpaperSettings();
         loadMomentsHeaderImage(); // 加载moments独立头图
         
@@ -788,32 +891,121 @@ onUnmounted(() => {
         margin: 0 0 12px 0;
 }
 
+.moment-text.image-description {
+        font-size: 14px;
+        color: var(--text-secondary);
+        background-color: var(--bg-secondary);
+        padding: 8px 12px;
+        border-radius: 8px;
+        margin-top: 10px;
+}
+
 .moment-images {
         display: grid;
         gap: 8px;
         grid-template-columns: repeat(3, 1fr);
 }
 
-.moment-images:has(.moment-image:only-child) {
+.moment-images:has(.moment-image-container:only-child) {
         grid-template-columns: 1fr;
         max-width: 300px;
 }
 
-.moment-images:has(.moment-image:nth-child(2):last-child) {
+.moment-images:has(.moment-image-container:nth-child(2):last-child) {
         grid-template-columns: repeat(2, 1fr);
-}
-
-.moment-image {
-        width: 100%;
-        aspect-ratio: 1;
-        object-fit: cover;
-        border-radius: 8px;
-        cursor: pointer;
-        transition: transform 0.2s ease;
 }
 
 .moment-image:hover {
         transform: scale(1.02);
+}
+
+.moment-placeholders {
+        display: grid;
+        gap: 8px;
+        grid-template-columns: repeat(3, 1fr);
+        margin-top: 12px;
+}
+
+.moment-placeholders:has(.placeholder-item:only-child) {
+        grid-template-columns: 1fr;
+        max-width: 300px;
+}
+
+.moment-placeholders:has(.placeholder-item:nth-child(2):last-child) {
+        grid-template-columns: repeat(2, 1fr);
+}
+
+.placeholder-item {
+        display: flex;
+        flex-direction: column;
+        /* 让图标和文字垂直排列 */
+        align-items: center;
+        justify-content: center;
+        /* 垂直和水平居中 */
+        gap: 8px;
+        background-color: var(--bg-secondary);
+        padding: 12px;
+        border-radius: 8px;
+        border: 1px solid var(--border-color);
+        aspect-ratio: 1;
+        /* 保持1:1的正方形比例 */
+        text-align: center;
+        /* 文字居中 */
+}
+.moment-image-container {
+        position: relative;
+        cursor: pointer;
+        overflow: hidden;
+        border-radius: 8px;
+        aspect-ratio: 1;
+        /* 关键：保持容器为1:1的正方形 */
+}
+
+.moment-image {
+        width: 100%;
+        height: 100%;
+        /* 让图片填满其容器 */
+        object-fit: cover;
+        transition: transform 0.2s ease;
+}
+
+.image-description-overlay {
+        position: absolute;
+        inset: 0;
+        background-color: rgba(0, 0, 0, 0.7);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 10px;
+        text-align: center;
+        font-size: 14px;
+        line-height: 1.5;
+        overflow-y: auto;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+}
+
+/* 隐藏 WebKit 浏览器 (Chrome, Safari) 的滚动条 */
+.image-description-overlay::-webkit-scrollbar {
+        display: none;
+}
+
+.image-description-overlay p {
+        margin: auto 0;
+        white-space: pre-wrap;
+        word-break: break-word;
+}
+
+/* 渐入渐出动画 */
+.fade-enter-active,
+.fade-leave-active {
+        transition: opacity 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+        opacity: 0;
 }
 
 /* 第三行：时间和操作按钮 */

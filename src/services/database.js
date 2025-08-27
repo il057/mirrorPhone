@@ -134,8 +134,9 @@ db.version(1).stores({
          * 存储用户上传的照片，不强制关联到某个角色
          * ++id: 自增主键
          * url: 图片URL
+         * description: 图片描述
          */
-        globalAlbum: '++id, url',
+        globalAlbum: '++id, url, description',
 
         /**
          * 表：widgetSettings (小组件设置)

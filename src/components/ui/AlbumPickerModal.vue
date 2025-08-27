@@ -57,7 +57,8 @@ const handleSelect = (url) => {
 // 新增：处理确认按钮点击，调用onSelect回调
 const handleConfirm = () => {
         if (selectedUrl.value && props.onSelect) {
-                props.onSelect(selectedUrl.value);
+                const selectedPhoto = props.photos.find(p => p.url === selectedUrl.value);
+                props.onSelect(selectedPhoto);
         }
 };
 

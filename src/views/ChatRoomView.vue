@@ -40,7 +40,7 @@
                                         
                                         <!-- 用户头像 -->
                                         <div class="message-avatar" v-else>
-                                                <img v-if="currentUserPersona?.avatar" :src="currentUserPersona.avatar" :alt="currentUserPersona.name">
+                                                <img v-if="currentUserPersona?.avatar" :src="currentUserPersona.avatar" :alt="currentUserPersona?.name || 'User'">
                                                 <span v-else class="avatar-initial">{{ getInitial(currentUserPersona?.name || 'User') }}</span>
                                         </div>
                                         <div class="message-content">
@@ -218,19 +218,28 @@ const actor = useObservable(
 // 获取当前聊天应显示的用户人格（仅用于显示）
 const currentUserPersona = useObservable(
         liveQuery(async () => {
-                if (!actor.value) return null;
+                // 获取当前角色信息
+                const currentActor = await db.actors.get(actorId.value);
+                if (!currentActor) {
+                        console.log('ChatRoom: currentActor not found, using default persona');
+                        return await getDefaultUserPersona();
+                }
                 
                 // 获取角色的分组ID
-                const groupId = actor.value.groupIds?.[0];
+                const groupId = currentActor.groupIds?.[0];
+                console.log('ChatRoom: currentActor', currentActor.name, 'groupId:', groupId);
                 
                 if (groupId) {
                         // 有分组，获取该分组绑定的用户人格
                         const groupPersona = await getUserPersonaForGroup(groupId);
+                        console.log('ChatRoom: groupPersona for', groupId, ':', groupPersona);
                         if (groupPersona) return groupPersona;
                 }
                 
                 // 没有分组或没有绑定的人格，使用默认人格
-                return await getDefaultUserPersona();
+                const defaultPersona = await getDefaultUserPersona();
+                console.log('ChatRoom: using defaultPersona:', defaultPersona);
+                return defaultPersona;
         }),
         { initialValue: null }
 );
@@ -295,6 +304,11 @@ watch(typingMessage, () => {
                 nextTick(() => scrollToBottom());
         }
 }, { immediate: false });
+
+// 监控当前用户人格变化（调试用）
+watch(currentUserPersona, (newPersona, oldPersona) => {
+        console.log('ChatRoom: currentUserPersona changed from', oldPersona, 'to', newPersona);
+}, { immediate: true });
 
 // 处理滚动事件，实现懒加载
 const handleScroll = async () => {
@@ -814,6 +828,28 @@ watch(showStickerPanel, (newVal, oldVal) => {
 
 // 初始化默认状态
 onMounted(async () => {
+        // 确保有默认用户人格
+        const defaultPersona = await getDefaultUserPersona();
+        if (!defaultPersona) {
+                // 如果没有默认人格，创建一个
+                const defaultUserPersona = {
+                        id: 'user_default',
+                        name: 'User',
+                        realName: '',
+                        aliases: [],
+                        gender: '',
+                        birthday: '',
+                        persona: '',
+                        avatar: '',
+                        groupIds: [],
+                        isDefault: true,
+                        type: 'user',
+                        avatarLibrary: []
+                };
+                await db.actors.put(defaultUserPersona);
+                console.log('ChatRoom: Created default user persona');
+        }
+
         if (actor.value && !actor.value.status) {
                 await db.actors.update(actorId.value, {
                         status: {
@@ -1054,8 +1090,6 @@ onMounted(async () => {
 
 /* 确保在键盘弹出时input-area能够正确显示 */
 .input-area.keyboard-visible {
-        position: fixed;
-        bottom: 0;
         z-index: 100;
 }
 
