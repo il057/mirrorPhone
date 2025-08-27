@@ -141,6 +141,8 @@
 <script setup>
 import { ref, onMounted, onUnmounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
+import { useObservable } from '@vueuse/rxjs';
+import { liveQuery } from 'dexie';
 import db, { USER_ACTOR_ID, resolveUserPersonaForMoments } from '../../services/database.js';
 import { getDefaultUserPersona } from '../../services/userPersonaService.js';
 import { showAlbumPickerModal, showUploadChoiceModal } from '../../services/uiService.js';
@@ -152,7 +154,10 @@ const router = useRouter();
 
 // 响应式数据
 const isHeaderExpanded = ref(false);
-const currentPersona = ref(null);
+const currentPersona = useObservable(
+        liveQuery(() => getDefaultUserPersona()),
+        { initialValue: null }
+);
 const moments = ref([]);
 const wallpaperSettings = ref(null);
 const momentsHeaderImage = ref(null); // moments独立头图
@@ -436,37 +441,6 @@ const changeHeaderImage = async () => {
         }
 };
 
-// 加载当前默认人格
-const loadCurrentPersona = async () => {
-        try {
-                const defaultPersona = await getDefaultUserPersona();
-                if (defaultPersona) {
-                        currentPersona.value = defaultPersona;
-                } else {
-                        // 创建默认人格
-                        const defaultUserPersona = {
-                                id: 'user_persona_default',
-                                name: 'User',
-                                realName: '',
-                                aliases: [],
-                                gender: '',
-                                birthday: '',
-                                persona: '',
-                                avatar: '',
-                                groupIds: [],
-                                isDefault: true,
-                                type: 'user_persona',
-                                avatarLibrary: []
-                        };
-                        
-                        await db.actors.put(defaultUserPersona);
-                        currentPersona.value = defaultUserPersona;
-                }
-        } catch (error) {
-                console.error('加载当前人格预设失败:', error);
-        }
-};
-
 // 加载壁纸设置
 const loadWallpaperSettings = async () => {
         try {
@@ -588,9 +562,7 @@ const loadMoments = async () => {
 };
 
 onMounted(() => {
-        loadCurrentPersona().then(() => {
-                loadMoments(); // 确保在加载当前人格后再加载动态
-        });
+        loadMoments(); // 直接加载动态，人格通过响应式观察自动更新
         loadWallpaperSettings();
         loadMomentsHeaderImage(); // 加载moments独立头图
         

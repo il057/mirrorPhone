@@ -1,4 +1,4 @@
-import db from './database';
+import db, { USER_ACTOR_ID } from './database';
 
 const mockActors = [
         // Bill 只在特别关心分组
@@ -74,7 +74,7 @@ const mockActors = [
         
         // 默认用户人格预设
         {
-                id: 'user_persona_default',
+                id: 'user_default',
                 name: 'User',
                 realName: '用户',
                 aliases: [],
@@ -84,7 +84,7 @@ const mockActors = [
                 avatar: '',
                 groupIds: [],
                 isDefault: true,
-                type: 'user_persona',
+                type: 'user',
                 isGroup: 0,
                 specialCare: 0
         }
@@ -106,12 +106,12 @@ const mockConversations = [
 
 // 添加好感度关系数据
 const mockRelationships = [
-        { sourceId: 'char_bill', targetId: 'user_main', type: '朋友', score: 85 },
-        { sourceId: 'char_alex', targetId: 'user_main', type: '好友', score: 72 },
-        { sourceId: 'char_zhao', targetId: 'user_main', type: '家人', score: 95 },
-        { sourceId: 'char_qian', targetId: 'user_main', type: '朋友', score: 68 },
-        { sourceId: 'char_sun', targetId: 'user_main', type: '家人', score: 98 },
-        { sourceId: 'char_li', targetId: 'user_main', type: '同事', score: 55 },
+        { sourceId: 'char_bill', targetId: USER_ACTOR_ID, type: '朋友', score: 85 },
+        { sourceId: 'char_alex', targetId: USER_ACTOR_ID, type: '好友', score: 72 },
+        { sourceId: 'char_zhao', targetId: USER_ACTOR_ID, type: '家人', score: 95 },
+        { sourceId: 'char_qian', targetId: USER_ACTOR_ID, type: '朋友', score: 68 },
+        { sourceId: 'char_sun', targetId: USER_ACTOR_ID, type: '家人', score: 98 },
+        { sourceId: 'char_li', targetId: USER_ACTOR_ID, type: '同事', score: 55 },
 ];
 
 // 添加一些示例消息事件
@@ -119,7 +119,7 @@ const mockEvents = [
         // 添加更多历史消息以测试懒加载
         ...Array.from({ length: 50 }, (_, i) => ({
                 timestamp: Date.now() - (50 - i) * 300000, // 每5分钟一条消息
-                actorId: i % 3 === 0 ? 'user_main' : 'char_bill',
+                actorId: i % 3 === 0 ? USER_ACTOR_ID : 'char_bill',
                 contextId: 'char_bill',
                 type: 'privateMessage',
                 content: { 
@@ -137,7 +137,7 @@ const mockEvents = [
         },
         {
                 timestamp: Date.now() - 3500000,
-                actorId: 'user_main', 
+                actorId: USER_ACTOR_ID, 
                 contextId: 'char_bill',
                 type: 'privateMessage',
                 content: { content: '还不错，工作有点忙' }

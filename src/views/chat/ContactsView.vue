@@ -234,7 +234,7 @@ const goToProfile = (actorId) => {
 .page-content {
         flex-grow: 1;
         overflow-y: auto;
-        padding-top: calc(var(--header-height) + 38px);
+        padding-top: calc(var(--header-height) + 48px);
         padding-bottom: calc(var(--footer-height) );
 }
 

@@ -88,7 +88,7 @@
                         <!-- 初始关系设定/好感印象 -->
                         <AccordionItem v-if="isNew" title="初始关系设定" :default-expanded="true">
                                 <div class="relationship-section">
-                                        <!-- 对用户的初始好感度 -->
+                                        <!-- 对你的初始好感度 -->
                                         <div class="relationship-item">
                                                 <h4>对你的好感度</h4>
                                                 <RangeSlider
@@ -99,7 +99,7 @@
                                                 />
                                         </div>
                                         
-                                        <!-- 对用户的关系 -->
+                                        <!-- 对你的关系 -->
                                         <div class="form-group">
                                                 <label for="userRelationType">对你的关系</label>
                                                 <input 
@@ -115,7 +115,7 @@
                         <!-- 好感印象与记忆管理（编辑模式） -->
                         <AccordionItem v-else title="好感印象与记忆管理">
                                 <div class="impression-section">
-                                        <!-- 对用户的好感度（只读） -->
+                                        <!-- 对你的好感度（只读） -->
                                         <div class="relationship-display">
                                                 <h4>对你的好感度</h4>
                                                 <div class="score-display">
@@ -276,6 +276,7 @@ import RangeSlider from '../components/ui/RangeSlider.vue';
 import TagsManager from '../components/ui/TagsManager.vue';
 import CheckboxList from '../components/ui/CheckboxList.vue';
 import { showToast, showConfirm, showWorldbookEditModal, showManageGroupsModal } from '../services/uiService.js';
+import { USER_ACTOR_ID } from '../services/database.js';
 
 const route = useRoute();
 const router = useRouter();
@@ -285,8 +286,8 @@ const isNew = computed(() => !actorId.value);
 
 const actor = ref(null);
 
-// 获取当前用户ID（假设为固定值，实际应用中需要从用户系统获取）
-const currentUserId = 'user_persona_1';
+// 获取当前用户ID（使用统一的用户标识符）
+const currentUserId = USER_ACTOR_ID;
 
 // 获取可用分组
 const availableGroups = useObservable(
@@ -498,7 +499,7 @@ onMounted(async () => {
                                 };
                         }
                         
-                        // 加载用户关系数据
+                        // 加载关系数据（角色对你的关系）
                         const relationship = await db.relationships
                                 .where('sourceId')
                                 .equals(actorId.value)

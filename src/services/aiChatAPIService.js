@@ -273,7 +273,8 @@ export async function buildMessageHistory(characterId, userId, newUserMessage) {
 
         // 添加历史消息（按时间正序）
         recentEvents.reverse().forEach(event => {
-            const isUser = event.actorId === userId;
+            // 检查是否为用户消息：所有存储为 __USER__ 的消息都是用户消息
+            const isUser = event.actorId === '__USER__';
             const content = event.content?.content || event.content || '';
             messages.push({
                 role: isUser ? 'user' : 'assistant',
@@ -297,7 +298,7 @@ export async function buildMessageHistory(characterId, userId, newUserMessage) {
 /**
  * 构建系统提示词
  * @param {Object} character - 角色信息
- * @param {string} userId - 用户ID
+ * @param {string} userId - 用户人格ID（不是 __USER__）
  * @param {Object} contextSettings - 上下文设置
  * @returns {Promise<string>} 系统提示词
  */
@@ -321,6 +322,32 @@ async function buildSystemPrompt(character, userId, contextSettings) {
 
     if (character.gender) {
         prompt += `\n性别：${character.gender}`;
+    }
+
+    // 获取用户人格信息
+    let userPersona = null;
+    if (userId !== '__USER__') {
+        userPersona = await db.actors.get(userId);
+        console.log('构建系统提示词 - 用户人格:', userPersona?.name || '未找到', '(ID:', userId, ')');
+    } else {
+        console.log('构建系统提示词 - 使用默认用户ID:', userId);
+    }
+
+    if (userPersona) {
+        prompt += `\n\n用户人格信息：`;
+        prompt += `\n- 名称：${userPersona.name}`;
+        if (userPersona.realName && userPersona.realName !== userPersona.name) {
+            prompt += `\n- 真实姓名：${userPersona.realName}`;
+        }
+        if (userPersona.persona) {
+            prompt += `\n- 人格设定：${userPersona.persona}`;
+        }
+        if (userPersona.birthday) {
+            prompt += `\n- 生日：${userPersona.birthday}`;
+        }
+        if (userPersona.gender) {
+            prompt += `\n- 性别：${userPersona.gender}`;
+        }
     }
 
     // 获取与用户的关系信息

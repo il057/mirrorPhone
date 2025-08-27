@@ -194,7 +194,6 @@ const handleCancel = () => {
 }
 
 .delete-toggle-btn:hover {
-        background-color: var(--bg-secondary);
         color: #f44336;
 }
 
@@ -287,8 +286,7 @@ const handleCancel = () => {
 }
 
 .avatar-item.selected-for-delete {
-        border-color: #f44336;
-        box-shadow: 0 0 0 2px rgba(244, 67, 54, 0.3);
+        border-color: var(--accent-primary);
 }
 
 .avatar-image {
@@ -308,7 +306,7 @@ const handleCancel = () => {
         width: 20px;
         height: 20px;
         border-radius: 50%;
-        border: 2px solid white;
+        border: 1px solid white;
         background-color: rgba(0, 0, 0, 0.5);
         display: flex;
         align-items: center;
@@ -317,8 +315,8 @@ const handleCancel = () => {
 }
 
 .checkbox.checked {
-        background-color: #f44336;
-        border-color: #f44336;
+        background-color: var(--accent-primary);
+        border-color: var(--accent-primary);
 }
 
 .modal-actions {
@@ -326,7 +324,6 @@ const handleCancel = () => {
         gap: 12px;
         padding: 20px;
         border-top: 1px solid var(--border-color);
-        background-color: var(--bg-secondary);
 }
 
 .action-btn {

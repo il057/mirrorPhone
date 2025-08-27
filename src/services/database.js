@@ -13,7 +13,7 @@ db.version(1).stores({
         /**
          * 表：actors (所有实体档案)
          * 存储所有角色、用户人格（Persona）以及群组的静态信息。
-         * &id: 主键，必须唯一 (例如: 'user_persona_1', 'char_abc', 'group_xyz')
+         * &id: 主键，必须唯一 (例如: 'user_1', 'char_abc', 'group_xyz')
          * name: 显示名称
          * realName: 真实姓名
          * aliases: 别名数组
@@ -32,7 +32,8 @@ db.version(1).stores({
         specialCare,
         contextMemorySettings,
         status,
-        *avatarLibrary
+        *avatarLibrary,
+        isHidden
         `,
 
         /**
@@ -224,6 +225,28 @@ export async function initializeGlobalSettings() {
         }
 }
 
+export async function initializeUserEntity() {
+        try {
+                const userEntity = await db.actors.get('__USER__');
+                if (!userEntity) {
+                        console.log('Initializing __USER__ entity...');
+                        await db.actors.put({
+                                id: '__USER__',
+                                name: '用户头像库',
+                                realName: '',
+                                aliases: [],
+                                isGroup: 0,
+                                groupIds: [],
+                                avatarLibrary: [],
+                                // 标记为隐藏实体，不在UI中显示
+                                isHidden: true
+                        });
+                }
+        } catch (error) {
+                console.error('Failed to initialize __USER__ entity:', error);
+        }
+}
+
 // 3. 导出数据库实例
 // 我们导出这个 db 对象，这样应用的任何部分都可以导入它来与数据库通信。
 export default db;
@@ -242,7 +265,7 @@ export async function resolveUserPersonaForContext(contextId) {
                 const boundPersona = await db.actors
                         .filter(actor => 
                                 actor.id && 
-                                actor.id.startsWith('user_persona_') && 
+                                actor.id.startsWith('user_') && 
                                 actor.groupIds && 
                                 actor.groupIds.includes(contextId)
                         )
@@ -254,13 +277,13 @@ export async function resolveUserPersonaForContext(contextId) {
                 
                 // 如果没有绑定的人格，返回默认人格
                 const defaultPersona = await db.actors
-                        .filter(actor => actor.id && actor.id.startsWith('user_persona_') && actor.isDefault)
+                        .filter(actor => actor.id && actor.id.startsWith('user_') && actor.isDefault)
                         .first();
-                
-                return defaultPersona ? defaultPersona.id : 'user_persona_default';
+
+                return defaultPersona ? defaultPersona.id : 'user_default';
         } catch (error) {
                 console.error('Failed to resolve user persona for context:', error);
-                return 'user_persona_default';
+                return 'user_default';
         }
 }
 
@@ -271,12 +294,12 @@ export async function resolveUserPersonaForContext(contextId) {
 export async function resolveUserPersonaForMoments() {
         try {
                 const defaultPersona = await db.actors
-                        .filter(actor => actor.id && actor.id.startsWith('user_persona_') && actor.isDefault)
+                        .filter(actor => actor.id && actor.id.startsWith('user_') && actor.isDefault)
                         .first();
-                
-                return defaultPersona ? defaultPersona.id : 'user_persona_default';
+
+                return defaultPersona ? defaultPersona.id : 'user_default';
         } catch (error) {
                 console.error('Failed to resolve user persona for moments:', error);
-                return 'user_persona_default';
+                return 'user_default';
         }
 }

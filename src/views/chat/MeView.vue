@@ -66,20 +66,31 @@ import AppHeader from '../../components/layout/Header.vue';
 import { showUserPersonaModal } from '../../services/uiService.js';
 import { getDefaultUserPersona } from '../../services/userPersonaService.js';
 
-// 当前默认人格预设
-const currentPersona = ref(null);
+// 当前默认人格预设 - 使用响应式观察
+const currentPersona = useObservable(
+        liveQuery(() => getDefaultUserPersona()),
+        { initialValue: null }
+);
 
-// 加载当前默认人格预设
-const loadCurrentPersona = async () => {
+// 打开人格预设管理
+const openPersonaManagement = async () => {
+        console.log('Opening persona management modal...');
+        try {
+                await showUserPersonaModal();
+                // 由于使用了响应式观察，不需要手动重新加载
+        } catch (error) {
+                console.error('Failed to open persona management:', error);
+        }
+};
+
+// 初始化函数 - 确保至少有一个默认人格
+const initializeDefaultPersona = async () => {
         try {
                 const defaultPersona = await getDefaultUserPersona();
-                
-                if (defaultPersona) {
-                        currentPersona.value = defaultPersona;
-                } else {
+                if (!defaultPersona) {
                         // 如果没有默认人格，创建一个默认的
                         const defaultUserPersona = {
-                                id: 'user_persona_default',
+                                id: 'user_default',
                                 name: 'User',
                                 realName: '',
                                 aliases: [],
@@ -89,32 +100,19 @@ const loadCurrentPersona = async () => {
                                 avatar: '',
                                 groupIds: [],
                                 isDefault: true,
-                                type: 'user_persona',
+                                type: 'user',
                                 avatarLibrary: []
                         };
                         
                         await db.actors.put(defaultUserPersona);
-                        currentPersona.value = defaultUserPersona;
                 }
         } catch (error) {
-                console.error('加载当前人格预设失败:', error);
-        }
-};
-
-// 打开人格预设管理
-const openPersonaManagement = async () => {
-        console.log('Opening persona management modal...');
-        try {
-                await showUserPersonaModal();
-                // 重新加载当前人格预设，以防有变更
-                await loadCurrentPersona();
-        } catch (error) {
-                console.error('Failed to open persona management:', error);
+                console.error('初始化默认人格失败:', error);
         }
 };
 
 onMounted(() => {
-        loadCurrentPersona();
+        initializeDefaultPersona();
 });
 
 // 生成首字母头像

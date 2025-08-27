@@ -3,7 +3,7 @@ import App from './App.vue'
 import router from './router'
 import './assets/main.css' // 引入全局样式
 import { populateMockData } from './services/mockData.js';
-import { initializeGlobalSettings, initializeDefaultFonts } from './services/database.js';
+import { initializeGlobalSettings, initializeDefaultFonts, initializeUserEntity } from './services/database.js';
 import db from './services/database.js';
 import { getContrastTextColor, generateColorScheme } from './utils/colorUtils.js';
 
@@ -51,6 +51,7 @@ app.use(router) // 使用路由
 Promise.all([
         initializeGlobalSettings(),
         initializeDefaultFonts(),
+        initializeUserEntity(),
         populateMockData(),
         initializeTheme()
 ]).then(() => {

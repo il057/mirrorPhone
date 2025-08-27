@@ -11,7 +11,7 @@ import db from './database.js';
 export async function getDefaultUserPersona() {
         try {
                 const defaultPersona = await db.actors
-                        .filter(actor => actor.id && actor.id.startsWith('user_persona_') && actor.isDefault)
+                        .filter(actor => actor.id && actor.id.startsWith('user_') && actor.isDefault)
                         .first();
                 return defaultPersona;
         } catch (error) {
@@ -29,78 +29,16 @@ export async function setDefaultUserPersona(personaId) {
         try {
                 // 取消所有人格的默认状态
                 await db.actors
-                        .filter(actor => actor.id && actor.id.startsWith('user_persona_'))
+                        .filter(actor => actor.id && actor.id.startsWith('user_'))
                         .modify({ isDefault: false });
                 
                 // 设置新的默认人格
                 await db.actors.update(personaId, { isDefault: true });
                 
-                // 应用默认人格到未绑定的实体
-                await applyDefaultPersonaToUnbound();
-                
                 return true;
         } catch (error) {
                 console.error('Failed to set default user persona:', error);
                 return false;
-        }
-}
-
-/**
- * 将默认人格应用到所有未绑定人格的分组、群聊和未分组角色
- * @returns {Promise<void>}
- */
-export async function applyDefaultPersonaToUnbound() {
-        try {
-                const defaultPersona = await getDefaultUserPersona();
-                if (!defaultPersona) {
-                        console.log('No default persona found');
-                        return;
-                }
-
-                // 获取所有已绑定人格的分组/群聊
-                const allPersonas = await db.actors
-                        .filter(actor => actor.id && actor.id.startsWith('user_persona_'))
-                        .toArray();
-                
-                const boundGroupIds = new Set();
-                allPersonas.forEach(persona => {
-                        if (persona.groupIds && Array.isArray(persona.groupIds)) {
-                                persona.groupIds.forEach(id => boundGroupIds.add(id));
-                        }
-                });
-
-                // 获取所有分组
-                const allGroups = await db.groups.filter(g => g.id !== 'group_special').toArray();
-                
-                // 获取所有群聊
-                const allGroupChats = await db.actors.filter(a => a.isGroup === 1).toArray();
-
-                // 将默认人格应用到未绑定的分组和群聊
-                const unboundIds = [];
-                
-                allGroups.forEach(group => {
-                        if (!boundGroupIds.has(group.id)) {
-                                unboundIds.push(group.id);
-                        }
-                });
-                
-                allGroupChats.forEach(chat => {
-                        if (!boundGroupIds.has(chat.id)) {
-                                unboundIds.push(chat.id);
-                        }
-                });
-
-                // 更新默认人格的groupIds
-                if (unboundIds.length > 0) {
-                        const currentGroupIds = defaultPersona.groupIds || [];
-                        const newGroupIds = [...new Set([...currentGroupIds, ...unboundIds])];
-                        
-                        await db.actors.update(defaultPersona.id, { groupIds: newGroupIds });
-                        console.log(`Applied default persona to ${unboundIds.length} unbound groups/chats`);
-                }
-
-        } catch (error) {
-                console.error('Failed to apply default persona to unbound entities:', error);
         }
 }
 
@@ -114,7 +52,7 @@ export async function getUserPersonaForGroup(groupId) {
                 const persona = await db.actors
                         .filter(actor => 
                                 actor.id && 
-                                actor.id.startsWith('user_persona_') && 
+                                actor.id.startsWith('user_') && 
                                 actor.groupIds && 
                                 actor.groupIds.includes(groupId)
                         )
@@ -147,15 +85,40 @@ export async function unbindPersonaFromGroup(personaId, groupId) {
                 if (persona && persona.groupIds) {
                         const newGroupIds = persona.groupIds.filter(id => id !== groupId);
                         await db.actors.update(personaId, { groupIds: newGroupIds });
-                        
-                        // 将解除绑定的分组/群聊重新分配给默认人格
-                        await applyDefaultPersonaToUnbound();
-                        
                         return true;
                 }
                 return false;
         } catch (error) {
                 console.error('Failed to unbind persona from group:', error);
                 return false;
+        }
+}
+
+/**
+ * 根据角色信息获取当前上下文应使用的用户人格ID
+ * @param {Object} actor - 当前对话的角色对象
+ * @returns {Promise<string|null>} 有效的用户人格ID，如果没有则返回null
+ */
+export async function getEffectiveUserPersonaId(actor) {
+        try {
+                if (!actor) return null;
+                
+                // 获取角色的分组ID
+                const groupId = actor.groupIds?.[0];
+                
+                if (groupId) {
+                        // 获取该分组绑定的用户人格
+                        const boundPersona = await getUserPersonaForGroup(groupId);
+                        if (boundPersona) {
+                                return boundPersona.id;
+                        }
+                }
+                
+                // 没有分组或没有绑定的人格，使用默认人格
+                const defaultPersona = await getDefaultUserPersona();
+                return defaultPersona ? defaultPersona.id : null;
+        } catch (error) {
+                console.error('Failed to get effective user persona ID:', error);
+                return null;
         }
 }

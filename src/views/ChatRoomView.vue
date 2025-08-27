@@ -4,7 +4,10 @@
                         <template #subtitle>
                                 <div class="status-indicator" v-if="actor">
                                         <div class="status-dot"
-                                                :style="{ backgroundColor: actor?.status?.color || '#4CAF50' }">
+                                                :style="{ 
+                                                        backgroundColor: actor?.status?.color || '#4CAF50',
+                                                        '--status-color': `${actor?.status?.color || '#4CAF50'}66`
+                                                }">
                                         </div>
                                         <span class="status-text">{{ actor?.status?.text || '在线' }}</span>
                                 </div>
@@ -28,9 +31,17 @@
                                         <p>加载更多消息...</p>
                                 </div>
                                 <div v-for="message in displayedMessages" :key="message.id" class="message-item"
-                                        :class="{ 'own-message': message.actorId === 'user_main' }">
-                                        <div class="message-avatar" v-if="message.actorId !== 'user_main'">
-                                                <span class="avatar-initial">{{ actor.name[0] }}</span>
+                                        :class="{ 'own-message': message.actorId === userActorId }">
+                                        <!-- 对方头像 -->
+                                        <div class="message-avatar" v-if="message.actorId !== userActorId">
+                                                <img v-if="actor?.avatar" :src="actor.avatar" :alt="actor.name">
+                                                <span v-else class="avatar-initial">{{ actor?.name?.[0] || '#' }}</span>
+                                        </div>
+                                        
+                                        <!-- 用户头像 -->
+                                        <div class="message-avatar" v-else>
+                                                <img v-if="currentUserPersona?.avatar" :src="currentUserPersona.avatar" :alt="currentUserPersona.name">
+                                                <span v-else class="avatar-initial">{{ getInitial(currentUserPersona?.name || 'User') }}</span>
                                         </div>
                                         <div class="message-content">
                                                 <!-- 文字消息 -->
@@ -56,31 +67,18 @@
                                         </div>
                                 </div>
 
-                                <!-- AI正在输入的消息 -->
-                                <div v-if="isTyping" class="message-item">
+                                <!-- AI正在输入的消息（包含思考和打字状态） -->
+                                <div v-if="isTyping || isGenerating" class="message-item">
                                         <div class="message-avatar">
-                                                <span class="avatar-initial">{{ actor.name[0] }}</span>
+                                                <img v-if="actor?.avatar" :src="actor.avatar" :alt="actor.name">
+                                                <span v-else class="avatar-initial">{{ actor?.name?.[0] || '#' }}</span>
                                         </div>
                                         <div class="message-content">
-                                                <div class="message-bubble typing-bubble breathing">
-                                                        <p v-if="typingMessage">{{ typingMessage }}</p>
+                                                <div class="message-bubble typing-bubble">
+                                                        <!-- 如果正在打字且有内容，显示打字内容 -->
+                                                        <p v-if="isTyping && typingMessage">{{ typingMessage }}</p>
+                                                        <!-- 否则显示思考/打字指示器 -->
                                                         <div v-else class="typing-indicator">
-                                                                <span class="typing-dot"></span>
-                                                                <span class="typing-dot"></span>
-                                                                <span class="typing-dot"></span>
-                                                        </div>
-                                                </div>
-                                        </div>
-                                </div>
-
-                                <!-- AI正在思考的指示器 -->
-                                <div v-if="isGenerating && !isTyping" class="message-item thinking-indicator">
-                                        <div class="message-avatar">
-                                                <span class="avatar-initial">{{ actor.name[0] }}</span>
-                                        </div>
-                                        <div class="message-content">
-                                                <div class="message-bubble thinking-bubble">
-                                                        <div class="thinking-spinner-container">
                                                                 <CirclesToRhombusesSpinner :animation-duration="1200"
                                                                         :circles-num="3" :circle-size="1"
                                                                         color="var(--accent-primary)" />
@@ -182,6 +180,8 @@ import db from '../services/database.js';
 import AppHeader from '../components/layout/Header.vue';
 import { formatTimestamp } from '../utils/datetime.js';
 import { generateAIReply } from '../services/aiChatAPIService.js';
+import { getUserPersonaForGroup, getUserPersonaForUngrouped, getDefaultUserPersona } from '../services/userPersonaService.js';
+import { USER_ACTOR_ID } from '../services/database.js';
 
 const route = useRoute();
 const router = useRouter();
@@ -191,6 +191,9 @@ const isGenerating = ref(false);
 const isLoadingMore = ref(false);
 const messagesContainer = ref(null);
 const messageInput = ref(null);
+
+// 用户ID常量，用于模板
+const userActorId = USER_ACTOR_ID;
 
 // 懒加载相关状态
 const messageOffset = ref(0);
@@ -212,14 +215,34 @@ const actor = useObservable(
         { initialValue: null }
 );
 
+// 获取当前聊天应显示的用户人格（仅用于显示）
+const currentUserPersona = useObservable(
+        liveQuery(async () => {
+                if (!actor.value) return null;
+                
+                // 获取角色的分组ID
+                const groupId = actor.value.groupIds?.[0];
+                
+                if (groupId) {
+                        // 有分组，获取该分组绑定的用户人格
+                        const groupPersona = await getUserPersonaForGroup(groupId);
+                        if (groupPersona) return groupPersona;
+                }
+                
+                // 没有分组或没有绑定的人格，使用默认人格
+                return await getDefaultUserPersona();
+        }),
+        { initialValue: null }
+);
+
 // 获取所有消息（用于懒加载）
 const allMessages = useObservable(
         liveQuery(async () => {
                 const allEvents = await db.events
                         .where('contextId').equals(actorId.value)
+                        .and(event => event.type === 'privateMessage')
                         .toArray();
-                return allEvents.filter(event => event.type === 'privateMessage')
-                        .sort((a, b) => a.timestamp - b.timestamp);
+                return allEvents.sort((a, b) => a.timestamp - b.timestamp);
         }),
         { initialValue: [] }
 );
@@ -261,18 +284,9 @@ watch(displayedMessages, () => {
         scrollToBottom();
 }, { deep: true });
 
-// 监听生成状态变化，确保思考指示器出现时滚动到底部
-watch(isGenerating, (newValue) => {
-        if (newValue) {
-                nextTick(() => scrollToBottom());
-        }
-}, { immediate: false });
-
-// 监听打字状态变化，确保打字时滚动到底部
-watch(isTyping, (newValue) => {
-        if (newValue) {
-                nextTick(() => scrollToBottom());
-        }
+// 监听AI状态变化，确保状态指示器出现时滚动到底部
+watch([isGenerating, isTyping], () => {
+        nextTick(() => scrollToBottom());
 }, { immediate: false });
 
 // 监听打字消息变化，确保打字过程中持续滚动到底部
@@ -377,7 +391,7 @@ const handleInputBlur = () => {
 const sendSticker = async (sticker) => {
         const message = {
                 timestamp: Date.now(),
-                actorId: 'user_main',
+                actorId: USER_ACTOR_ID,
                 contextId: actorId.value,
                 type: 'privateMessage',
                 content: {
@@ -419,7 +433,7 @@ const sendMessage = async () => {
 
         const message = {
                 timestamp: Date.now(),
-                actorId: 'user_main', // 假设用户ID
+                actorId: USER_ACTOR_ID,
                 contextId: actorId.value,
                 type: 'privateMessage',
                 content: {
@@ -473,6 +487,9 @@ const generateReply = async () => {
                 for (let i = 0; i < mockReplies.length; i++) {
                         const reply = mockReplies[i];
                         
+                        // 开始打字状态（会自动隐藏思考状态）
+                        isTyping.value = true;
+                        
                         // 显示拼音打字特效
                         await simulatePinyinTyping(reply.content);
                         
@@ -490,10 +507,10 @@ const generateReply = async () => {
                         await db.events.add(messageEvent);
                         await updateConversation(messageEvent);
                         
-                        // 消息间保持打字效果，只是暂停一下
+                        // 消息间保持输入状态，只清空当前打字内容，不改变isTyping状态
                         if (i < mockReplies.length - 1) {
-                                // 清空当前打字内容但保持打字状态
                                 typingMessage.value = '';
+                                // 保持isTyping为true，确保header持续显示"正在输入中"
                                 await new Promise(resolve => setTimeout(resolve, Math.random() * 1000 + 500));
                         }
                 }
@@ -501,14 +518,20 @@ const generateReply = async () => {
         } catch (error) {
                 console.error('生成回复失败:', error);
                 
+                // 开始打字状态显示错误消息
+                isTyping.value = true;
+                
                 // 添加错误消息到聊天记录
+                const errorText = `抱歉，出现了错误：${error.message}`;
+                await simulatePinyinTyping(errorText);
+                
                 const errorMessage = {
                         timestamp: Date.now(),
                         actorId: actorId.value,
                         contextId: actorId.value,
                         type: 'privateMessage',
                         content: {
-                                content: `抱歉，出现了错误：${error.message}`
+                                content: errorText
                         }
                 };
 
@@ -531,7 +554,7 @@ const generateReply = async () => {
         try {
                 // 获取最后一条用户消息
                 const lastUserMessage = displayedMessages.value
-                        .filter(msg => msg.actorId === 'user_main')
+                        .filter(msg => msg.actorId === USER_ACTOR_ID)
                         .pop();
                 
                 if (!lastUserMessage) {
@@ -539,10 +562,19 @@ const generateReply = async () => {
                         return;
                 }
 
+                // 获取当前上下文对应的用户人格ID
+                let effectiveUserId = USER_ACTOR_ID;
+                if (currentUserPersona.value && currentUserPersona.value.id) {
+                        effectiveUserId = currentUserPersona.value.id;
+                        console.log('使用用户人格:', currentUserPersona.value.name, '(ID:', effectiveUserId, ')');
+                } else {
+                        console.log('使用默认用户ID:', effectiveUserId);
+                }
+
                 // 调用AI服务生成回复
                 const aiResult = await generateAIReply(
                         actorId.value, 
-                        'user_main', 
+                        effectiveUserId, 
                         lastUserMessage.content.content
                 );
 
@@ -550,6 +582,9 @@ const generateReply = async () => {
                         // 处理AI返回的多条消息，为每条消息添加打字特效
                         for (let i = 0; i < aiResult.messages.length; i++) {
                                 const aiMessage = aiResult.messages[i];
+                                
+                                // 开始打字状态
+                                isTyping.value = true;
                                 
                                 // 显示拼音打字特效
                                 await simulatePinyinTyping(aiMessage.content);
@@ -568,8 +603,10 @@ const generateReply = async () => {
                                 await db.events.add(messageEvent);
                                 await updateConversation(messageEvent);
                                 
-                                // 消息间随机间隔缩短 (500毫秒-1.5秒)
+                                // 消息间保持输入状态，只清空当前打字内容
                                 if (i < aiResult.messages.length - 1) {
+                                        typingMessage.value = '';
+                                        // 保持isTyping为true，确保header持续显示"正在输入中"
                                         await new Promise(resolve => setTimeout(resolve, Math.random() * 1000 + 500));
                                 }
                         }
@@ -585,6 +622,7 @@ const generateReply = async () => {
                         }
                 } else {
                         // AI调用失败，显示错误消息
+                        isTyping.value = true;
                         await simulatePinyinTyping(aiResult.error || '抱歉，我现在无法回复。');
                         
                         const errorMessage = {
@@ -605,6 +643,7 @@ const generateReply = async () => {
                 console.error('生成回复失败:', error);
                 
                 // 添加错误消息到聊天记录
+                isTyping.value = true;
                 const errorText = `抱歉，出现了错误：${error.message}`;
                 await simulatePinyinTyping(errorText);
                 
@@ -731,7 +770,7 @@ const updateConversation = async (message) => {
                 id: actorId.value,
                 lastEventTimestamp: message.timestamp,
                 lastEventContent: message.content,
-                unreadCount: message.actorId === 'user_main' ? 0 : 1, // 如果是用户发送则重置未读数
+                unreadCount: message.actorId === USER_ACTOR_ID ? 0 : 1, // 如果是用户发送则重置未读数
                 summaryState: null
         };
 
@@ -756,6 +795,12 @@ const goBack = () => {
 // 跳转到profile
 const goToProfile = () => {
         router.push(`/profile/${actorId.value}`);
+};
+
+// 生成首字母头像（参考 MeView 的逻辑）
+const getInitial = (name) => {
+        if (!name) return 'U';
+        return name.charAt(0).toUpperCase();
 };
 
 // 监听表情包面板状态变化
@@ -842,13 +887,13 @@ onMounted(async () => {
 
 @keyframes pulse {
         0% {
-                box-shadow: 0 0 6px rgba(76, 175, 80, 0.6);
+                box-shadow: 0 0 6px var(--status-color, rgba(76, 175, 80, 0.6));
         }
         50% {
-                box-shadow: 0 0 10px rgba(76, 175, 80, 0.8);
+                box-shadow: 0 0 10px var(--status-color, rgba(76, 175, 80, 0.8));
         }
         100% {
-                box-shadow: 0 0 6px rgba(76, 175, 80, 0.6);
+                box-shadow: 0 0 6px var(--status-color, rgba(76, 175, 80, 0.6));
         }
 }
 
@@ -869,7 +914,8 @@ onMounted(async () => {
 .messages-container {
         flex-grow: 1;
         overflow-y: auto;
-        padding: 15px 20px;
+        padding: 0 20px;
+        padding-top: calc(var(--header-height) + 15px);
         display: flex;
         flex-direction: column;
         gap: 15px;
@@ -901,6 +947,13 @@ onMounted(async () => {
         align-items: center;
         justify-content: center;
         flex-shrink: 0;
+        overflow: hidden;
+}
+
+.message-avatar img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
 }
 
 .avatar-initial {
@@ -967,44 +1020,15 @@ onMounted(async () => {
         }
 }
 
+
 /* 打字特效样式 */
 .typing-bubble {
         background-color: var(--bg-card);
         border: 1px solid var(--border-color);
         position: relative;
-        animation: typing-bubble-appear 0.3s ease-out;
 }
 
-@keyframes typing-bubble-appear {
-        0% {
-                opacity: 0;
-                transform: translateY(10px) scale(0.95);
-        }
-        100% {
-                opacity: 1;
-                transform: translateY(0) scale(1);
-        }
-}
 
-/* 思考指示器样式 */
-.thinking-indicator {
-        opacity: 0.8;
-}
-
-.thinking-bubble {
-        background-color: var(--bg-card) !important;
-        padding: 16px 20px !important;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-}
-
-.thinking-spinner-container {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        min-height: 30px;
-}
 
 .message-time {
         font-size: 11px;
@@ -1090,6 +1114,7 @@ onMounted(async () => {
         outline: none;
         overflow-y: auto;
         line-height: 1.4;
+        max-height: 20px;
 }
 
 .message-input:focus {
@@ -1272,21 +1297,6 @@ onMounted(async () => {
         background-color: var(--accent-darker);
 }
 
-/* 打字效果呼吸动画 */
-.typing-bubble.breathing {
-        animation: breathing 2s ease-in-out infinite;
-}
-
-@keyframes breathing {
-        0%, 100% {
-                transform: scale(1);
-                opacity: 0.9;
-        }
-        50% {
-                transform: scale(1.02);
-                opacity: 1;
-        }
-}
 
 /* 打字指示器 */
 .typing-indicator {

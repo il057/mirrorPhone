@@ -394,7 +394,7 @@ const loadGroups = async () => {
 
 const loadFriends = async () => {
         try {
-                const friends = await db.actors.filter(a => a.isGroup !== 1 && !a.id.startsWith('user_persona_')).toArray();
+                const friends = await db.actors.filter(a => a.isGroup !== 1 && !a.id.startsWith('user_')).toArray();
                 availableFriends.value = friends;
         } catch (error) {
                 console.error('加载好友失败:', error);

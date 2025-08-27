@@ -53,7 +53,6 @@
                                         <div v-show="expandedPersonas.includes(persona.id)" class="persona-content">
                                                 <div class="form-section">
                                                         <div class="form-group avatar-group">
-                                                                <label>头像</label>
                                                                 <div class="avatar-picker-container">
                                                                         <div class="avatar-picker" @click="pickAvatar(persona)">
                                                                                 <img v-if="persona.avatar" :src="persona.avatar" :alt="persona.name">
@@ -111,21 +110,25 @@
                                                         <transition name="accordion">
                                                                 <div v-show="expandedGroups.includes(persona.id)" class="groups-selection">
                                                                         <div class="groups-grid">
-                                                                                <label v-for="group in availableGroups" :key="group.id" class="group-item">
+                                                                                <label v-for="group in availableGroups" :key="group.id" class="group-item" :class="{ disabled: isGroupBoundToOther(group.id, persona.id) }">
                                                                                         <input 
                                                                                                 type="checkbox" 
                                                                                                 :value="group.id"
                                                                                                 v-model="persona.groupIds"
+                                                                                                :disabled="isGroupBoundToOther(group.id, persona.id)"
                                                                                         >
                                                                                         <span>{{ group.name }}</span>
+                                                                                        <small v-if="isGroupBoundToOther(group.id, persona.id)" class="bound-indicator">已绑定</small>
                                                                                 </label>
-                                                                                <label v-for="groupChat in groupChats" :key="groupChat.id" class="group-item">
+                                                                                <label v-for="groupChat in groupChats" :key="groupChat.id" class="group-item" :class="{ disabled: isGroupBoundToOther(groupChat.id, persona.id) }">
                                                                                         <input 
                                                                                                 type="checkbox" 
                                                                                                 :value="groupChat.id"
                                                                                                 v-model="persona.groupIds"
+                                                                                                :disabled="isGroupBoundToOther(groupChat.id, persona.id)"
                                                                                         >
                                                                                         <span>{{ groupChat.name }} (群聊)</span>
+                                                                                        <small v-if="isGroupBoundToOther(groupChat.id, persona.id)" class="bound-indicator">已绑定</small>
                                                                                 </label>
                                                                         </div>
                                                                 </div>
@@ -158,8 +161,8 @@ import { useObservable } from '@vueuse/rxjs';
 import { liveQuery } from 'dexie';
 import db from '../../services/database.js';
 import MainDropdown from './MainDropdown.vue';
-import { showToast, showConfirm, showUploadChoiceModal, showUserAvatarPickerModal } from '../../services/uiService.js';
-import { setDefaultUserPersona, applyDefaultPersonaToUnbound } from '../../services/userPersonaService.js';
+import { showToast, showConfirm, showUploadChoiceModal, showAvatarPickerModal } from '../../services/uiService.js';
+import { setDefaultUserPersona } from '../../services/userPersonaService.js';
 
 const emit = defineEmits(['close', 'personaChanged']);
 
@@ -224,13 +227,22 @@ const toggleGroupsExpanded = (personaId) => {
         }
 };
 
+// 检查分组是否被其他人格绑定
+const isGroupBoundToOther = (groupId, currentPersonaId) => {
+        return userPersonas.value.some(persona => 
+                persona.id !== currentPersonaId && 
+                persona.groupIds && 
+                persona.groupIds.includes(groupId)
+        );
+};
+
 
 // 加载用户人格预设
 const loadUserPersonas = async () => {
         try {
                 console.log('Loading user personas...');
                 const personas = await db.actors.filter(actor => 
-                        actor.id && actor.id.startsWith('user_persona_')
+                        actor.id && actor.id.startsWith('user_')
                 ).toArray();
                 
                 console.log('Found personas:', personas);
@@ -242,10 +254,19 @@ const loadUserPersonas = async () => {
                         groupIds: persona.groupIds || []
                 }));
 
-                // 如果没有默认人格，设置第一个为默认
-                if (userPersonas.value.length > 0 && !userPersonas.value.some(p => p.isDefault)) {
+                // 确保有且仅有一个默认人格
+                const defaultPersonas = userPersonas.value.filter(p => p.isDefault);
+                
+                if (defaultPersonas.length === 0 && userPersonas.value.length > 0) {
+                        // 如果没有默认人格，设置第一个为默认
                         userPersonas.value[0].isDefault = true;
-                        await savePersona(userPersonas.value[0]);
+                        await db.actors.update(userPersonas.value[0].id, { isDefault: true });
+                } else if (defaultPersonas.length > 1) {
+                        // 如果有多个默认人格，只保留第一个
+                        for (let i = 1; i < defaultPersonas.length; i++) {
+                                defaultPersonas[i].isDefault = false;
+                                await db.actors.update(defaultPersonas[i].id, { isDefault: false });
+                        }
                 }
                 
                 console.log('Processed personas:', userPersonas.value);
@@ -268,7 +289,7 @@ const toggleDefault = async (personaId) => {
                                 
                                 // 通知父组件人格已变更
                                 emit('personaChanged', persona);
-                                showToast('默认人格已更新，并应用到未绑定的分组和群聊', 'success');
+                                showToast('默认人格已更新', 'success');
                         }
                 } else {
                         showToast('设置默认人格失败', 'error');
@@ -282,7 +303,8 @@ const toggleDefault = async (personaId) => {
 // 选择头像
 const pickAvatar = async (persona) => {
         try {
-                const result = await showUserAvatarPickerModal(persona.id);
+                // 使用__USER__作为头像库ID，所有用户人格共享头像库
+                const result = await showAvatarPickerModal(persona.id, '__USER__');
                 if (result) {
                         persona.avatar = result;
                 }
@@ -313,7 +335,7 @@ const savePersona = async (persona) => {
                         gender: persona.gender,
                         avatar: persona.avatar,
                         aliases: aliases,
-                        type: 'user_persona',
+                        type: 'user',
                         isDefault: Boolean(persona.isDefault),
                         groupIds: Array.isArray(persona.groupIds) ? [...persona.groupIds] : [],
                         avatarLibrary: Array.isArray(persona.avatarLibrary) ? [...persona.avatarLibrary] : []
@@ -321,7 +343,7 @@ const savePersona = async (persona) => {
 
                 if (persona.isNew) {
                         // 新建人格预设
-                        dataToSave.id = `user_persona_${Date.now()}`;
+                        dataToSave.id = `user_${Date.now()}`;
                         await db.actors.add(dataToSave);
                         persona.id = dataToSave.id;
                         persona.isNew = false;
@@ -340,14 +362,11 @@ const savePersona = async (persona) => {
                         await db.actors.put(dataToSave);
                 }
 
-                // 如果是默认人格，需要更新其他人格的默认状态并应用到未绑定实体
+                // 如果是默认人格，需要更新其他人格的默认状态
                 if (persona.isDefault) {
                         await db.actors
-                                .filter(actor => actor.id && actor.id.startsWith('user_persona_') && actor.id !== persona.id)
+                                .filter(actor => actor.id && actor.id.startsWith('user_') && actor.id !== persona.id)
                                 .modify({ isDefault: false });
-                        
-                        // 应用默认人格到未绑定的实体
-                        await applyDefaultPersonaToUnbound();
                         
                         // 通知父组件人格已变更
                         emit('personaChanged', persona);
@@ -394,7 +413,7 @@ const deletePersona = async (persona) => {
 // 创建新人格预设
 const createNewPersona = () => {
         const newPersona = {
-                id: `new_persona_${Date.now()}`,
+                id: `new_${Date.now()}`,
                 name: '',
                 realName: '',
                 aliasesStr: '',
@@ -405,7 +424,7 @@ const createNewPersona = () => {
                 groupIds: [],
                 isDefault: false,
                 isNew: true,
-                type: 'user_persona'
+                type: 'user'
         };
 
         userPersonas.value.push(newPersona);
@@ -414,8 +433,6 @@ const createNewPersona = () => {
 
 onMounted(() => {
         loadUserPersonas();
-        // 确保默认人格应用到未绑定的实体
-        applyDefaultPersonaToUnbound();
 });
 </script>
 
@@ -471,7 +488,6 @@ onMounted(() => {
 }
 
 .close-button:hover {
-        background-color: var(--bg-secondary);
         color: var(--text-primary);
 }
 
@@ -630,7 +646,7 @@ onMounted(() => {
 }
 
 .star-button:hover {
-        background-color: rgba(255, 215, 0, 0.1);
+        color: #FFD700;
 }
 
 .star-button.active {
@@ -640,6 +656,9 @@ onMounted(() => {
 /* 人格内容编辑样式 */
 .persona-content {
         padding-top: 10px;
+        padding-left: 10px;
+        padding-right: 10px;
+        text-align: left;
 }
 
 .form-section {
@@ -772,15 +791,37 @@ onMounted(() => {
         border-radius: 6px;
         cursor: pointer;
         transition: all 0.2s ease;
+        position: relative;
 }
 
 .group-item:hover {
         background-color: var(--bg-primary);
 }
 
+.group-item.disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        background-color: var(--bg-card);
+}
+
+.group-item.disabled:hover {
+        background-color: var(--bg-card);
+}
+
 .group-item input[type="checkbox"] {
         width: auto;
         margin: 0;
+}
+
+.group-item input[type="checkbox"]:disabled {
+        cursor: not-allowed;
+}
+
+.bound-indicator {
+        font-size: 12px;
+        color: var(--text-secondary);
+        margin-left: auto;
+        font-style: italic;
 }
 
 /* 操作按钮 */
