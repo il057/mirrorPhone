@@ -5,208 +5,183 @@
                                 <h3 class="modal-title">{{ isEditMode ? '编辑动态' : '发布动态' }}</h3>
                                 <button class="close-btn" @click="closeModal">×</button>
                         </div>
-                        
+
                         <div class="modal-body">
                                 <!-- 文本输入区域 -->
                                 <div class="text-input-section">
-                                        <textarea 
-                                                v-model="postText" 
-                                                placeholder="分享新鲜事..." 
-                                                class="post-textarea"
-                                                :rows="isImagePost ? 3 : 6"
-                                        ></textarea>
+                                        <textarea v-model="postText" placeholder="分享新鲜事..." class="post-textarea"
+                                                :rows="isImagePost ? 3 : 6"></textarea>
                                 </div>
-                                
+
                                 <!-- 图片区域 - 仅在图片动态时显示 -->
                                 <div v-if="isImagePost" class="image-section">
                                         <!-- 图片模式选择 -->
                                         <div class="segmented-control">
-                                                <input 
-                                                        type="radio" 
-                                                        id="text-description" 
-                                                        value="description" 
-                                                        v-model="imageMode"
-                                                >
-                                                <label for="text-description" :class="{ active: imageMode === 'description' }">
-                                                        文字描述图片
+                                                <input type="radio" id="text-description" value="description"
+                                                        v-model="imageMode">
+                                                <label for="text-description"
+                                                        :class="{ active: imageMode === 'description' }">
+                                                        文字描述
                                                 </label>
-                                                
-                                                <input 
-                                                        type="radio" 
-                                                        id="upload-image" 
-                                                        value="upload" 
-                                                        v-model="imageMode"
-                                                >
+
+                                                <input type="radio" id="upload-image" value="upload"
+                                                        v-model="imageMode">
                                                 <label for="upload-image" :class="{ active: imageMode === 'upload' }">
                                                         上传图片
                                                 </label>
-                                                
-                                                <input 
-                                                        type="radio" 
-                                                        id="album-select" 
-                                                        value="album" 
-                                                        v-model="imageMode"
-                                                >
+
+                                                <input type="radio" id="album-select" value="album" v-model="imageMode">
                                                 <label for="album-select" :class="{ active: imageMode === 'album' }">
-                                                        从相册选择
+                                                        相册选择
                                                 </label>
                                         </div>
-                                        
+
                                         <!-- 图片描述文本框 -->
-                                        <div class="image-description-section" :class="{ 'required': imageMode === 'description' }">
+                                        <div class="image-description-section"
+                                                :class="{ 'required': imageMode === 'description' }">
                                                 <div v-if="imageMode !== 'description'" class="description-toggle">
-                                                        <button 
-                                                                type="button" 
-                                                                class="toggle-description-btn"
-                                                                @click="showDescription = !showDescription"
-                                                        >
+                                                        <button type="button" class="toggle-description-btn"
+                                                                @click="showDescription = !showDescription">
                                                                 {{ showDescription ? '收起描述' : '添加描述' }}
                                                         </button>
                                                 </div>
-                                                
-                                                <div v-if="imageMode === 'description' || showDescription" class="description-input">
-                                                        <textarea 
-                                                                v-model="imageDescription" 
+
+                                                <div v-if="imageMode === 'description' || showDescription"
+                                                        class="description-input">
+                                                        <textarea v-model="imageDescription"
                                                                 :placeholder="imageMode === 'description' ? '请描述图片内容...' : '为图片添加描述...'"
-                                                                class="description-textarea"
-                                                                rows="3"
-                                                        ></textarea>
+                                                                class="description-textarea" rows="3"></textarea>
                                                 </div>
                                         </div>
-                                        
+
                                         <!-- 图片选择/上传区域 -->
                                         <div v-if="imageMode !== 'description'" class="image-upload-area">
                                                 <div v-if="selectedImages.length === 0" class="upload-placeholder">
-                                                        <button 
-                                                                type="button" 
-                                                                class="add-image-btn"
-                                                                @click="handleImageSelection"
-                                                        >
-                                                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-                                                                        <circle cx="8.5" cy="8.5" r="1.5"/>
-                                                                        <polyline points="21,15 16,10 5,21"/>
+                                                        <button type="button" class="add-image-btn"
+                                                                @click="handleImageSelection">
+                                                                <svg width="24" height="24" viewBox="0 0 24 24"
+                                                                        fill="none" stroke="currentColor"
+                                                                        stroke-width="2">
+                                                                        <rect x="3" y="3" width="18" height="18" rx="2"
+                                                                                ry="2" />
+                                                                        <circle cx="8.5" cy="8.5" r="1.5" />
+                                                                        <polyline points="21,15 16,10 5,21" />
                                                                 </svg>
                                                                 {{ imageMode === 'upload' ? '上传图片' : '选择图片' }}
                                                         </button>
                                                 </div>
-                                                
+
                                                 <div v-else class="selected-images">
-                                                        <div v-for="(image, index) in selectedImages" :key="index" class="image-item">
-                                                                <img :src="image.url" :alt="image.description || '图片'" class="preview-image">
-                                                                <button 
-                                                                        type="button" 
-                                                                        class="remove-image-btn"
-                                                                        @click="removeImage(index)"
-                                                                >
-                                                                        ×
+                                                        <div v-for="(image, index) in selectedImages" :key="index"
+                                                                class="image-item">
+                                                                <img :src="image.url" :alt="image.description || '图片'"
+                                                                        class="preview-image">
+                                                                <button type="button" class="remove-image-btn"
+                                                                        @click="removeImage(index)">
+                                                                        <svg xmlns="http://www.w3.org/2000/svg"
+                                                                                fill="none" viewBox="0 0 24 24"
+                                                                                stroke-width="1.5" stroke="currentColor"
+                                                                                class="size-6">
+                                                                                <path stroke-linecap="round"
+                                                                                        stroke-linejoin="round"
+                                                                                        d="M6 18 18 6M6 6l12 12" />
+                                                                        </svg>
+
                                                                 </button>
                                                         </div>
-                                                        
-                                                        <button 
-                                                                v-if="selectedImages.length < 9"
-                                                                type="button" 
-                                                                class="add-more-btn"
-                                                                @click="handleImageSelection"
-                                                        >
-                                                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                                        <line x1="12" y1="5" x2="12" y2="19"/>
-                                                                        <line x1="5" y1="12" x2="19" y2="12"/>
+
+                                                        <button v-if="selectedImages.length < 9" type="button"
+                                                                class="add-more-btn" @click="handleImageSelection">
+                                                                <svg width="20" height="20" viewBox="0 0 24 24"
+                                                                        fill="none" stroke="currentColor"
+                                                                        stroke-width="2">
+                                                                        <line x1="12" y1="5" x2="12" y2="19" />
+                                                                        <line x1="5" y1="12" x2="19" y2="12" />
                                                                 </svg>
                                                         </button>
                                                 </div>
                                         </div>
                                 </div>
-                                
+
                                 <!-- 谁可以看设置 - 编辑模式下隐藏 -->
                                 <div v-if="!isEditMode" class="visibility-section">
-                                        <div class="visibility-header" @click="showVisibilityOptions = !showVisibilityOptions">
+                                        <div class="visibility-header"
+                                                @click="showVisibilityOptions = !showVisibilityOptions">
                                                 <span class="visibility-label">谁可以看</span>
                                                 <span class="visibility-value">{{ visibilityText }}</span>
-                                                <svg 
-                                                        class="chevron-icon" 
-                                                        :class="{ 'expanded': showVisibilityOptions }"
-                                                        width="16" 
-                                                        height="16" 
-                                                        viewBox="0 0 24 24" 
-                                                        fill="none" 
-                                                        stroke="currentColor" 
-                                                        stroke-width="2"
-                                                >
-                                                        <polyline points="6,9 12,15 18,9"/>
+                                                <svg class="chevron-icon" :class="{ 'expanded': showVisibilityOptions }"
+                                                        width="16" height="16" viewBox="0 0 24 24" fill="none"
+                                                        stroke="currentColor" stroke-width="2">
+                                                        <polyline points="6,9 12,15 18,9" />
                                                 </svg>
                                         </div>
-                                        
+
                                         <!-- 手风琴展开内容 -->
                                         <div v-if="showVisibilityOptions" class="visibility-options">
                                                 <div class="visibility-mode-selector">
                                                         <label class="radio-option">
-                                                                <input 
-                                                                        type="radio" 
-                                                                        value="public" 
-                                                                        v-model="visibilityMode"
-                                                                >
+                                                                <input type="radio" value="public"
+                                                                        v-model="visibilityMode">
                                                                 <span class="radio-text">公开</span>
                                                         </label>
-                                                        
+
                                                         <label class="radio-option">
-                                                                <input 
-                                                                        type="radio" 
-                                                                        value="group" 
-                                                                        v-model="visibilityMode"
-                                                                >
+                                                                <input type="radio" value="group"
+                                                                        v-model="visibilityMode">
                                                                 <span class="radio-text">选择分组</span>
                                                         </label>
-                                                        
+
                                                         <label class="radio-option">
-                                                                <input 
-                                                                        type="radio" 
-                                                                        value="friends" 
-                                                                        v-model="visibilityMode"
-                                                                >
+                                                                <input type="radio" value="friends"
+                                                                        v-model="visibilityMode">
                                                                 <span class="radio-text">选择好友</span>
                                                         </label>
                                                 </div>
-                                                
+
                                                 <!-- 分组选择 -->
                                                 <div v-if="visibilityMode === 'group'" class="group-selection">
                                                         <div class="selection-header">选择分组</div>
                                                         <div class="checkbox-list">
-                                                                <label v-for="group in availableGroups" :key="group.id" class="checkbox-item">
-                                                                        <input 
-                                                                                type="checkbox" 
-                                                                                :value="group.id" 
-                                                                                v-model="selectedGroups"
-                                                                        >
-                                                                        <span class="checkbox-text">{{ group.name }}</span>
+                                                                <label v-for="group in availableGroups" :key="group.id"
+                                                                        class="checkbox-item">
+                                                                        <input type="checkbox" :value="group.id"
+                                                                                v-model="selectedGroups">
+                                                                        <span class="checkbox-text">{{ group.name
+                                                                                }}</span>
                                                                 </label>
                                                         </div>
                                                 </div>
-                                                
+
                                                 <!-- 好友选择 -->
                                                 <div v-if="visibilityMode === 'friends'" class="friends-selection">
-                                                        <div class="selection-header">选择好友</div>
-                                                        <div class="checkbox-list">
-                                                                <label v-for="friend in availableFriends" :key="friend.id" class="checkbox-item">
-                                                                        <input 
-                                                                                type="checkbox" 
-                                                                                :value="friend.id" 
-                                                                                v-model="selectedFriends"
-                                                                        >
-                                                                        <div class="friend-item">
-                                                                                <div class="avatar">
-                                                                                        <img v-if="friend.avatar" :src="friend.avatar" :alt="friend.name">
-                                                                                        <span v-else class="avatar-initial">{{ getInitial(friend.name) }}</span>
-                                                                                </div>
-                                                                                <span class="checkbox-text">{{ friend.name }}</span>
-                                                                        </div>
-                                                                </label>
-                                                        </div>
+                                                                <div class="selection-header">选择好友</div>
+                                                                <div class="checkbox-list">
+                                                                                <label
+                                                                                                v-for="friend in availableFriends.filter(f => !f.id.startsWith('user') && f.id !== '__USER__')"
+                                                                                                :key="friend.id"
+                                                                                                class="checkbox-item">
+                                                                                                <input type="checkbox" :value="friend.id"
+                                                                                                                v-model="selectedFriends">
+                                                                                                <div class="friend-item">
+                                                                                                                <div class="avatar">
+                                                                                                                                <img v-if="friend.avatar"
+                                                                                                                                                :src="friend.avatar"
+                                                                                                                                                :alt="friend.name">
+                                                                                                                                <span v-else
+                                                                                                                                                class="avatar-initial">{{
+                                                                                                                                                getInitial(friend.name)
+                                                                                                                                                }}</span>
+                                                                                                                </div>
+                                                                                                                <span class="checkbox-text">{{
+                                                                                                                                friend.name }}</span>
+                                                                                                </div>
+                                                                                </label>
+                                                                </div>
                                                 </div>
                                         </div>
                                 </div>
                         </div>
-                        
+
                         <!-- 底部按钮 -->
                         <div class="modal-footer">
                                 <button type="button" class="cancel-btn" @click="closeModal">
@@ -575,36 +550,8 @@ watch(() => props.editData, (newEditData) => {
 }
 
 .segmented-control {
-        display: flex;
-        background: var(--bg-secondary);
-        border-radius: 8px;
-        padding: 4px;
-        margin-bottom: 15px;
-        overflow: hidden;
+       width: auto;
 }
-
-.segmented-control input[type="radio"] {
-        display: none;
-}
-
-.segmented-control label {
-        flex: 1;
-        text-align: center;
-        padding: 8px 12px;
-        font-size: 14px;
-        cursor: pointer;
-        border-radius: 6px;
-        transition: all 0.2s ease;
-        color: var(--text-secondary);
-        font-weight: 500;
-}
-
-.segmented-control label.active,
-.segmented-control label:hover {
-        background: var(--accent-primary);
-        color: white;
-}
-
 .image-description-section {
         margin: 15px 0;
 }
@@ -627,6 +574,7 @@ watch(() => props.editData, (newEditData) => {
         border-radius: 6px;
         font-size: 14px;
         cursor: pointer;
+        width: 100%;
 }
 
 .toggle-description-btn:hover {
@@ -672,6 +620,7 @@ watch(() => props.editData, (newEditData) => {
         flex-direction: column;
         align-items: center;
         gap: 10px;
+        width: 100%;
 }
 
 .add-image-btn:hover {

@@ -237,7 +237,7 @@
                                                                         </button>
                                                                         
                                                                         <div class="bubble-preview-gradient" :style="{ 
-                                                                                background: `linear-gradient(45deg, ${preset.charBubbleBg} 0%, ${preset.charBubbleText} 33%, ${preset.userBubbleBg} 66%, ${preset.userBubbleText} 100%)`
+                                                                                background: `linear-gradient(45deg, ${preset.charBubbleBg} 0%, ${preset.userBubbleBg} 33%, ${preset.userBubbleText} 66%, ${preset.charBubbleText} 100%)`
                                                                         }"></div>
                                                                         <span class="preset-name">{{ preset.name }}</span>
                                                                 </div>
@@ -634,7 +634,7 @@ const getChatBackgroundType = () => {
 
 const changeChatBackground = async () => {
         try {
-                // 使用相册选择器
+                // 直接使用相册选择器
                 const selectedPhoto = await showAlbumPickerModal();
                 if (selectedPhoto) {
                         chatBackground.value = selectedPhoto.url;
@@ -643,27 +643,6 @@ const changeChatBackground = async () => {
                                 actor.value.chatBackground = selectedPhoto.url;
                         }
                         showToast('聊天背景已更新', 'success');
-                } else {
-                        // 用户取消选择，询问是否使用默认背景或输入URL
-                        const choice = await showConfirm('聊天背景', '是否使用默认背景？点击"取消"可输入自定义URL');
-                        if (choice) {
-                                // 使用默认背景
-                                chatBackground.value = '';
-                                if (actor.value) {
-                                        actor.value.chatBackground = '';
-                                }
-                                showToast('已设置为默认背景', 'success');
-                        } else {
-                                // 输入自定义URL
-                                const customUrl = await promptForInput('自定义背景', '请输入背景图片URL', false, true, chatBackground.value);
-                                if (customUrl !== null) {
-                                        chatBackground.value = customUrl;
-                                        if (actor.value) {
-                                                actor.value.chatBackground = customUrl;
-                                        }
-                                        showToast('聊天背景已更新', 'success');
-                                }
-                        }
                 }
         } catch (error) {
                 console.error('更新聊天背景失败:', error);
@@ -1342,7 +1321,7 @@ onUnmounted(() => {
 }
 
 .danger-btn.delete:hover {
-        background-color: rgba(244, 67, 54, 0.1);
+        background-color: rgba(255, 55, 41, 0.1);
 }
 
 /* 记忆设置样式 */
@@ -1526,11 +1505,11 @@ onUnmounted(() => {
 .edit-presets-btn {
         padding: 6px 12px;
         background: none;
-        border: 1px solid var(--border-color);
+        border: none;
         border-radius: 6px;
         color: var(--text-primary);
         cursor: pointer;
-        font-size: 12px;
+        font-size: 15px;
         display: flex;
         align-items: center;
         gap: 4px;

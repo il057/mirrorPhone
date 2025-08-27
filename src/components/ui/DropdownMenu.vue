@@ -1,5 +1,5 @@
 <template>
-        <div v-if="isOpen" class="dropdown-container">
+        <div v-if="isOpen" class="dropdown-container" @click.stop>
                 <div class="dropdown-menu">
                         <ul>
                                 <slot></slot>
@@ -9,10 +9,28 @@
 </template>
 
 <script setup>
-defineProps({
+import { onMounted, onUnmounted } from 'vue';
+
+const props = defineProps({
         isOpen: Boolean,
 });
-defineEmits(['close']);
+
+const emit = defineEmits(['close']);
+
+// 点击外部关闭下拉菜单
+const handleClickOutside = (event) => {
+        if (props.isOpen) {
+                emit('close');
+        }
+};
+
+onMounted(() => {
+        document.addEventListener('click', handleClickOutside);
+});
+
+onUnmounted(() => {
+        document.removeEventListener('click', handleClickOutside);
+});
 </script>
 
 <style scoped>

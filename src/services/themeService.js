@@ -4,11 +4,14 @@
  */
 
 import { getActorBubbleStyle } from './bubbleStyleService.js';
+import { adjustColorLuminance } from '../utils/colorUtils.js';
 
 // 保存原始全局主题色
 let originalTheme = {
         primary: null,
-        text: null
+        text: null,
+        darker: null,
+        lighter: null
 };
 
 // 当前角色主题状态
@@ -49,6 +52,8 @@ export function saveOriginalTheme() {
         
         originalTheme.primary = styles.getPropertyValue('--accent-primary').trim();
         originalTheme.text = styles.getPropertyValue('--accent-text').trim();
+        originalTheme.darker = styles.getPropertyValue('--accent-darker').trim();
+        originalTheme.lighter = styles.getPropertyValue('--accent-lighter').trim();
         
         console.log('Saved original theme:', originalTheme);
 }
@@ -60,6 +65,12 @@ export function restoreOriginalTheme() {
         const root = document.documentElement;
         root.style.setProperty('--accent-primary', originalTheme.primary);
         root.style.setProperty('--accent-text', originalTheme.text);
+        if (originalTheme.darker) {
+                root.style.setProperty('--accent-darker', originalTheme.darker);
+        }
+        if (originalTheme.lighter) {
+                root.style.setProperty('--accent-lighter', originalTheme.lighter);
+        }
         
         // 清除角色主题状态
         currentActorTheme.actorId = null;
@@ -91,12 +102,27 @@ export async function applyActorTheme(actorId, isUsingUserBubble = null, force =
                 
                 // 应用主题色
                 const root = document.documentElement;
+                let primaryColor, textColor;
+                
                 if (isUsingUserBubble) {
-                        root.style.setProperty('--accent-primary', bubbleStyle.userBubbleBg);
-                        root.style.setProperty('--accent-text', bubbleStyle.userBubbleText);
+                        primaryColor = bubbleStyle.userBubbleBg;
+                        textColor = bubbleStyle.userBubbleText;
                 } else {
-                        root.style.setProperty('--accent-primary', bubbleStyle.charBubbleBg);
-                        root.style.setProperty('--accent-text', bubbleStyle.charBubbleText);
+                        primaryColor = bubbleStyle.charBubbleBg;
+                        textColor = bubbleStyle.charBubbleText;
+                }
+                
+                root.style.setProperty('--accent-primary', primaryColor);
+                root.style.setProperty('--accent-text', textColor);
+                
+                // 计算并设置衍生颜色
+                try {
+                        const darkerColor = adjustColorLuminance(primaryColor, -0.2);
+                        const lighterColor = adjustColorLuminance(primaryColor, 0.2);
+                        root.style.setProperty('--accent-darker', darkerColor);
+                        root.style.setProperty('--accent-lighter', lighterColor);
+                } catch (error) {
+                        console.warn('Failed to calculate accent color variants:', error);
                 }
                 
                 // 同时设置气泡样式CSS变量
@@ -127,12 +153,26 @@ export function toggleActorTheme() {
         const root = document.documentElement;
         const bubbleStyle = currentActorTheme.bubbleStyle;
         
+        let primaryColor, textColor;
         if (newIsUsingUserBubble) {
-                root.style.setProperty('--accent-primary', bubbleStyle.userBubbleBg);
-                root.style.setProperty('--accent-text', bubbleStyle.userBubbleText);
+                primaryColor = bubbleStyle.userBubbleBg;
+                textColor = bubbleStyle.userBubbleText;
         } else {
-                root.style.setProperty('--accent-primary', bubbleStyle.charBubbleBg);
-                root.style.setProperty('--accent-text', bubbleStyle.charBubbleText);
+                primaryColor = bubbleStyle.charBubbleBg;
+                textColor = bubbleStyle.charBubbleText;
+        }
+        
+        root.style.setProperty('--accent-primary', primaryColor);
+        root.style.setProperty('--accent-text', textColor);
+        
+        // 计算并设置衍生颜色
+        try {
+                const darkerColor = adjustColorLuminance(primaryColor, -0.2);
+                const lighterColor = adjustColorLuminance(primaryColor, 0.2);
+                root.style.setProperty('--accent-darker', darkerColor);
+                root.style.setProperty('--accent-lighter', lighterColor);
+        } catch (error) {
+                console.warn('Failed to calculate accent color variants:', error);
         }
         
         console.log('Toggled actor theme to', newIsUsingUserBubble ? 'user' : 'char', 'bubble color');

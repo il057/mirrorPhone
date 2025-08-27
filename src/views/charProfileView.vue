@@ -1,6 +1,6 @@
 <template>
         <div class="page-container">
-                <AppHeader :title="(actor?.name || '') + '的详细资料'" :override-back-action="goBack">
+                <AppHeader :title="'  '" :override-back-action="goBack">
 
                         <template #right>
                                 <button class="header-action-button" @click="goToEdit">编辑</button>

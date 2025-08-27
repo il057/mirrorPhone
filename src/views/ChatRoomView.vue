@@ -3,8 +3,7 @@
                 <AppHeader :title="isTyping ? '正在输入中…' : (actor?.name || '聊天')" :override-back-action="goBack">
                         <template #subtitle>
                                 <div class="status-indicator" v-if="actor">
-                                        <div class="status-dot"
-                                                :style="{ 
+                                        <div class="status-dot" :style="{ 
                                                         backgroundColor: actor?.status?.color || '#4CAF50',
                                                         '--status-color': `${actor?.status?.color || '#4CAF50'}66`
                                                 }">
@@ -37,11 +36,13 @@
                                                 <img v-if="actor?.avatar" :src="actor.avatar" :alt="actor.name">
                                                 <span v-else class="avatar-initial">{{ actor?.name?.[0] || '#' }}</span>
                                         </div>
-                                        
+
                                         <!-- 用户头像 -->
                                         <div class="message-avatar" v-else>
-                                                <img v-if="currentUserPersona?.avatar" :src="currentUserPersona.avatar" :alt="currentUserPersona?.name || 'User'">
-                                                <span v-else class="avatar-initial">{{ getInitial(currentUserPersona?.name || 'User') }}</span>
+                                                <img v-if="currentUserPersona?.avatar" :src="currentUserPersona.avatar"
+                                                        :alt="currentUserPersona?.name || 'User'">
+                                                <span v-else class="avatar-initial">{{
+                                                        getInitial(currentUserPersona?.name || 'User') }}</span>
                                         </div>
                                         <div class="message-content">
                                                 <!-- 文字消息 -->
@@ -59,6 +60,44 @@
                                                         <img :src="message.content.url"
                                                                 :alt="message.content.name || '表情包'"
                                                                 class="sticker-image" />
+                                                </div>
+
+                                                <!-- 图片消息 -->
+                                                <div v-else-if="message.content.type === 'image'" class="image-message">
+                                                        <!-- 文字图片 -->
+                                                        <div v-if="message.content.subtype === 'text'"
+                                                                class="text-image-placeholder">
+                                                                <div class="text-image-icon">🖼️</div>
+                                                                <div class="text-image-description">{{
+                                                                        message.content.description }}</div>
+                                                        </div>
+                                                        <!-- 真实图片 -->
+                                                        <img v-else :src="message.content.url"
+                                                                :alt="message.content.fileName || '图片'"
+                                                                class="real-image" @load="scrollToBottom" />
+                                                </div>
+
+                                                <!-- 支付消息 -->
+                                                <div v-else-if="message.content.type === 'payment'"
+                                                        class="payment-message">
+                                                        <div class="payment-header">
+                                                                <span class="payment-icon">
+                                                                        {{ message.content.subtype === 'transfer' ? '💸'
+                                                                        : '💳' }}
+                                                                </span>
+                                                                <span class="payment-type">
+                                                                        {{ message.content.subtype === 'transfer' ? '转账'
+                                                                        : '代付' }}
+                                                                </span>
+                                                        </div>
+                                                        <div class="payment-amount">¥{{
+                                                                message.content.amount.toFixed(2) }}</div>
+                                                        <div v-if="message.content.productInfo" class="payment-product">
+                                                                商品：{{ message.content.productInfo }}
+                                                        </div>
+                                                        <div v-if="message.content.message" class="payment-note">
+                                                                {{ message.content.message }}
+                                                        </div>
                                                 </div>
 
                                                 <div class="message-time">
@@ -100,25 +139,66 @@
                                 <div class="function-buttons">
                                         <button class="function-btn" :class="{ active: showStickerPanel }"
                                                 @click.stop="toggleStickerPanel" title="表情包">
-                                                <span>😀</span>
+                                                <svg xmlns="http://www.w3.org/2000/svg" height="24"
+                                                        viewBox="0 -960 960 960" width="24" fill="currentColor">
+                                                        <path
+                                                                d="M260-280q-26 0-43-17t-17-43q0-25 17-42.5t43-17.5q25 0 42.5 17.5T320-340q0 26-17.5 43T260-280Zm0-280q-26 0-43-17t-17-43q0-25 17-42.5t43-17.5q25 0 42.5 17.5T320-620q0 26-17.5 43T260-560Zm140 120v-80h160v80H400Zm288 200-66-44q28-43 43-92.5T680-480q0-66-21.5-124T598-709l61-51q48 57 74.5 128.5T760-480q0 67-19 127.5T688-240Z" />
+                                                </svg>
                                         </button>
-                                        <button class="function-btn" title="发送图片">
-                                                <span>📷</span>
+                                        <button class="function-btn" @click.stop="handleSendImage" title="发送图片">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"
+                                                        fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                                                        stroke="currentColor" class="size-6">
+                                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                                                d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
+                                                </svg>
+
                                         </button>
                                         <button class="function-btn" title="语音">
-                                                <span>🎤</span>
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"
+                                                        fill="currentColor" class="bi bi-mic" viewBox="0 0 16 16">
+                                                        <path
+                                                                d="M3.5 6.5A.5.5 0 0 1 4 7v1a4 4 0 0 0 8 0V7a.5.5 0 0 1 1 0v1a5 5 0 0 1-4.5 4.975V15h3a.5.5 0 0 1 0 1h-7a.5.5 0 0 1 0-1h3v-2.025A5 5 0 0 1 3 8V7a.5.5 0 0 1 .5-.5" />
+                                                        <path
+                                                                d="M10 8a2 2 0 1 1-4 0V3a2 2 0 1 1 4 0zM8 0a3 3 0 0 0-3 3v5a3 3 0 0 0 6 0V3a3 3 0 0 0-3-3" />
+                                                </svg>
                                         </button>
-                                        <button class="function-btn" title="转账">
-                                                <span>💰</span>
+                                        <button class="function-btn" @click.stop="handlePayment" title="转账">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="35" height="35"
+                                                        fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                                                        stroke="currentColor" class="size-6">
+                                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                                                d="m9 7.5 3 4.5m0 0 3-4.5M12 12v5.25M15 12H9m6 3H9m12-3a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                                                </svg>
                                         </button>
                                         <button class="function-btn" title="听歌">
-                                                <span>🎵</span>
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"
+                                                        fill="currentColor" class="bi bi-music-note"
+                                                        viewBox="0 0 16 16">
+                                                        <path
+                                                                d="M9 13c0 1.105-1.12 2-2.5 2S4 14.105 4 13s1.12-2 2.5-2 2.5.895 2.5 2" />
+                                                        <path fill-rule="evenodd" d="M9 3v10H8V3z" />
+                                                        <path
+                                                                d="M8 2.82a1 1 0 0 1 .804-.98l3-.6A1 1 0 0 1 13 2.22V4L8 5z" />
+                                                </svg>
                                         </button>
-                                        <button class="function-btn" title="通话">
-                                                <span>📞</span>
+                                        <button class="function-btn" @click.stop="handleCall" title="通话">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"
+                                                        fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                                                        stroke="currentColor" class="size-6">
+                                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                                                d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 0 0 2.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 0 1-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 0 0-1.091-.852H4.5A2.25 2.25 0 0 0 2.25 4.5v2.25Z" />
+                                                </svg>
+
                                         </button>
                                         <button class="function-btn" title="主题" @click="toggleThemeColor">
-                                                <span>🎨</span>
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"
+                                                        fill="currentColor" class="bi bi-circle-half"
+                                                        viewBox="0 0 16 16"
+                                                        :style="isUsingUserBubbleTheme ? 'transform: scaleX(-1);' : ''">
+                                                        <path
+                                                                d="M8 15A7 7 0 1 0 8 1zm0 1A8 8 0 1 1 8 0a8 8 0 0 1 0 16" />
+                                                </svg>
                                         </button>
                                 </div>
 
@@ -129,22 +209,26 @@
                                                 @blur="handleInputBlur" ref="messageInput"></textarea>
                                         <button class="action-button generate-btn" @click="generateReply"
                                                 :disabled="isGenerating" title="生成回复">
-                                                <svg v-if="!isGenerating" xmlns="http://www.w3.org/2000/svg" fill="none"
-                                                        viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"
-                                                        width="20" height="20">
-                                                        <path stroke-linecap="round" stroke-linejoin="round"
-                                                                d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.847a4.5 4.5 0 003.09 3.09L15.75 12l-2.847.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
+                                                <svg v-if="!isGenerating" xmlns="http://www.w3.org/2000/svg" width="24"
+                                                        height="24" fill="currentColor" class="bi bi-stars"
+                                                        viewBox="0 0 16 16">
+                                                        <path
+                                                                d="M7.657 6.247c.11-.33.576-.33.686 0l.645 1.937a2.89 2.89 0 0 0 1.829 1.828l1.936.645c.33.11.33.576 0 .686l-1.937.645a2.89 2.89 0 0 0-1.828 1.829l-.645 1.936a.361.361 0 0 1-.686 0l-.645-1.937a2.89 2.89 0 0 0-1.828-1.828l-1.937-.645a.361.361 0 0 1 0-.686l1.937-.645a2.89 2.89 0 0 0 1.828-1.828zM3.794 1.148a.217.217 0 0 1 .412 0l.387 1.162c.173.518.579.924 1.097 1.097l1.162.387a.217.217 0 0 1 0 .412l-1.162.387A1.73 1.73 0 0 0 4.593 5.69l-.387 1.162a.217.217 0 0 1-.412 0L3.407 5.69A1.73 1.73 0 0 0 2.31 4.593l-1.162-.387a.217.217 0 0 1 0-.412l1.162-.387A1.73 1.73 0 0 0 3.407 2.31zM10.863.099a.145.145 0 0 1 .274 0l.258.774c.115.346.386.617.732.732l.774.258a.145.145 0 0 1 0 .274l-.774.258a1.16 1.16 0 0 0-.732.732l-.258.774a.145.145 0 0 1-.274 0l-.258-.774a1.16 1.16 0 0 0-.732-.732L9.1 2.137a.145.145 0 0 1 0-.274l.774-.258c.346-.115.617-.386.732-.732z" />
                                                 </svg>
                                                 <SpringSpinner v-else :animation-duration="3000" :size="20"
                                                         color="var(--accent-primary)" />
                                         </button>
                                         <button class="action-button send-btn" @click="sendMessage"
                                                 :disabled="!newMessage.trim()" title="发送">
-                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                                                        stroke-width="1.5" stroke="currentColor" width="20" height="20">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"
+                                                        fill="none" viewBox="0 0 24 24"
+                                                        stroke-width="2" stroke="currentColor" class="size-6">
                                                         <path stroke-linecap="round" stroke-linejoin="round"
-                                                                d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
+                                                                d="M4.5 10.5 12 3m0 0 7.5 7.5M12 3v18" />
                                                 </svg>
+
+
+
                                         </button>
                                 </div>
                         </div>
@@ -185,6 +269,7 @@ import { USER_ACTOR_ID } from '../services/database.js';
 import { getPersonalSettings, getTypingDelayConfig, getRandomMessageDelay } from '../services/personalSettingsService.js';
 import { getActorBubbleStyle, applyBubbleStyles } from '../services/bubbleStyleService.js';
 import { applyActorTheme, toggleActorTheme, restoreOriginalTheme, getActorThemeChoice } from '../services/themeService.js';
+import { showActionChoiceModal, showPaymentModal, showUploadChoiceModal, promptForInput, showToast } from '../services/uiService.js';
 
 const route = useRoute();
 const router = useRouter();
@@ -460,6 +545,188 @@ const loadStickers = async () => {
 // 主题色切换功能
 const toggleThemeColor = () => {
         isUsingUserBubbleTheme.value = toggleActorTheme();
+};
+
+// 处理发送图片
+const handleSendImage = async () => {
+        const actions = [
+                { key: 'text-image', label: '文字图片', iconType: 'text-image' },
+                { key: 'upload-image', label: '上传图片', iconType: 'upload-image' }
+        ];
+        
+        const choice = await showActionChoiceModal('发送图片', actions);
+        if (!choice) return;
+        
+        if (choice === 'text-image') {
+                const description = await promptForInput(
+                        '文字图片描述', 
+                        '请描述你想要的图片内容', 
+                        true, 
+                        false
+                );
+                
+                if (description) {
+                        await sendTextImage(description);
+                }
+        } else if (choice === 'upload-image') {
+                // 提示用户关于视觉功能
+                showToast('提示：如需AI识别图片内容，请确保使用支持视觉功能的模型', 'info');
+                
+                const uploadResult = await showUploadChoiceModal();
+                if (uploadResult) {
+                        if (uploadResult.type === 'local' && Array.isArray(uploadResult.value)) {
+                                // 多张图片
+                                for (const file of uploadResult.value) {
+                                        await sendRealImage(file);
+                                }
+                        } else {
+                                // 单张图片
+                                await sendRealImage(uploadResult.value);
+                        }
+                }
+        }
+};
+
+// 发送文字图片
+const sendTextImage = async (description) => {
+        const message = {
+                id: Date.now() + Math.random(),
+                actorId: userActorId,
+                contextId: actorId.value,
+                type: 'privateMessage',
+                content: {
+                        type: 'image',
+                        subtype: 'text',
+                        description: description,
+                        url: null
+                },
+                timestamp: Date.now()
+        };
+
+        try {
+                await db.events.add(message);
+                await updateConversation(message);
+        } catch (error) {
+                console.error('发送文字图片失败:', error);
+                showToast('发送失败', 'error');
+        }
+};
+
+// 发送真实图片
+const sendRealImage = async (imageData) => {
+        const message = {
+                id: Date.now() + Math.random(),
+                actorId: userActorId,
+                contextId: actorId.value,
+                type: 'privateMessage',
+                content: {
+                        type: 'image',
+                        subtype: 'real',
+                        url: typeof imageData === 'string' ? imageData : URL.createObjectURL(imageData),
+                        fileName: typeof imageData === 'string' ? null : imageData.name
+                },
+                timestamp: Date.now()
+        };
+
+        try {
+                await db.events.add(message);
+                await updateConversation(message);
+        } catch (error) {
+                console.error('发送图片失败:', error);
+                showToast('发送失败', 'error');
+        }
+};
+
+// 处理转账
+const handlePayment = async () => {
+        const actions = [
+                { key: 'transfer', label: '转账', iconType: 'transfer' },
+                { key: 'pay', label: '代付', iconType: 'pay' }
+        ];
+        
+        const choice = await showActionChoiceModal('支付选项', actions);
+        if (!choice) return;
+        
+        const paymentData = await showPaymentModal(choice);
+        if (paymentData) {
+                await sendPaymentMessage(paymentData);
+        }
+};
+
+// 发送支付消息
+const sendPaymentMessage = async (paymentData) => {
+        const message = {
+                id: Date.now() + Math.random(),
+                actorId: userActorId,
+                contextId: actorId.value,
+                type: 'privateMessage',
+                content: {
+                        type: 'payment',
+                        subtype: paymentData.type,
+                        amount: paymentData.amount,
+                        message: paymentData.message,
+                        productInfo: paymentData.productInfo
+                },
+                timestamp: Date.now()
+        };
+
+        try {
+                await db.events.add(message);
+                await updateConversation(message);
+                showToast(`${paymentData.type === 'transfer' ? '转账' : '代付'}发送成功`, 'success');
+        } catch (error) {
+                console.error('发送支付消息失败:', error);
+                showToast('发送失败', 'error');
+        }
+};
+
+// 处理通话
+const handleCall = async () => {
+        const actions = [
+                { key: 'voice', label: '语音通话', iconType: 'voice' },
+                { key: 'video', label: '视频通话', iconType: 'video' }
+        ];
+        
+        const choice = await showActionChoiceModal('通话选项', actions);
+        if (choice) {
+                showToast(`${choice === 'voice' ? '语音' : '视频'}通话功能暂未实现`, 'info');
+        }
+};
+
+// 处理更多功能选项
+const handleMoreActions = async () => {
+        const actions = [
+                { key: 'red-packet', label: '发红包', iconType: 'red-packet' },
+                { key: 'sticker', label: '表情包', iconType: 'sticker' },
+                { key: 'music', label: '音乐分享', iconType: 'music' },
+                { key: 'location', label: '位置分享', iconType: 'location' },
+                { key: 'file', label: '文件分享', iconType: 'file' },
+                { key: 'gift', label: '送礼物', iconType: 'gift' }
+        ];
+        
+        const choice = await showActionChoiceModal('更多功能', actions);
+        if (choice) {
+                switch (choice) {
+                        case 'red-packet':
+                                showToast('红包功能开发中', 'info');
+                                break;
+                        case 'sticker':
+                                showToast('表情包功能开发中', 'info');
+                                break;
+                        case 'music':
+                                showToast('音乐分享功能开发中', 'info');
+                                break;
+                        case 'location':
+                                showToast('位置分享功能开发中', 'info');
+                                break;
+                        case 'file':
+                                showToast('文件分享功能开发中', 'info');
+                                break;
+                        case 'gift':
+                                showToast('礼物功能开发中', 'info');
+                                break;
+                }
+        }
 };
 
 // 发送消息
@@ -965,6 +1232,19 @@ onMounted(async () => {
                 try {
                         const bubbleStyle = await applyActorTheme(actor.value.id, isUsingUserBubbleTheme.value);
                         currentBubbleStyle.value = bubbleStyle;
+                        
+                        // 应用聊天背景
+                        const messagesContainerEl = document.querySelector('.messages-container');
+                        if (messagesContainerEl && actor.value.chatBackground) {
+                                messagesContainerEl.style.backgroundImage = `url('${actor.value.chatBackground}')`;
+                                messagesContainerEl.style.backgroundSize = 'cover';
+                                messagesContainerEl.style.backgroundPosition = 'center';
+                                messagesContainerEl.style.backgroundRepeat = 'no-repeat';
+                                messagesContainerEl.style.backgroundAttachment = 'fixed';
+                        } else if (messagesContainerEl) {
+                                // 清除背景图
+                                messagesContainerEl.style.backgroundImage = 'none';
+                        }
                 } catch (error) {
                         console.error('Failed to load bubble style:', error);
                 }
@@ -1226,7 +1506,7 @@ onUnmounted(() => {
         border-radius: 50%;
         border: 1px solid var(--border-color);
         background-color: var(--bg-card);
-        color: var(--text-primary);
+        color: var(--accent-darker);
         cursor: pointer;
         transition: all 0.2s;
         display: flex;
@@ -1236,11 +1516,15 @@ onUnmounted(() => {
 }
 
 .function-btn:hover {
-        background-color: var(--bg-secondary);
+        background-color: var(--accent-primary);
+        color: var(--accent-text);
         transform: scale(1.05);
 }
 
-.function-btn:active {
+/* 功能按钮激活状态 */
+.function-btn.active {
+        background-color: var(--accent-primary);
+        color: var(--text-inverse);
         transform: scale(0.95);
 }
 
@@ -1286,8 +1570,8 @@ onUnmounted(() => {
 
 .generate-btn {
         background-color: var(--bg-card);
-        color: var(--text-primary);
-        border: 1px solid var(--border-color);
+        color: var(--accent-darker);
+        border: 1px solid var(--accent-border);
 }
 
 .generate-btn:hover:not(:disabled) {
@@ -1297,7 +1581,7 @@ onUnmounted(() => {
 
 .send-btn {
         background-color: var(--accent-primary);
-        color: var(--text-inverse);
+        color: var(--accent-text);
 }
 
 .send-btn:hover:not(:disabled) {
@@ -1415,6 +1699,92 @@ onUnmounted(() => {
         border-radius: 8px;
 }
 
+/* 图片消息样式 */
+.image-message {
+        display: inline-block;
+        margin: 4px 0;
+}
+
+.text-image-placeholder {
+        background-color: var(--bg-secondary);
+        border: 2px dashed var(--border-color);
+        border-radius: 12px;
+        padding: 20px;
+        text-align: center;
+        max-width: 200px;
+        min-width: 150px;
+        color: var(--text-secondary);
+}
+
+.text-image-icon {
+        font-size: 32px;
+        margin-bottom: 8px;
+}
+
+.text-image-description {
+        font-size: 14px;
+        line-height: 1.4;
+        word-wrap: break-word;
+}
+
+.real-image {
+        max-width: 200px;
+        max-height: 200px;
+        border-radius: 12px;
+        cursor: pointer;
+        transition: transform 0.2s;
+}
+
+.real-image:hover {
+        transform: scale(1.02);
+}
+
+/* 支付消息样式 */
+.payment-message {
+        background: linear-gradient(135deg, var(--accent-primary), var(--accent-darker));
+        color: var(--text-inverse);
+        padding: 16px;
+        border-radius: 16px;
+        min-width: 180px;
+        text-align: center;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.payment-header {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        margin-bottom: 8px;
+}
+
+.payment-icon {
+        font-size: 18px;
+}
+
+.payment-type {
+        font-weight: 600;
+        font-size: 14px;
+}
+
+.payment-amount {
+        font-size: 24px;
+        font-weight: 700;
+        margin: 8px 0;
+}
+
+.payment-product {
+        font-size: 12px;
+        opacity: 0.9;
+        margin-bottom: 4px;
+}
+
+.payment-note {
+        font-size: 12px;
+        opacity: 0.8;
+        font-style: italic;
+}
+
 /* 面板切换动画 */
 .sticker-panel-enter-active,
 .sticker-panel-leave-active {
@@ -1434,17 +1804,6 @@ onUnmounted(() => {
         opacity: 1;
         transform: translateY(0);
 }
-
-/* 功能按钮激活状态 */
-.function-btn.active {
-        background-color: var(--accent-primary);
-        color: var(--text-inverse);
-}
-
-.function-btn.active:hover {
-        background-color: var(--accent-darker);
-}
-
 
 /* 打字指示器 */
 .typing-indicator {

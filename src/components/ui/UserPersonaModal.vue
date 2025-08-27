@@ -459,7 +459,6 @@ onMounted(() => {
         background-color: var(--bg-primary);
         border-radius: 12px;
         width: 100%;
-        max-width: 600px;
         max-height: 90vh;
         overflow: hidden;
         display: flex;
@@ -470,7 +469,7 @@ onMounted(() => {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 20px;
+        padding: 10px;
         border-bottom: 1px solid var(--border-color);
 }
 

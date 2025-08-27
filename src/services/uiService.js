@@ -9,6 +9,8 @@ import AvatarPickerModal from '../components/ui/AvatarPickerModal.vue';
 import ManageGroupsModal from '../components/ui/ManageGroupsModal.vue';
 import WorldbookEditModal from '../components/ui/WorldbookEditModal.vue';
 import UserPersonaModal from '../components/ui/UserPersonaModal.vue';
+import ActionChoiceModal from '../components/ui/ActionChoiceModal.vue';
+import PaymentModal from '../components/ui/PaymentModal.vue';
 
 // 确保有一个容器来挂载这些动态组件
 function getModalsContainer() {
@@ -269,6 +271,76 @@ export function showUserPersonaModal() {
                         onPersonaChanged: (persona) => {
                                 // 可以在这里处理人格变更事件
                                 console.log('Default persona changed:', persona);
+                        }
+                });
+
+                modalApp.mount(modalWrapper);
+        });
+}
+
+/**
+ * 显示动作选择模态框
+ * @param {string} title - 模态框标题
+ * @param {Array} actions - 动作选项数组，每个对象包含 key、label、icon
+ * @returns {Promise<string|null>} 用户选择则返回动作key，否则返回null
+ */
+export function showActionChoiceModal(title, actions) {
+        return new Promise((resolve) => {
+                const container = getModalsContainer();
+                const modalWrapper = document.createElement('div');
+                container.appendChild(modalWrapper);
+
+                const cleanup = () => {
+                        modalApp.unmount();
+                        if (container.contains(modalWrapper)) {
+                                container.removeChild(modalWrapper);
+                        }
+                };
+
+                const modalApp = createApp(ActionChoiceModal, {
+                        title,
+                        actions,
+                        onSelect: (actionKey) => {
+                                cleanup();
+                                resolve(actionKey);
+                        },
+                        onCancel: () => {
+                                cleanup();
+                                resolve(null);
+                        }
+                });
+
+                modalApp.mount(modalWrapper);
+        });
+}
+
+/**
+ * 显示支付模态框（转账或代付）
+ * @param {'transfer'|'pay'} type - 支付类型
+ * @returns {Promise<Object|null>} 用户确认则返回支付信息对象，否则返回null
+ */
+export function showPaymentModal(type) {
+        return new Promise((resolve) => {
+                const container = getModalsContainer();
+                const modalWrapper = document.createElement('div');
+                container.appendChild(modalWrapper);
+
+                const cleanup = () => {
+                        modalApp.unmount();
+                        if (container.contains(modalWrapper)) {
+                                container.removeChild(modalWrapper);
+                        }
+                };
+
+                const modalApp = createApp(PaymentModal, {
+                        type,
+                        onConfirm: (data) => {
+                                cleanup();
+                                resolve(data);
+                        },
+                        onCancel: () => {
+                                cleanup();
+                                resolve(null);
                         }
                 });
 

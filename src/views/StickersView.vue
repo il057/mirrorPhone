@@ -120,12 +120,12 @@
                         </div>
                 </main>
 
-                <DropdownMenu :is-open="isDropdownOpen" @close="isDropdownOpen = false">
+                <HeaderDropdownMenu :is-open="isDropdownOpen" @close="isDropdownOpen = false">
                         <li @click="handleDropdownAction('bulkAdd')">批量导入</li>
                         <li @click="handleDropdownAction('exportAll')">全部导出</li>
                         <li @click="handleDropdownAction('reorder')">排序</li>
                         <li @click="handleDropdownAction('edit')">编辑</li>
-                </DropdownMenu>
+                </HeaderDropdownMenu>
 
                 <transition name="footer-slide">
                         <footer v-if="isEditMode" class="edit-footer">
@@ -143,7 +143,7 @@ import { liveQuery } from 'dexie';
 import { useRouter } from 'vue-router';
 import db from '../services/database.js';
 import AppHeader from '../components/layout/Header.vue';
-import DropdownMenu from '../components/ui/DropdownMenu.vue';
+import HeaderDropdownMenu from '../components/ui/HeaderDropdownMenu.vue';
 import { showToast, showUploadChoiceModal, promptForInput, showConfirm } from '../services/uiService.js';
 import { uploadToCloudinary } from '../services/cloudinaryService.js';
 import { useSelection } from '../services/selectionService.js';
