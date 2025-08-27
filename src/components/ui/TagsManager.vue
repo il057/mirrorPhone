@@ -27,7 +27,7 @@
                                 </button>
                         </div>
                 </div>
-                <div v-if="editable && showAddForm" class="add-tag-form">
+                <div v-if="editable && allowAdd && showAddForm" class="add-tag-form">
                         <input 
                                 v-model="newTagName"
                                 placeholder="标签名称"
@@ -47,7 +47,7 @@
                         <button @click="cancelAdd" class="cancel-btn">取消</button>
                 </div>
                 <button 
-                        v-if="editable && !showAddForm"
+                        v-if="editable && allowAdd && !showAddForm"
                         @click="showAddForm = true"
                         class="add-tag-btn"
                 >
@@ -58,6 +58,7 @@
 
 <script setup>
 import { ref } from 'vue';
+import { promptForInput } from '../../services/uiService.js';
 
 const props = defineProps({
         tags: {
@@ -67,6 +68,10 @@ const props = defineProps({
         editable: {
                 type: Boolean,
                 default: false
+        },
+        allowAdd: {
+                type: Boolean,
+                default: true
         }
 });
 
@@ -104,11 +109,14 @@ const removeTag = (tagName) => {
         emit('tag-removed', tagName);
 };
 
-const editTag = (tag) => {
-        const newName = prompt('编辑标签名称:', tag.name);
-        const newStrength = prompt('编辑强度(1-10):', tag.strength);
-        
-        if (newName !== null && newStrength !== null) {
+const editTag = async (tag) => {
+        try {
+                const newName = await promptForInput('编辑标签名称', '请输入新的标签名称', false, false, tag.name);
+                if (newName === null) return; // 用户取消
+                
+                const newStrength = await promptForInput('编辑标签强度', '请输入强度(1-10)', false, false, tag.strength.toString());
+                if (newStrength === null) return; // 用户取消
+                
                 const updatedTags = props.tags.map(t => 
                         t.name === tag.name 
                                 ? { name: newName.trim(), strength: parseInt(newStrength) || tag.strength }
@@ -116,6 +124,8 @@ const editTag = (tag) => {
                 );
                 emit('update:tags', updatedTags);
                 emit('tag-edited', { oldTag: tag, newTag: { name: newName.trim(), strength: parseInt(newStrength) || tag.strength } });
+        } catch (error) {
+                console.error('编辑标签失败:', error);
         }
 };
 

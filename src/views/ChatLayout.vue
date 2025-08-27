@@ -27,7 +27,7 @@
 
                 <AppFooter :has-notification="true" />
 
-                <DropdownMenu :is-open="isDropdownOpen" @close="isDropdownOpen = false">
+                <HeaderDropdownMenu :is-open="isDropdownOpen" @close="isDropdownOpen = false">
                         <template v-if="route.name === 'chat-messages' || route.name === 'chat-contacts'">
                                 <li @click="handleDropdownAction('addFriend')">添加好友</li>
                                 <li @click="handleDropdownAction('suggestedFriends')">可能认识</li>
@@ -39,7 +39,7 @@
                                 <li @click="handleDropdownAction('writePost')">写动态</li>
                                 <li @click="handleDropdownAction('postPhoto')">发照片</li>
                         </template>
-                </DropdownMenu>
+                </HeaderDropdownMenu>
 
         </div>
 </template>
@@ -52,7 +52,7 @@ import { liveQuery } from 'dexie';
 import db from '../services/database';
 import AppHeader from '../components/layout/Header.vue';
 import AppFooter from '../components/layout/Footer.vue';
-import DropdownMenu from '../components/ui/DropdownMenu.vue';
+import HeaderDropdownMenu from '../components/ui/HeaderDropdownMenu.vue';
 import { showToast, showManageGroupsModal } from '../services/uiService'; // 导入新的服务
 
 const route = useRoute();
@@ -62,16 +62,34 @@ const isDropdownOpen = ref(false);
 
 const showPlusMenu = computed(() => {
         const routesWithPlus = ['chat-messages', 'chat-contacts', 'chat-moments'];
+        // 在个人动态页，如果是自己的动态页则显示，否则隐藏
+        if (route.name === 'personal-moments') {
+                return route.params.id === '__USER__';
+        }
         return routesWithPlus.includes(route.name);
 });
 
 watch(
-        () => route.meta,
-        (meta) => {
-                currentTitle.value = meta.title || '';
+        () => route,
+        async (newRoute) => {
+                if (newRoute.name === 'personal-moments') {
+                        const actorId = newRoute.params.id;
+                        let actorName = '';
+                        if (actorId === '__USER__') {
+                                const persona = await db.actors.where('isDefault').equals(1).first();
+                                actorName = persona?.name || '我';
+                        } else {
+                                const actor = await db.actors.get(actorId);
+                                actorName = actor?.name || '未知';
+                        }
+                        currentTitle.value = `${actorName}的动态`;
+                } else {
+                        currentTitle.value = newRoute.meta.title || '';
+                }
         },
-        { immediate: true }
+        { immediate: true, deep: true }
 );
+
 
 // This logic runs in the background to keep the 'Special Care' group in sync.
 const actors = useObservable(liveQuery(() => db.actors.toArray()), { initialValue: [] });
@@ -113,6 +131,7 @@ const handleDropdownAction = (action) => {
 };
 
 </script>
+
 <style scoped>
 .app-main-container {
         width: 100vw;

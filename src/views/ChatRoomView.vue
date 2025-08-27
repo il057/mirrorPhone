@@ -182,6 +182,7 @@ import { formatTimestamp } from '../utils/datetime.js';
 import { generateAIReply } from '../services/aiChatAPIService.js';
 import { getUserPersonaForGroup, getUserPersonaForUngrouped, getDefaultUserPersona } from '../services/userPersonaService.js';
 import { USER_ACTOR_ID } from '../services/database.js';
+import { getPersonalSettings, getTypingDelayConfig, getRandomMessageDelay } from '../services/personalSettingsService.js';
 
 const route = useRoute();
 const router = useRouter();
@@ -208,6 +209,14 @@ const showStickerPanel = ref(false);
 const stickers = ref([]);
 // 虚拟键盘状态 - 简化处理，不再依赖复杂的检测
 const isKeyboardVisible = ref(false);
+
+// 个人设置
+const personalSettings = ref({
+        typingSimulation: {
+                enabled: true,
+                speed: 5
+        }
+});
 
 // 获取角色信息
 const actor = useObservable(
@@ -474,7 +483,7 @@ const sendMessage = async () => {
         }
 };
 
-// 模拟AI回复函数 - 带拼音打字特效
+// 模拟AI回复函数 - 根据设置使用打字特效或随机延迟
 const generateReply = async () => {
         if (isGenerating.value) return;
         
@@ -497,35 +506,67 @@ const generateReply = async () => {
                         }
                 ];
 
-                // 逐条显示消息，每条消息都有拼音打字特效
-                for (let i = 0; i < mockReplies.length; i++) {
-                        const reply = mockReplies[i];
-                        
-                        // 开始打字状态（会自动隐藏思考状态）
-                        isTyping.value = true;
-                        
-                        // 显示拼音打字特效
-                        await simulatePinyinTyping(reply.content);
-                        
-                        // 保存完整消息到数据库
-                        const messageEvent = {
-                                timestamp: Date.now(),
-                                actorId: actorId.value,
-                                contextId: actorId.value,
-                                type: 'privateMessage',
-                                content: {
-                                        content: reply.content
-                                }
-                        };
+                // 根据设置决定使用打字模拟还是随机延迟
+                if (personalSettings.value.typingSimulation.enabled) {
+                        // 使用拼音打字模拟
+                        for (let i = 0; i < mockReplies.length; i++) {
+                                const reply = mockReplies[i];
+                                
+                                // 开始打字状态（会自动隐藏思考状态）
+                                isTyping.value = true;
+                                
+                                // 显示拼音打字特效
+                                await simulatePinyinTyping(reply.content);
+                                
+                                // 保存完整消息到数据库
+                                const messageEvent = {
+                                        timestamp: Date.now(),
+                                        actorId: actorId.value,
+                                        contextId: actorId.value,
+                                        type: 'privateMessage',
+                                        content: {
+                                                content: reply.content
+                                        }
+                                };
 
-                        await db.events.add(messageEvent);
-                        await updateConversation(messageEvent);
-                        
-                        // 消息间保持输入状态，只清空当前打字内容，不改变isTyping状态
-                        if (i < mockReplies.length - 1) {
-                                typingMessage.value = '';
-                                // 保持isTyping为true，确保header持续显示"正在输入中"
-                                await new Promise(resolve => setTimeout(resolve, Math.random() * 1000 + 500));
+                                await db.events.add(messageEvent);
+                                await updateConversation(messageEvent);
+                                
+                                // 消息间保持输入状态，只清空当前打字内容，不改变isTyping状态
+                                if (i < mockReplies.length - 1) {
+                                        typingMessage.value = '';
+                                        // 保持isTyping为true，确保header持续显示"正在输入中"
+                                        await new Promise(resolve => setTimeout(resolve, Math.random() * 1000 + 500));
+                                }
+                        }
+                } else {
+                        // 使用随机延迟，不显示打字过程
+                        for (let i = 0; i < mockReplies.length; i++) {
+                                const reply = mockReplies[i];
+                                
+                                // 计算随机延迟时间
+                                const delay = getRandomMessageDelay(reply.content.length);
+                                await new Promise(resolve => setTimeout(resolve, delay));
+                                
+                                // 直接保存完整消息到数据库
+                                const messageEvent = {
+                                        timestamp: Date.now(),
+                                        actorId: actorId.value,
+                                        contextId: actorId.value,
+                                        type: 'privateMessage',
+                                        content: {
+                                                content: reply.content
+                                        }
+                                };
+
+                                await db.events.add(messageEvent);
+                                await updateConversation(messageEvent);
+                                
+                                // 消息间添加额外的随机间隔
+                                if (i < mockReplies.length - 1) {
+                                        const betweenDelay = Math.random() * 1000 + 500; // 0.5-1.5秒随机间隔
+                                        await new Promise(resolve => setTimeout(resolve, betweenDelay));
+                                }
                         }
                 }
                 
@@ -687,6 +728,9 @@ const simulatePinyinTyping = async (fullMessage) => {
         typingMessage.value = '';
         currentTypingIndex.value = 0;
         
+        // 获取当前的打字速度配置
+        const delayConfig = getTypingDelayConfig(personalSettings.value.typingSimulation.speed);
+        
         // 将消息转换为字符数组，正确处理中文字符
         const chars = Array.from(fullMessage);
         
@@ -707,8 +751,8 @@ const simulatePinyinTyping = async (fullMessage) => {
                                 await nextTick();
                                 scrollToBottom();
                                 
-                                // 拼音输入间隔缩短 (60-120毫秒)
-                                await new Promise(resolve => setTimeout(resolve, Math.random() * 60));
+                                // 使用配置的拼音步骤延迟
+                                await new Promise(resolve => setTimeout(resolve, delayConfig.pinyinStepDelay));
                         }
                 } else {
                         // 非中文字符直接显示
@@ -719,13 +763,18 @@ const simulatePinyinTyping = async (fullMessage) => {
                         await nextTick();
                         scrollToBottom();
                         
-                        // 普通字符间隔缩短 (30-80毫秒)
-                        await new Promise(resolve => setTimeout(resolve, Math.random() * 50 + 30));
+                        // 使用配置的字符延迟
+                        await new Promise(resolve => setTimeout(resolve, delayConfig.characterDelay));
+                }
+                
+                // 在空格和标点符号后添加额外停顿
+                if (/[\s，。！？；：]/.test(char)) {
+                        await new Promise(resolve => setTimeout(resolve, delayConfig.wordPauseDelay));
                 }
         }
         
-        // 打字完成后停留时间缩短
-        await new Promise(resolve => setTimeout(resolve, 200));
+        // 打字完成后使用配置的句子停顿时间
+        await new Promise(resolve => setTimeout(resolve, delayConfig.sentencePauseDelay));
         
         // 不在这里清除打字状态，由外部调用者控制
 };
@@ -817,6 +866,17 @@ const getInitial = (name) => {
         return name.charAt(0).toUpperCase();
 };
 
+// 刷新个人设置
+const refreshPersonalSettings = async () => {
+        try {
+                const settings = await getPersonalSettings();
+                personalSettings.value = settings;
+                console.log('ChatRoom: Refreshed personal settings:', settings);
+        } catch (error) {
+                console.error('ChatRoom: Failed to refresh personal settings:', error);
+        }
+};
+
 // 监听表情包面板状态变化
 watch(showStickerPanel, (newVal, oldVal) => {
         if (newVal !== oldVal) {
@@ -826,8 +886,24 @@ watch(showStickerPanel, (newVal, oldVal) => {
         }
 });
 
+// 监听个人设置变化，实时更新
+watch(() => personalSettings.value, async (newSettings) => {
+        if (newSettings) {
+                console.log('ChatRoom: Personal settings updated:', newSettings);
+        }
+}, { deep: true });
+
 // 初始化默认状态
 onMounted(async () => {
+        // 加载个人设置
+        try {
+                const settings = await getPersonalSettings();
+                personalSettings.value = settings;
+                console.log('ChatRoom: Loaded personal settings:', settings);
+        } catch (error) {
+                console.error('ChatRoom: Failed to load personal settings:', error);
+        }
+        
         // 确保有默认用户人格
         const defaultPersona = await getDefaultUserPersona();
         if (!defaultPersona) {
@@ -878,11 +954,21 @@ onMounted(async () => {
                 nextTick(() => scrollToBottom());
         };
         
+        // 监听页面可见性变化，当用户返回时刷新设置
+        const handleVisibilityChange = () => {
+                if (!document.hidden) {
+                        // 页面变为可见时刷新设置
+                        refreshPersonalSettings();
+                }
+        };
+        
         window.addEventListener('resize', handleResize);
+        document.addEventListener('visibilitychange', handleVisibilityChange);
         
         // 清理事件监听器
         return () => {
                 window.removeEventListener('resize', handleResize);
+                document.removeEventListener('visibilitychange', handleVisibilityChange);
         };
 });
 </script>

@@ -2,7 +2,7 @@
         <div v-if="isVisible" class="modal-overlay" @click.self="closeModal">
                 <div class="modal-content write-post-modal">
                         <div class="modal-header">
-                                <h3 class="modal-title">发布动态</h3>
+                                <h3 class="modal-title">{{ isEditMode ? '编辑动态' : '发布动态' }}</h3>
                                 <button class="close-btn" @click="closeModal">×</button>
                         </div>
                         
@@ -118,8 +118,8 @@
                                         </div>
                                 </div>
                                 
-                                <!-- 谁可以看设置 -->
-                                <div class="visibility-section">
+                                <!-- 谁可以看设置 - 编辑模式下隐藏 -->
+                                <div v-if="!isEditMode" class="visibility-section">
                                         <div class="visibility-header" @click="showVisibilityOptions = !showVisibilityOptions">
                                                 <span class="visibility-label">谁可以看</span>
                                                 <span class="visibility-value">{{ visibilityText }}</span>
@@ -213,7 +213,7 @@
                                         取消
                                 </button>
                                 <button type="button" class="publish-btn" @click="publishPost" :disabled="!canPublish">
-                                        发表
+                                        {{ isEditMode ? '保存' : '发表' }}
                                 </button>
                         </div>
                 </div>
@@ -235,6 +235,14 @@ const props = defineProps({
         postType: {
                 type: String, // 'text' 或 'image'
                 default: 'text'
+        },
+        editData: {
+                type: Object,
+                default: null
+        },
+        isEditMode: {
+                type: Boolean,
+                default: false
         }
 });
 
@@ -296,7 +304,9 @@ const canPublish = computed(() => {
 // 方法
 const closeModal = () => {
         emit('close');
-        resetForm();
+        if (!props.isEditMode) {
+                resetForm();
+        }
 };
 
 const resetForm = () => {
@@ -409,6 +419,11 @@ const publishPost = () => {
                 }
         };
 
+        // 如果是编辑模式，添加eventId
+        if (props.isEditMode && props.editData) {
+                postData.eventId = props.editData.id;
+        }
+
         if (isImagePost.value) {
                 // 如果是“文字描述图片”模式
                 if (imageMode.value === 'description') {
@@ -454,6 +469,39 @@ onMounted(() => {
                 showDescription.value = true;
         }
 });
+
+// 监听编辑数据变化，填充表单
+watch(() => props.editData, (newEditData) => {
+        if (newEditData && props.isEditMode) {
+                // 正确设置文本内容
+                if (newEditData.content && newEditData.content.text) {
+                        postText.value = newEditData.content.text;
+                } else {
+                        postText.value = '';
+                }
+                
+                // 如果有图片，设置图片相关内容
+                if (newEditData.content && newEditData.content.images && newEditData.content.images.length > 0) {
+                        // 将图片URL转换为selectedImages格式
+                        selectedImages.value = newEditData.content.images.map(url => ({
+                                url: url,
+                                description: ''
+                        }));
+                        
+                        // 如果有图片描述，也填充进去
+                        if (newEditData.content.imageDescription) {
+                                imageDescription.value = newEditData.content.imageDescription;
+                        }
+                } else {
+                        selectedImages.value = [];
+                        imageDescription.value = '';
+                }
+        } else {
+                // 非编辑模式时清空
+                selectedImages.value = [];
+                imageDescription.value = '';
+        }
+}, { immediate: true });
 </script>
 
 <style scoped>

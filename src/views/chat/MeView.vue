@@ -13,18 +13,21 @@
                 </AppHeader>
 
                 <main class="page-content">
-                        <div class="user-profile-header">
-                                <div class="avatar">
-                                        <img v-if="currentPersona?.avatar" :src="currentPersona.avatar"
-                                                :alt="currentPersona.name || 'User'">
-                                        <span v-else class="avatar-initial">{{ getInitial(currentPersona?.name ||
-                                                'User') }}</span>
+                        <router-link to="/moments/__USER__" class="user-profile-header-link">
+                                <div class="user-profile-header">
+                                        <div class="avatar">
+                                                <img v-if="currentPersona?.avatar" :src="currentPersona.avatar"
+                                                        :alt="currentPersona.name || 'User'">
+                                                <span v-else class="avatar-initial">{{ getInitial(currentPersona?.name
+                                                        ||
+                                                        'User') }}</span>
+                                        </div>
+                                        <div class="user-info">
+                                                <h2 class="user-name">{{ currentPersona?.name || 'User' }}</h2>
+                                                <p class="user-status">{{ currentPersona?.realName || '查看我的动态' }}</p>
+                                        </div>
                                 </div>
-                                <div class="user-info">
-                                        <h2 class="user-name">{{ currentPersona?.name || 'User' }}</h2>
-                                        <p class="user-status">{{ currentPersona?.realName || '查看我的动态' }}</p>
-                                </div>
-                        </div>
+                        </router-link>
 
                         <div class="menu-list">
                                 <router-link to="/stickers" class="menu-item">
@@ -35,23 +38,23 @@
                                                         d="M9 5l7 7-7 7" />
                                         </svg>
                                 </router-link>
-                                <div class="menu-item">
+                                <router-link to="/favorites" class="menu-item">
                                         <span>收藏</span>
                                         <svg class="chevron" xmlns="http://www.w3.org/2000/svg" fill="none"
                                                 viewBox="0 0 24 24" stroke="currentColor">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                         d="M9 5l7 7-7 7" />
                                         </svg>
-                                </div>
+                                </router-link>
 
-                                <div class="menu-item">
+                                <router-link to="/personal-settings" class="menu-item">
                                         <span>设置</span>
                                         <svg class="chevron" xmlns="http://www.w3.org/2000/svg" fill="none"
                                                 viewBox="0 0 24 24" stroke="currentColor">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                         d="M9 5l7 7-7 7" />
                                         </svg>
-                                </div>
+                                </router-link>
                         </div>
                 </main>
         </div>
@@ -151,6 +154,21 @@ const getInitial = (name) => {
         padding: 10px 15px 0;
         background-color: var(--bg-primary);
         overflow-y: auto;
+}
+
+.user-profile-header-link {
+        text-decoration: none;
+        color: inherit;
+        display: block;
+        margin-bottom: 30px;
+}
+
+.user-profile-header-link .avatar {
+        transition: transform 0.2s ease-in-out;
+}
+
+.user-profile-header-link:hover .avatar {
+        transform: scale(1.05);
 }
 
 .user-profile-header {

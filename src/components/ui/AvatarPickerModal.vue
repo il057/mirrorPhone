@@ -58,6 +58,7 @@
                                                                 'selected-for-delete': selectedForDelete.includes(avatar.url)
                                                         }"
                                                         @click="handleAvatarClick(avatar.url)"
+                                                        :title="avatar.description || ''"
                                                 >
                                                         <img :src="avatar.url" :alt="'头像'" class="avatar-image" loading="lazy">
                                                         

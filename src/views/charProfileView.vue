@@ -1,6 +1,6 @@
 <template>
         <div class="page-container">
-                <AppHeader :title=" ' ' || '详细资料'" :override-back-action="goBack">
+                <AppHeader :title="(actor?.name || '') + '的详细资料'" :override-back-action="goBack">
 
                         <template #right>
                                 <button class="header-action-button" @click="goToEdit">编辑</button>
@@ -11,7 +11,8 @@
                         <section class="profile-header">
                                 <div class="avatar-wrapper">
                                         <div class="avatar">
-                                                <span class="avatar-initial">{{ getInitial(actor.name) }}</span>
+                                                <img v-if="actor.currentAvatar" :src="actor.currentAvatar" :alt="actor.name" class="avatar-image">
+                                                <span v-else class="avatar-initial">{{ getInitial(actor.name) }}</span>
                                         </div>
                                 </div>
                                 <div class="name-section">
@@ -66,6 +67,20 @@
                                         <span class="value">{{ groupNames || '未分组' }}</span>
                                 </div>
                         </section>
+
+                        <section class="actions-section">
+                                <div class="detail-item" @click="goToMoments">
+                                        <span class="label">动态</span>
+                                        <span class="value accessory">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                                                        fill="currentColor" class="bi bi-chevron-right"
+                                                        viewBox="0 0 16 16">
+                                                        <path fill-rule="evenodd"
+                                                                d="M4.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L10.293 8 4.646 2.354a.5.5 0 0 1 0-.708" />
+                                                </svg>
+                                        </span>
+                                </div>
+                        </section>
                 </main>
 
                 <!-- 底部发消息按钮 -->
@@ -80,7 +95,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useObservable } from '@vueuse/rxjs';
 import { liveQuery } from 'dexie';
@@ -91,6 +106,14 @@ import { calculateAge, getZodiacSign } from '../utils/datetime.js';
 const route = useRoute();
 const router = useRouter();
 const actorId = ref(route.params.id);
+
+// 保存当前页面的来源信息，用于后续导航
+onMounted(() => {
+        const fromPage = route.query.from;
+        if (fromPage) {
+                sessionStorage.setItem(`profile_${actorId.value}_from`, fromPage);
+        }
+});
 
 const actor = useObservable(
         liveQuery(() => db.actors.get(actorId.value)),
@@ -105,10 +128,9 @@ const allGroups = useObservable(
 // 查询好感度
 const relationshipScore = useObservable(
         liveQuery(async () => {
-                // 假设当前用户ID为 'user_main'，实际应用中可能需要从全局状态获取
                 const relationship = await db.relationships
                         .where('sourceId').equals(actorId.value)
-                        .and(r => r.targetId === 'user_main')
+                        .and(r => r.targetId === '__USER__')
                         .first();
                 return relationship ? relationship.score : null;
         }),
@@ -140,23 +162,35 @@ const groupNames = computed(() => {
 
 // 返回上一页
 const goBack = () => {
-        // 使用路由历史记录进行智能判断
-        const historyLength = window.history.length;
+        const fromPage = router.currentRoute.value.query.from;
+        const fromEdit = fromPage === 'edit';
         
-        // 如果历史记录长度大于1，尝试返回上一页
-        if (historyLength > 1) {
-                // 检查路由历史，防止从edit页面返回时的无限循环
-                const fromEdit = router.currentRoute.value.query.from === 'edit';
-                if (fromEdit) {
-                        router.push('/chat/contacts');
-                } else {
-                        router.back();
-                }
-        } else {
-                // 没有历史记录时，返回到联系人页面
+        if (fromPage === 'contacts') {
                 router.push('/chat/contacts');
+        } else if (fromPage === 'messages') {
+                router.push('/chat/messages');
+        } else if (fromEdit) {
+                // 从edit页面来的，返回到联系人页面
+                router.push('/chat/contacts');
+        } else {
+                // 使用路由历史记录进行智能判断
+                const historyLength = window.history.length;
+                
+                // 如果历史记录长度大于1，尝试返回上一页
+                if (historyLength > 1) {
+                        router.back();
+                } else {
+                        // 没有历史记录时，返回到联系人页面
+                        router.push('/chat/contacts');
+                }
         }
 };
+
+// 跳转到动态页面
+const goToMoments = () => {
+        router.push(`/moments/${actorId.value}?from=profile`);
+};
+
 
 // 跳转到编辑页面
 const goToEdit = () => {
@@ -272,6 +306,7 @@ const goToChat = () => {
 }
 
 .details-section,
+.actions-section,
 .persona-section {
         background-color: var(--bg-card);
         border-radius: 8px;

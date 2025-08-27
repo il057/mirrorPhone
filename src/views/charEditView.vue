@@ -18,12 +18,12 @@
                 <main class="edit-content content" v-if="actor">
                         <!-- 头像部分 -->
                         <section class="form-section avatar-section">
-                                <div class="avatar-wrapper">
+                                <div class="avatar-wrapper" @click="openAvatarPicker">
                                         <div class="avatar">
-                                                <span class="avatar-initial">{{ getInitial(actor.name) }}</span>
+                                                <img v-if="actor.currentAvatar" :src="actor.currentAvatar" :alt="actor.name" class="avatar-image">
+                                                <span v-else class="avatar-initial">{{ getInitial(actor.name) }}</span>
                                         </div>
                                 </div>
-                                <p class="avatar-prompt">更换头像</p>
                         </section>
 
                         <!-- 基本信息与人设 -->
@@ -72,15 +72,15 @@
                         <AccordionItem title="单人世界书">
                                 <div class="worldbook-section">
                                         <p class="section-description">
-                                                为此角色选择专属的世界书，这些世界书只对该角色有效。
+                                                为此角色选择专属的世界书分组，这些世界书只对该角色有效。
                                         </p>
                                         <CheckboxList
-                                                v-model="actor.worldbookIds"
+                                                v-model="actor.worldbookGroupIds"
                                                 :options="worldbookOptions"
                                                 @change="handleWorldbookChange"
                                         />
                                         <button @click="openWorldbookManagement" class="secondary-btn">
-                                                管理世界书
+                                                管理世界书分组
                                         </button>
                                 </div>
                         </AccordionItem>
@@ -136,6 +136,7 @@
                                                 <TagsManager
                                                         v-model:tags="userRelationship.tags"
                                                         :editable="true"
+                                                        :allowAdd="false"
                                                         @tag-added="handleTagAdded"
                                                         @tag-removed="handleTagRemoved"
                                                         @tag-edited="handleTagEdited"
@@ -155,11 +156,40 @@
                         <!-- 聊天设置 -->
                         <AccordionItem title="聊天设置">
                                 <div class="chat-settings-section">
+                                        <!-- 聊天预览 -->
+                                        <div class="setting-item">
+                                                <h4>聊天预览</h4>
+                                                <div class="chat-preview-wrapper">
+                                                        <div class="chat-preview" :style="{ backgroundImage: chatBackground ? `url(${chatBackground})` : 'none' }">
+                                                                <!-- 用户消息气泡 -->
+                                                                <div class="message-bubble user-message">
+                                                                        <div class="avatar-mini">
+                                                                                <img v-if="userAvatar" :src="userAvatar" alt="你" class="avatar-image-mini">
+                                                                                <span v-else class="avatar-initial-mini">你</span>
+                                                                        </div>
+                                                                        <div class="message-content">示例消息</div>
+                                                                </div>
+                                                                <!-- 角色消息气泡 -->
+                                                                <div class="message-bubble char-message">
+                                                                        <div class="avatar-mini">
+                                                                                <img v-if="actor.currentAvatar" :src="actor.currentAvatar" :alt="actor.name" class="avatar-image-mini">
+                                                                                <span v-else class="avatar-initial-mini">{{ getInitial(actor.name) }}</span>
+                                                                        </div>
+                                                                        <div class="message-content">角色回复示例</div>
+                                                                </div>
+                                                        </div>
+                                                </div>
+                                        </div>
+
                                         <!-- 聊天背景 -->
                                         <div class="setting-item">
                                                 <h4>聊天背景</h4>
-                                                <div class="placeholder-content">
-                                                        <p>此功能待开发。</p>
+                                                <div class="background-settings">
+                                                        <div class="current-background">
+                                                                <span>当前背景：</span>
+                                                                <span class="background-type">{{ getChatBackgroundType() }}</span>
+                                                                <button @click="changeChatBackground" class="change-background-btn">修改</button>
+                                                        </div>
                                                 </div>
                                         </div>
 
@@ -275,7 +305,7 @@ import AccordionItem from '../components/ui/AccordionItem.vue';
 import RangeSlider from '../components/ui/RangeSlider.vue';
 import TagsManager from '../components/ui/TagsManager.vue';
 import CheckboxList from '../components/ui/CheckboxList.vue';
-import { showToast, showConfirm, showWorldbookEditModal, showManageGroupsModal } from '../services/uiService.js';
+import { showToast, showConfirm, showWorldbookEditModal, showManageGroupsModal, showAvatarPickerModal, showAlbumPickerModal, promptForInput } from '../services/uiService.js';
 import { USER_ACTOR_ID } from '../services/database.js';
 
 const route = useRoute();
@@ -283,6 +313,9 @@ const router = useRouter();
 
 const actorId = ref(route.params.id);
 const isNew = computed(() => !actorId.value);
+
+// 记录来源页面，用于新建角色后的返回导航
+const fromPage = ref(route.query.from || 'contacts');
 
 const actor = ref(null);
 
@@ -298,6 +331,12 @@ const availableGroups = useObservable(
 // 获取世界书数据
 const allWorldbooks = useObservable(
         liveQuery(() => db.worldbooks.toArray()),
+        { initialValue: [] }
+);
+
+// 获取世界书分组数据
+const worldbookGroups = useObservable(
+        liveQuery(() => db.worldbookGroups.toArray()),
         { initialValue: [] }
 );
 
@@ -318,6 +357,10 @@ const userRelationship = ref({
         type: '',
         tags: []
 });
+
+// 聊天设置相关
+const chatBackground = ref('');
+const userAvatar = ref('');
 
 // 下拉菜单选项
 const genderOptions = [
@@ -351,14 +394,11 @@ const groupOptions = computed(() => {
 
 // 世界书选项
 const worldbookOptions = computed(() => {
-        const currentGroupId = actor.value?.groupIds?.[0];
-        const groupBindings = groupWorldbooks.value.find(g => g.id === currentGroupId)?.worldbookIds || [];
-        
-        return allWorldbooks.value.map(wb => ({
-                label: wb.name,
-                value: wb.id,
-                disabled: groupBindings.includes(wb.id),
-                description: groupBindings.includes(wb.id) ? '(已通过分组绑定)' : ''
+        return worldbookGroups.value.map(group => ({
+                label: group.name,
+                value: group.id,
+                disabled: false,
+                description: `包含 ${group.worldbookIds?.length || 0} 个世界书`
         }));
 });
 
@@ -383,7 +423,7 @@ watch(() => actor.value?.gender, (newGender) => {
 // 处理分组变化
 const handleGroupChange = async (option) => {
         if (option.value === 'new_group') {
-                const groupName = prompt('请输入新分组的名称:');
+                const groupName = await promptForInput('新建分组', '请输入新分组的名称', false, false);
                 if (groupName) {
                         try {
                                 const newGroupId = await db.groups.add({
@@ -405,11 +445,11 @@ const handleGroupChange = async (option) => {
 
 // 世界书相关方法
 const handleWorldbookChange = (selectedIds) => {
-        // 确保 actor.worldbookIds 存在
-        if (!actor.value.worldbookIds) {
-                actor.value.worldbookIds = [];
+        // 确保 actor.worldbookGroupIds 存在（存储世界书分组ID而不是单个世界书ID）
+        if (!actor.value.worldbookGroupIds) {
+                actor.value.worldbookGroupIds = [];
         }
-        actor.value.worldbookIds = selectedIds;
+        actor.value.worldbookGroupIds = selectedIds;
 };
 
 const openWorldbookManagement = () => {
@@ -455,6 +495,72 @@ const updateRelationshipTags = async () => {
         }
 };
 
+// 头像相关方法
+const openAvatarPicker = async () => {
+        // 对于新角色，先检查是否已经有基本信息
+        if (isNew.value && !actor.value.name) {
+                showToast('请先填写角色昵称', 'info');
+                return;
+        }
+        
+        // 对于新角色，使用临时ID；对于已存在的角色，使用真实ID
+        const actorIdForAvatar = actor.value.id || `temp_char_${Date.now()}`;
+        const selectedAvatar = await showAvatarPickerModal(actorIdForAvatar);
+        if (selectedAvatar) {
+                actor.value.currentAvatar = selectedAvatar;
+                // 如果是新角色，将临时ID记录下来，保存时需要迁移头像库
+                if (isNew.value) {
+                        actor.value.tempAvatarLibraryId = actorIdForAvatar;
+                }
+        }
+};
+
+// 聊天背景相关方法
+const getChatBackgroundType = () => {
+        if (!chatBackground.value) return '默认背景';
+        if (chatBackground.value.startsWith('http')) return '自定义URL';
+        return '默认背景';
+};
+
+const changeChatBackground = async () => {
+        try {
+                // 使用相册选择器
+                const selectedPhoto = await showAlbumPickerModal();
+                if (selectedPhoto) {
+                        chatBackground.value = selectedPhoto.url;
+                        // 保存到角色数据
+                        if (actor.value) {
+                                actor.value.chatBackground = selectedPhoto.url;
+                        }
+                        showToast('聊天背景已更新', 'success');
+                } else {
+                        // 用户取消选择，询问是否使用默认背景或输入URL
+                        const choice = await showConfirm('聊天背景', '是否使用默认背景？点击"取消"可输入自定义URL');
+                        if (choice) {
+                                // 使用默认背景
+                                chatBackground.value = '';
+                                if (actor.value) {
+                                        actor.value.chatBackground = '';
+                                }
+                                showToast('已设置为默认背景', 'success');
+                        } else {
+                                // 输入自定义URL
+                                const customUrl = await promptForInput('自定义背景', '请输入背景图片URL', false, true, chatBackground.value);
+                                if (customUrl !== null) {
+                                        chatBackground.value = customUrl;
+                                        if (actor.value) {
+                                                actor.value.chatBackground = customUrl;
+                                        }
+                                        showToast('聊天背景已更新', 'success');
+                                }
+                        }
+                }
+        } catch (error) {
+                console.error('更新聊天背景失败:', error);
+                showToast('更新聊天背景失败', 'error');
+        }
+};
+
 // 加载数据
 onMounted(async () => {
         if (isNew.value) {
@@ -462,12 +568,15 @@ onMounted(async () => {
                         name: '',
                         realName: '',
                         birthday: '',
-                        gender: '男',
+                        gender: '未知',
                         groupIds: [],
                         persona: '',
                         specialCare: 0,
                         isGroup: 0,
                         worldbookIds: [],
+                        worldbookGroupIds: [],
+                        currentAvatar: '',
+                        chatBackground: '',
                         contextMemorySettings: {
                                 privateChat: 50,
                                 groupChat: 20,
@@ -487,6 +596,12 @@ onMounted(async () => {
                         if (!Array.isArray(actor.value.worldbookIds)) {
                                 actor.value.worldbookIds = [];
                         }
+                        if (!Array.isArray(actor.value.worldbookGroupIds)) {
+                                actor.value.worldbookGroupIds = [];
+                        }
+                        // 加载聊天背景
+                        chatBackground.value = actor.value.chatBackground || '';
+                        
                         // 确保上下文记忆设置存在
                         if (!actor.value.contextMemorySettings) {
                                 actor.value.contextMemorySettings = {
@@ -524,6 +639,16 @@ onMounted(async () => {
                         router.push('/');
                 }
         }
+        
+        // 加载用户头像（从用户人格中获取）
+        try {
+                const userEntity = await db.actors.get(currentUserId);
+                if (userEntity && userEntity.currentAvatar) {
+                        userAvatar.value = userEntity.currentAvatar;
+                }
+        } catch (error) {
+                console.warn('无法加载用户头像:', error);
+        }
 });
 
 const saveChanges = async () => {
@@ -537,11 +662,33 @@ const saveChanges = async () => {
                 const dataToSave = JSON.parse(JSON.stringify({
                         ...actor.value,
                         groupIds: actor.value.groupIds?.[0] ? [actor.value.groupIds[0]] : [],
-                        worldbookIds: Array.isArray(actor.value.worldbookIds) ? [...actor.value.worldbookIds] : []
+                        worldbookIds: Array.isArray(actor.value.worldbookIds) ? [...actor.value.worldbookIds] : [],
+                        worldbookGroupIds: Array.isArray(actor.value.worldbookGroupIds) ? [...actor.value.worldbookGroupIds] : [],
+                        currentAvatar: actor.value.currentAvatar || '',
+                        chatBackground: actor.value.chatBackground || ''
                 }));
+                
+                // 删除临时字段
+                delete dataToSave.tempAvatarLibraryId;
                 
                 if (isNew.value) {
                         dataToSave.id = `char_${Date.now()}`;
+                        
+                        // 如果有临时头像库，需要迁移
+                        if (actor.value.tempAvatarLibraryId) {
+                                try {
+                                        // 获取临时头像库数据
+                                        const tempEntity = await db.actors.get(actor.value.tempAvatarLibraryId);
+                                        if (tempEntity && tempEntity.avatarLibrary) {
+                                                dataToSave.avatarLibrary = tempEntity.avatarLibrary;
+                                                // 删除临时实体
+                                                await db.actors.delete(actor.value.tempAvatarLibraryId);
+                                        }
+                                } catch (error) {
+                                        console.warn('迁移头像库失败:', error);
+                                }
+                        }
+                        
                         await db.actors.add(dataToSave);
                         
                         // 简单创建基本关系
@@ -557,7 +704,8 @@ const saveChanges = async () => {
                         }
                         
                         showToast('角色创建成功', 'success');
-                        router.push(`/profile/${dataToSave.id}`);
+                        // 新建角色保存后，跳转到profile页面，并记录来源页面
+                        router.push(`/profile/${dataToSave.id}?from=${fromPage.value}`);
                 } else {
                         await db.actors.put(dataToSave);
                         showToast('资料保存成功', 'success');
@@ -576,7 +724,7 @@ const deleteCharacter = async () => {
         );
         if (confirmed) {
                 try {
-                        await db.transaction('rw', db.actors, db.conversations, db.events, db.relationships, db.memories, async () => {
+                        await db.transaction('rw', db.actors, db.conversations, db.events, db.relationships, db.memories, db.favorites, async () => {
                                 const id = actorId.value;
                                 await db.actors.delete(id);
                                 await db.conversations.delete(id);
@@ -584,6 +732,8 @@ const deleteCharacter = async () => {
                                 await db.events.where({ contextId: id }).delete();
                                 await db.relationships.where({ sourceId: id }).or('targetId').equals(id).delete();
                                 await db.memories.where({ actorId: id }).delete();
+                                // 清理该角色的所有收藏
+                                await db.favorites.where({ authorId: id }).delete();
                         });
                         showToast('角色已删除', 'success');
                         router.push('/chat/contacts');
@@ -654,6 +804,10 @@ const handleBack = () => {
         margin-bottom: 30px;
 }
 
+.avatar-wrapper {
+        cursor: pointer;
+}
+
 .avatar-wrapper .avatar {
         width: 100px;
         height: 100px;
@@ -663,6 +817,14 @@ const handleBack = () => {
         align-items: center;
         font-weight: bold;
         margin: 0 auto;
+        overflow: hidden;
+}
+
+.avatar-image {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        border-radius: 12px;
 }
 
 .avatar-initial {
@@ -982,5 +1144,109 @@ const handleBack = () => {
                 align-items: flex-start;
                 gap: 10px;
         }
+}
+
+/* 聊天预览样式 */
+.chat-preview-wrapper {
+        margin: 15px 0;
+}
+
+.chat-preview {
+        background-color: var(--bg-primary);
+        background-size: cover;
+        background-position: center;
+        border-radius: 12px;
+        padding: 15px;
+        min-height: 120px;
+        border: 1px solid var(--border-color);
+}
+
+.message-bubble {
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+        margin-bottom: 12px;
+}
+
+.message-bubble:last-child {
+        margin-bottom: 0;
+}
+
+.user-message {
+        flex-direction: row-reverse;
+}
+
+.char-message {
+        flex-direction: row;
+}
+
+.avatar-mini {
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        overflow: hidden;
+}
+
+.avatar-image-mini {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+}
+
+.avatar-initial-mini {
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--accent-primary);
+}
+
+.message-content {
+        background-color: var(--bg-card);
+        padding: 8px 12px;
+        border-radius: 12px;
+        font-size: 14px;
+        max-width: 200px;
+        word-wrap: break-word;
+}
+
+.user-message .message-content {
+        background-color: var(--accent-primary);
+        color: var(--accent-text);
+}
+
+.background-settings {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+}
+
+.current-background {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        justify-content: space-between;
+}
+
+.background-type {
+        color: var(--text-secondary);
+        font-size: 14px;
+}
+
+.change-background-btn {
+        padding: 6px 12px;
+        background-color: var(--accent-primary);
+        color: var(--accent-text);
+        border: none;
+        border-radius: 6px;
+        font-size: 12px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+}
+
+.change-background-btn:hover {
+        background-color: var(--accent-darker);
 }
 </style>

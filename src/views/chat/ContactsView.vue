@@ -22,8 +22,8 @@
                                                 <li v-for="member in group.members" :key="member.id"
                                                         class="contact-item" @click="goToProfile(member.id)">
                                                         <div class="avatar">
-                                                                <span class="avatar-initial">{{ getInitial(member.name)
-                                                                        }}</span>
+                                                                <img v-if="member.currentAvatar" :src="member.currentAvatar" :alt="member.name" class="avatar-image">
+                                                                <span v-else class="avatar-initial">{{ getInitial(member.name) }}</span>
                                                         </div>
                                                         <span>{{ member.name }}</span>
                                                 </li>
@@ -37,8 +37,8 @@
                                                 <li v-for="friend in specialCareFriends" :key="friend.id"
                                                         class="contact-item" @click="goToProfile(friend.id)">
                                                         <div class="avatar">
-                                                                <span class="avatar-initial">{{ getInitial(friend.name)
-                                                                        }}</span>
+                                                                <img v-if="friend.currentAvatar" :src="friend.currentAvatar" :alt="friend.name" class="avatar-image">
+                                                                <span v-else class="avatar-initial">{{ getInitial(friend.name) }}</span>
                                                         </div>
                                                         <span>{{ friend.name }}</span>
                                                 </li>
@@ -49,8 +49,8 @@
                                         <ul>
                                                 <li v-for="friend in group" :key="friend.id" class="contact-item" @click="goToProfile(friend.id)">
                                                         <div class="avatar">
-                                                                <span class="avatar-initial">{{ getInitial(friend.name)
-                                                                        }}</span>
+                                                                <img v-if="friend.currentAvatar" :src="friend.currentAvatar" :alt="friend.name" class="avatar-image">
+                                                                <span v-else class="avatar-initial">{{ getInitial(friend.name) }}</span>
                                                         </div>
                                                         <span>{{ friend.name }}</span>
                                                 </li>
@@ -206,7 +206,7 @@ const groupChats = computed(() => allActors.value.filter(a => a.isGroup).sort((a
 
 // 跳转到profile页面
 const goToProfile = (actorId) => {
-        router.push(`/profile/${actorId}`);
+        router.push(`/profile/${actorId}?from=contacts`);
 };
 
 </script>
@@ -279,6 +279,7 @@ const goToProfile = (actorId) => {
 .avatar-initial {
         color: var(--accent-primary);
 }
+
 .group-header {
         cursor: pointer;
         background-color: var(--bg-secondary);

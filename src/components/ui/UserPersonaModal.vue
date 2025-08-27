@@ -388,7 +388,11 @@ const deletePersona = async (persona) => {
 
         if (confirmed) {
                 try {
-                        await db.actors.delete(persona.id);
+                        await db.transaction('rw', db.actors, db.favorites, async () => {
+                                await db.actors.delete(persona.id);
+                                // 清理该人格的所有收藏
+                                await db.favorites.where({ authorId: persona.id }).delete();
+                        });
                         
                         // 从列表中移除
                         const index = userPersonas.value.findIndex(p => p.id === persona.id);

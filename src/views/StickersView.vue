@@ -1,6 +1,6 @@
 <template>
         <div class="page-container">
-                <AppHeader :title="headerTitle" :overrideBackAction="() => $router.push('/chat/me')">
+                <AppHeader :title="headerTitle" :override-back-action="() => $router.push('/chat/me')">
                         <template #left>
                                 <button v-if="!isEditMode && !isReordering" @click="$router.push('/chat/me')"
                                         class="header-action-button">

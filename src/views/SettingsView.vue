@@ -354,16 +354,22 @@ async function saveChanges() {
                 }
 
                 // 2. 保存所有全局设置
-                // 只保存可序列化的全局设置
-                const { activeApiProfileId, cloudinaryCloudName, cloudinaryUploadPreset, githubGistId, githubToken } = globalSettings.value;
-                await db.globalSettings.put({
-                        id: 'global',
-                        activeApiProfileId,
-                        cloudinaryCloudName,
-                        cloudinaryUploadPreset,
-                        githubGistId,
-                        githubToken
-                });
+                const existingSettings = await db.globalSettings.get('global') || {};
+
+                // 然后，创建一个新的对象，包含旧设置和当前页面要更新的设置
+                const settingsToSave = {
+                        ...existingSettings, // 展开所有现有设置，保留个性化等配置
+                        id: 'global', // 确保主键存在
+                        // 更新 SettingsView 相关的字段
+                        activeApiProfileId: globalSettings.value.activeApiProfileId,
+                        cloudinaryCloudName: globalSettings.value.cloudinaryCloudName,
+                        cloudinaryUploadPreset: globalSettings.value.cloudinaryUploadPreset,
+                        githubGistId: globalSettings.value.githubGistId,
+                        githubToken: globalSettings.value.githubToken
+                };
+
+                // 使用 put 方法保存合并后的完整设置对象
+                await db.globalSettings.put(settingsToSave);
 
                 showToast('设置已保存！', 'success');
         } catch (error) {

@@ -9,7 +9,8 @@
                 <ul v-if="conversations" class="conversation-list">
                         <li v-for="convo in conversations" :key="convo.id" class="conversation-item">
                                 <div class="avatar" @click="goToProfile(convo.id)">
-                                        <span class="avatar-initial">{{ convo.actor?.name[0] }}</span>
+                                        <img v-if="convo.actor?.currentAvatar" :src="convo.actor.currentAvatar" :alt="convo.actor.name" class="avatar-image">
+                                        <span v-else class="avatar-initial">{{ convo.actor?.name[0] }}</span>
                                 </div>
                                 <div class="convo-details" @click="goToChat(convo.id)">
                                         <div class="convo-header">
@@ -53,7 +54,7 @@ const conversations = useObservable(
 
 // 跳转到profile页面
 const goToProfile = (actorId) => {
-        router.push(`/profile/${actorId}`);
+        router.push(`/profile/${actorId}?from=messages`);
 };
 
 // 跳转到聊天室

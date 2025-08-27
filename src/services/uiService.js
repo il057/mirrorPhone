@@ -316,8 +316,26 @@ export function showAvatarPickerModal(actorId, libraryId = null) {
                                 // 使用上传选择模态框
                                 const uploadResult = await showUploadChoiceModal();
                                 if (uploadResult) {
-                                        // 保存到头像库
-                                        await saveToAvatarLibrary(actualLibraryId, uploadResult.value);
+                                        // 检查是否是角色头像库（非用户头像库）
+                                        const isCharacterLibrary = actualLibraryId !== '__USER__' && !actualLibraryId.startsWith('user_');
+                                        
+                                        // 要求用户输入对这个头像的描述
+                                        const description = await promptForInput(
+                                                '头像描述', 
+                                                '请为这个头像添加描述', 
+                                                true, 
+                                                !isCharacterLibrary  // 角色头像库描述必填，用户头像库可选
+                                        );
+                                        
+                                        // 如果是角色头像库且没有输入描述，则取消上传
+                                        if (isCharacterLibrary && (!description || description.trim() === '')) {
+                                                showToast('角色头像描述为必填项', 'error');
+                                                resolve(null);
+                                                return;
+                                        }
+                                        
+                                        // 保存到头像库，包含描述信息
+                                        await saveToAvatarLibrary(actualLibraryId, uploadResult.value, description || '');
                                         resolve(uploadResult.value);
                                 } else {
                                         resolve(null);
@@ -354,7 +372,19 @@ async function getAvatarLibrary(libraryId) {
                         .first();
                 
                 if (entity && entity.avatarLibrary) {
-                        return entity.avatarLibrary.map(url => ({ url, id: url }));
+                        return entity.avatarLibrary.map(item => {
+                                if (typeof item === 'string') {
+                                        // 旧格式：直接是URL字符串
+                                        return { url: item, id: item, description: '' };
+                                } else {
+                                        // 新格式：包含描述的对象
+                                        return { 
+                                                url: item.url, 
+                                                id: item.url, 
+                                                description: item.description || '' 
+                                        };
+                                }
+                        });
                 }
                 
                 return [];
@@ -368,24 +398,46 @@ async function getAvatarLibrary(libraryId) {
  * 保存头像到头像库
  * @param {string} libraryId - 头像库ID
  * @param {string} avatarUrl - 头像URL
+ * @param {string} description - 头像描述（可选）
  */
-async function saveToAvatarLibrary(libraryId, avatarUrl) {
+async function saveToAvatarLibrary(libraryId, avatarUrl, description = '') {
         try {
                 // 确保__USER__实体存在
                 if (libraryId === '__USER__') {
                         await ensureUserEntity();
                 }
                 
-                const entity = await db.actors.get(libraryId);
-                if (entity) {
-                        const avatarLibrary = entity.avatarLibrary || [];
-                        if (!avatarLibrary.includes(avatarUrl)) {
-                                avatarLibrary.push(avatarUrl);
-                                await db.actors.update(libraryId, { avatarLibrary });
-                        }
+                // 获取或创建实体
+                let entity = await db.actors.get(libraryId);
+                if (!entity) {
+                        // 如果实体不存在，创建一个临时实体（用于新角色的头像库）
+                        entity = {
+                                id: libraryId,
+                                name: libraryId.startsWith('temp_') ? '临时头像库' : '头像库',
+                                avatarLibrary: [],
+                                isHidden: true
+                        };
+                        await db.actors.add(entity);
+                }
+                
+                const avatarLibrary = entity.avatarLibrary || [];
+                // 检查是否已存在相同URL的头像
+                const existingIndex = avatarLibrary.findIndex(item => 
+                        (typeof item === 'string' ? item : item.url) === avatarUrl
+                );
+                
+                if (existingIndex === -1) {
+                        // 新头像，添加到数组
+                        const avatarData = description ? { url: avatarUrl, description } : avatarUrl;
+                        avatarLibrary.push(avatarData);
+                        await db.actors.update(libraryId, { avatarLibrary });
+                        console.log('头像已保存到头像库:', { libraryId, avatarUrl, description });
+                } else {
+                        console.log('头像已存在于头像库中');
                 }
         } catch (error) {
                 console.error('Failed to save to avatar library:', error);
+                throw error;
         }
 }
 
@@ -398,7 +450,10 @@ async function deleteFromAvatarLibrary(libraryId, avatarUrls) {
         try {
                 const entity = await db.actors.get(libraryId);
                 if (entity && entity.avatarLibrary) {
-                        const avatarLibrary = entity.avatarLibrary.filter(url => !avatarUrls.includes(url));
+                        const avatarLibrary = entity.avatarLibrary.filter(item => {
+                                const url = typeof item === 'string' ? item : item.url;
+                                return !avatarUrls.includes(url);
+                        });
                         await db.actors.update(libraryId, { avatarLibrary });
                 }
         } catch (error) {

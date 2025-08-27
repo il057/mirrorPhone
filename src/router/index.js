@@ -38,6 +38,11 @@ const router = createRouter({
                         component: () => import('../views/StickersView.vue')
                 },
                 {
+                        path: '/favorites',
+                        name: 'favorites',
+                        component: () => import('../views/FavoritesView.vue')
+                },
+                {
                         path: '/music',
                         name: 'music',
                         component: () => import('../views/MusicView.vue')
@@ -68,7 +73,7 @@ const router = createRouter({
                                         path: 'moments',
                                         name: 'chat-moments',
                                         component: () => import('../views/chat/MomentsView.vue'),
-                                        meta: { title: '' } 
+                                        meta: { title: '' }
                                 },
                                 {
                                         path: 'me',
@@ -77,6 +82,21 @@ const router = createRouter({
                                         meta: { title: '' }
                                 }
                         ]
+                },
+                // 个人设置页面
+                {
+                        path: '/personal-settings',
+                        name: 'personal-settings',
+                        component: () => import('../views/PersonalSettingsView.vue'),
+                        meta: { title: '个人设置' }
+                },
+                // 个人动态页面 - 移到ChatLayout外部，不在Footer控制范围内
+                {
+                        path: '/moments/:id',
+                        name: 'personal-moments',
+                        component: () => import('../views/chat/MomentsView.vue'),
+                        meta: { title: '的动态' },
+                        props: true
                 },
                 // 角色/群组详情页
                 {

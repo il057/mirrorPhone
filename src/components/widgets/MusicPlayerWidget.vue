@@ -3,9 +3,12 @@
                 <!-- 未登录状态 -->
                 <div v-if="!isLoggedIn" class="login-prompt" @click="goToMusicPage">
                         <div class="album-art">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="#1DB954" 
-                                     class="bi bi-spotify" viewBox="0 0 16 16">
-                                        <path d="M8 0a8 8 0 1 0 0 16A8 8 0 0 0 8 0m3.669 11.538a.5.5 0 0 1-.686.165c-1.879-1.147-4.243-1.407-7.028-.77a.499.499 0 0 1-.222-.973c3.048-.696 5.662-.397 7.77.892a.5.5 0 0 1 .166.686m.979-2.178a.624.624 0 0 1-.858.205c-2.15-1.321-5.428-1.704-7.972-.932a.625.625 0 0 1-.362-1.194c2.905-.881 6.517-.454 8.986 1.063a.624.624 0 0 1 .206.858m.084-2.268C10.154 5.56 5.9 5.419 3.438 6.166a.748.748 0 1 1-.434-1.432c2.825-.857 7.523-.692 10.492 1.07a.747.747 0 1 1-.764 1.288"/>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor"
+                                        class="bi bi-music-note-beamed" viewBox="0 0 16 16">
+                                        <path
+                                                d="M6 13c0 1.105-1.12 2-2.5 2S1 14.105 1 13s1.12-2 2.5-2 2.5.896 2.5 2m9-2c0 1.105-1.12 2-2.5 2s-2.5-.895-2.5-2 1.12-2 2.5-2 2.5.895 2.5 2" />
+                                        <path fill-rule="evenodd" d="M14 11V2h1v9zM6 3v10H5V3z" />
+                                        <path d="M5 2.905a1 1 0 0 1 .9-.995l8-.8a1 1 0 0 1 1.1.995V3L5 4z" />
                                 </svg>
                         </div>
                         <div class="track-info">
@@ -13,18 +16,24 @@
                                 <div class="track-artist">点击登录</div>
                                 <div class="controls">
                                         <button class="control-btn disabled">
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16">
-                                                        <path d="M.5 3.5A.5.5 0 0 0 0 4v8a.5.5 0 0 0 1 0V8.753l6.267 3.636c.54.313 1.233-.066 1.233-.697v-2.94l6.267 3.636c.54.314 1.233-.065 1.233-.696V4.308c0-.63-.693-1.01-1.233-.696L8.5 7.248v-2.94c0-.63-.692-1.01-1.233-.696L1 7.248V4a.5.5 0 0 0-.5-.5"/>
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12"
+                                                        fill="currentColor" viewBox="0 0 16 16">
+                                                        <path
+                                                                d="M.5 3.5A.5.5 0 0 0 0 4v8a.5.5 0 0 0 1 0V8.753l6.267 3.636c.54.313 1.233-.066 1.233-.697v-2.94l6.267 3.636c.54.314 1.233-.065 1.233-.696V4.308c0-.63-.693-1.01-1.233-.696L8.5 7.248v-2.94c0-.63-.692-1.01-1.233-.696L1 7.248V4a.5.5 0 0 0-.5-.5" />
                                                 </svg>
                                         </button>
                                         <button class="play-btn disabled">
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
-                                                        <path d="m11.596 8.697-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 0 1 0 1.393"/>
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14"
+                                                        fill="currentColor" viewBox="0 0 16 16">
+                                                        <path
+                                                                d="m11.596 8.697-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 0 1 0 1.393" />
                                                 </svg>
                                         </button>
                                         <button class="control-btn disabled">
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16">
-                                                        <path d="M15.5 3.5a.5.5 0 0 1 .5.5v8a.5.5 0 0 1-1 0V8.753l-6.267 3.636c-.54.313-1.233-.066-1.233-.697v-2.94l-6.267 3.636C.693 12.703 0 12.324 0 11.693V4.308c0-.63.693-1.01 1.233-.696L7.5 7.248v-2.94c0-.63.693-1.01 1.233-.696L15 7.248V4a.5.5 0 0 1 .5-.5"/>
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12"
+                                                        fill="currentColor" viewBox="0 0 16 16">
+                                                        <path
+                                                                d="M15.5 3.5a.5.5 0 0 1 .5.5v8a.5.5 0 0 1-1 0V8.753l-6.267 3.636c-.54.313-1.233-.066-1.233-.697v-2.94l-6.267 3.636C.693 12.703 0 12.324 0 11.693V4.308c0-.63.693-1.01 1.233-.696L7.5 7.248v-2.94c0-.63.693-1.01 1.233-.696L15 7.248V4a.5.5 0 0 1 .5-.5" />
                                                 </svg>
                                         </button>
                                 </div>
@@ -41,11 +50,12 @@
                 <!-- 已登录但无播放内容 - 显示空播放器 -->
                 <div v-else-if="!currentTrack" class="empty-player">
                         <div class="album-art" @click.stop>
-                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" 
-                                     class="bi bi-music-note-beamed" viewBox="0 0 16 16">
-                                        <path d="M6 13c0 1.105-1.12 2-2.5 2S1 14.105 1 13s1.12-2 2.5-2 2.5.896 2.5 2m9-2c0 1.105-1.12 2-2.5 2s-2.5-.895-2.5-2 1.12-2 2.5-2 2.5.895 2.5 2"/>
-                                        <path fill-rule="evenodd" d="M14 11V2h1v9zM6 3v10H5V3z"/>
-                                        <path d="M5 2.905a1 1 0 0 1 .9-.995l8-.8a1 1 0 0 1 1.1.995V3L5 4z"/>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor"
+                                        class="bi bi-music-note-beamed" viewBox="0 0 16 16">
+                                        <path
+                                                d="M6 13c0 1.105-1.12 2-2.5 2S1 14.105 1 13s1.12-2 2.5-2 2.5.896 2.5 2m9-2c0 1.105-1.12 2-2.5 2s-2.5-.895-2.5-2 1.12-2 2.5-2 2.5.895 2.5 2" />
+                                        <path fill-rule="evenodd" d="M14 11V2h1v9zM6 3v10H5V3z" />
+                                        <path d="M5 2.905a1 1 0 0 1 .9-.995l8-.8a1 1 0 0 1 1.1.995V3L5 4z" />
                                 </svg>
                         </div>
                         <div class="track-info">
@@ -53,24 +63,34 @@
                                 <div class="track-artist">选择音乐开始播放</div>
                                 <div class="controls">
                                         <button @click.stop="previousTrack" class="control-btn disabled">
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16">
-                                                        <path d="M.5 3.5A.5.5 0 0 0 0 4v8a.5.5 0 0 0 1 0V8.753l6.267 3.636c.54.313 1.233-.066 1.233-.697v-2.94l6.267 3.636c.54.314 1.233-.065 1.233-.696V4.308c0-.63-.693-1.01-1.233-.696L8.5 7.248v-2.94c0-.63-.692-1.01-1.233-.696L1 7.248V4a.5.5 0 0 0-.5-.5"/>
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12"
+                                                        fill="currentColor" viewBox="0 0 16 16">
+                                                        <path
+                                                                d="M.5 3.5A.5.5 0 0 0 0 4v8a.5.5 0 0 0 1 0V8.753l6.267 3.636c.54.313 1.233-.066 1.233-.697v-2.94l6.267 3.636c.54.314 1.233-.065 1.233-.696V4.308c0-.63-.693-1.01-1.233-.696L8.5 7.248v-2.94c0-.63-.692-1.01-1.233-.696L1 7.248V4a.5.5 0 0 0-.5-.5" />
                                                 </svg>
                                         </button>
                                         <button @click.stop="startPlayback" class="play-btn">
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
-                                                        <path d="m11.596 8.697-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 0 1 0 1.393"/>
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14"
+                                                        fill="currentColor" viewBox="0 0 16 16">
+                                                        <path
+                                                                d="m11.596 8.697-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 0 1 0 1.393" />
                                                 </svg>
                                         </button>
                                         <button @click.stop="nextTrack" class="control-btn disabled">
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16">
-                                                        <path d="M15.5 3.5a.5.5 0 0 1 .5.5v8a.5.5 0 0 1-1 0V8.753l-6.267 3.636c-.54.313-1.233-.066-1.233-.697v-2.94l-6.267 3.636C.693 12.703 0 12.324 0 11.693V4.308c0-.63.693-1.01 1.233-.696L7.5 7.248v-2.94c0-.63.693-1.01 1.233-.696L15 7.248V4a.5.5 0 0 1 .5-.5"/>
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12"
+                                                        fill="currentColor" viewBox="0 0 16 16">
+                                                        <path
+                                                                d="M15.5 3.5a.5.5 0 0 1 .5.5v8a.5.5 0 0 1-1 0V8.753l-6.267 3.636c-.54.313-1.233-.066-1.233-.697v-2.94l-6.267 3.636C.693 12.703 0 12.324 0 11.693V4.308c0-.63.693-1.01 1.233-.696L7.5 7.248v-2.94c0-.63.693-1.01 1.233-.696L15 7.248V4a.5.5 0 0 1 .5-.5" />
                                                 </svg>
                                         </button>
-                                        <button @click.stop="toggleShuffle" class="control-btn" :class="{ 'active': isShuffleOn }">
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16">
-                                                        <path fill-rule="evenodd" d="M0 3.5A.5.5 0 0 1 .5 3H1c2.202 0 3.827 1.24 4.874 2.418.49.552.865 1.102 1.126 1.532.26-.43.636-.98 1.126-1.532C9.173 4.24 10.798 3 13 3v1c-1.798 0-3.173 1.01-4.126 2.082A9.6 9.6 0 0 0 7.556 8a9.6 9.6 0 0 0 1.317 1.918C9.828 10.99 11.204 12 13 12v1c-2.202 0-3.827-1.24-4.874-2.418A10.6 10.6 0 0 1 7 9.05c-.26.43-.636.98-1.126 1.532C4.827 11.76 3.202 13 1 13H.5a.5.5 0 0 1 0-1H1c1.798 0 3.173-1.01 4.126-2.082A9.6 9.6 0 0 0 6.444 8a9.6 9.6 0 0 0-1.317-1.918C4.172 5.01 2.796 4 1 4H.5a.5.5 0 0 1-.5-.5"/>
-                                                        <path d="M13 5.466V1.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384l-2.36 1.966a.25.25 0 0 1-.41-.192m0 9v-3.932a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384l-2.36 1.966a.25.25 0 0 1-.41-.192"/>
+                                        <button @click.stop="toggleShuffle" class="control-btn"
+                                                :class="{ 'active': isShuffleOn }">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12"
+                                                        fill="currentColor" viewBox="0 0 16 16">
+                                                        <path fill-rule="evenodd"
+                                                                d="M0 3.5A.5.5 0 0 1 .5 3H1c2.202 0 3.827 1.24 4.874 2.418.49.552.865 1.102 1.126 1.532.26-.43.636-.98 1.126-1.532C9.173 4.24 10.798 3 13 3v1c-1.798 0-3.173 1.01-4.126 2.082A9.6 9.6 0 0 0 7.556 8a9.6 9.6 0 0 0 1.317 1.918C9.828 10.99 11.204 12 13 12v1c-2.202 0-3.827-1.24-4.874-2.418A10.6 10.6 0 0 1 7 9.05c-.26.43-.636.98-1.126 1.532C4.827 11.76 3.202 13 1 13H.5a.5.5 0 0 1 0-1H1c1.798 0 3.173-1.01 4.126-2.082A9.6 9.6 0 0 0 6.444 8a9.6 9.6 0 0 0-1.317-1.918C4.172 5.01 2.796 4 1 4H.5a.5.5 0 0 1-.5-.5" />
+                                                        <path
+                                                                d="M13 5.466V1.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384l-2.36 1.966a.25.25 0 0 1-.41-.192m0 9v-3.932a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384l-2.36 1.966a.25.25 0 0 1-.41-.192" />
                                                 </svg>
                                         </button>
                                 </div>
@@ -89,34 +109,41 @@
                         <div class="album-art" @click.stop="toggleVinylMode">
                                 <!-- 黑胶唱片模式 -->
                                 <div v-if="isVinylMode" class="vinyl-record" :class="{ 'spinning': isPlaying }">
+
                                         <div class="vinyl-disc">
                                                 <div class="vinyl-label">
-                                                        <img v-if="currentTrack.album?.images?.[0]" 
-                                                             :src="currentTrack.album.images[0].url"
-                                                             :alt="currentTrack.name">
+                                                        <img v-if="currentTrack.album?.images?.[0]"
+                                                                :src="currentTrack.album.images[0].url"
+                                                                :alt="currentTrack.name">
                                                         <div v-else class="album-placeholder">
-                                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" 
-                                                                     fill="currentColor" class="bi bi-music-note" viewBox="0 0 16 16">
-                                                                        <path d="M9 13c0 1.105-1.12 2-2.5 2S4 14.105 4 13s1.12-2 2.5-2 2.5.895 2.5 2"/>
-                                                                        <path fill-rule="evenodd" d="M9 3v10H8V3z"/>
-                                                                        <path d="M8 2.82a1 1 0 0 1 .804-.98l3-.6A1 1 0 0 1 13 2.22V4L8 5z"/>
+                                                                <svg xmlns="http://www.w3.org/2000/svg" width="16"
+                                                                        height="16" fill="currentColor"
+                                                                        class="bi bi-music-note" viewBox="0 0 16 16">
+                                                                        <path
+                                                                                d="M9 13c0 1.105-1.12 2-2.5 2S4 14.105 4 13s1.12-2 2.5-2 2.5.895 2.5 2" />
+                                                                        <path fill-rule="evenodd" d="M9 3v10H8V3z" />
+                                                                        <path
+                                                                                d="M8 2.82a1 1 0 0 1 .804-.98l3-.6A1 1 0 0 1 13 2.22V4L8 5z" />
                                                                 </svg>
                                                         </div>
                                                 </div>
                                                 <div class="vinyl-center-hole"></div>
                                         </div>
                                 </div>
+
                                 <!-- 普通封面模式 -->
                                 <div v-else>
-                                        <img v-if="currentTrack.album?.images?.[0]" 
-                                             :src="currentTrack.album.images[0].url"
-                                             :alt="currentTrack.name">
+                                        <img v-if="currentTrack.album?.images?.[0]"
+                                                :src="currentTrack.album.images[0].url" :alt="currentTrack.name">
                                         <div v-else class="album-placeholder">
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" 
-                                                     fill="currentColor" class="bi bi-music-note" viewBox="0 0 16 16">
-                                                        <path d="M9 13c0 1.105-1.12 2-2.5 2S4 14.105 4 13s1.12-2 2.5-2 2.5.895 2.5 2"/>
-                                                        <path fill-rule="evenodd" d="M9 3v10H8V3z"/>
-                                                        <path d="M8 2.82a1 1 0 0 1 .804-.98l3-.6A1 1 0 0 1 13 2.22V4L8 5z"/>
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"
+                                                        fill="currentColor" class="bi bi-music-note"
+                                                        viewBox="0 0 16 16">
+                                                        <path
+                                                                d="M9 13c0 1.105-1.12 2-2.5 2S4 14.105 4 13s1.12-2 2.5-2 2.5.895 2.5 2" />
+                                                        <path fill-rule="evenodd" d="M9 3v10H8V3z" />
+                                                        <path
+                                                                d="M8 2.82a1 1 0 0 1 .804-.98l3-.6A1 1 0 0 1 13 2.22V4L8 5z" />
                                                 </svg>
                                         </div>
                                 </div>
@@ -126,32 +153,44 @@
                                 <div class="track-artist">{{ getArtistNames(currentTrack.artists) }}</div>
                                 <div class="controls">
                                         <button @click.stop="previousTrack" class="control-btn">
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16">
-                                                        <path d="M.5 3.5A.5.5 0 0 0 0 4v8a.5.5 0 0 0 1 0V8.753l6.267 3.636c.54.313 1.233-.066 1.233-.697v-2.94l6.267 3.636c.54.314 1.233-.065 1.233-.696V4.308c0-.63-.693-1.01-1.233-.696L8.5 7.248v-2.94c0-.63-.692-1.01-1.233-.696L1 7.248V4a.5.5 0 0 0-.5-.5"/>
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12"
+                                                        fill="currentColor" viewBox="0 0 16 16">
+                                                        <path
+                                                                d="M.5 3.5A.5.5 0 0 0 0 4v8a.5.5 0 0 0 1 0V8.753l6.267 3.636c.54.313 1.233-.066 1.233-.697v-2.94l6.267 3.636c.54.314 1.233-.065 1.233-.696V4.308c0-.63-.693-1.01-1.233-.696L8.5 7.248v-2.94c0-.63-.692-1.01-1.233-.696L1 7.248V4a.5.5 0 0 0-.5-.5" />
                                                 </svg>
                                         </button>
                                         <button @click.stop="togglePlayback" class="play-btn">
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
-                                                        <path v-if="isPlaying" d="M6 3.5a.5.5 0 0 1 .5.5v8a.5.5 0 0 1-1 0V4a.5.5 0 0 1 .5-.5m4 0a.5.5 0 0 1 .5.5v8a.5.5 0 0 1-1 0V4a.5.5 0 0 1 .5-.5"/>
-                                                        <path v-else d="m11.596 8.697-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 0 1 0 1.393"/>
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14"
+                                                        fill="currentColor" viewBox="0 0 16 16">
+                                                        <path v-if="isPlaying"
+                                                                d="M6 3.5a.5.5 0 0 1 .5.5v8a.5.5 0 0 1-1 0V4a.5.5 0 0 1 .5-.5m4 0a.5.5 0 0 1 .5.5v8a.5.5 0 0 1-1 0V4a.5.5 0 0 1 .5-.5" />
+                                                        <path v-else
+                                                                d="m11.596 8.697-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 0 1 0 1.393" />
                                                 </svg>
                                         </button>
                                         <button @click.stop="nextTrack" class="control-btn">
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16">
-                                                        <path d="M15.5 3.5a.5.5 0 0 1 .5.5v8a.5.5 0 0 1-1 0V8.753l-6.267 3.636c-.54.313-1.233-.066-1.233-.697v-2.94l-6.267 3.636C.693 12.703 0 12.324 0 11.693V4.308c0-.63.693-1.01 1.233-.696L7.5 7.248v-2.94c0-.63.693-1.01 1.233-.696L15 7.248V4a.5.5 0 0 1 .5-.5"/>
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12"
+                                                        fill="currentColor" viewBox="0 0 16 16">
+                                                        <path
+                                                                d="M15.5 3.5a.5.5 0 0 1 .5.5v8a.5.5 0 0 1-1 0V8.753l-6.267 3.636c-.54.313-1.233-.066-1.233-.697v-2.94l-6.267 3.636C.693 12.703 0 12.324 0 11.693V4.308c0-.63.693-1.01 1.233-.696L7.5 7.248v-2.94c0-.63.693-1.01 1.233-.696L15 7.248V4a.5.5 0 0 1 .5-.5" />
                                                 </svg>
                                         </button>
-                                        <button @click.stop="toggleShuffle" class="control-btn" :class="{ 'active': isShuffleOn }">
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16">
-                                                        <path fill-rule="evenodd" d="M0 3.5A.5.5 0 0 1 .5 3H1c2.202 0 3.827 1.24 4.874 2.418.49.552.865 1.102 1.126 1.532.26-.43.636-.98 1.126-1.532C9.173 4.24 10.798 3 13 3v1c-1.798 0-3.173 1.01-4.126 2.082A9.6 9.6 0 0 0 7.556 8a9.6 9.6 0 0 0 1.317 1.918C9.828 10.99 11.204 12 13 12v1c-2.202 0-3.827-1.24-4.874-2.418A10.6 10.6 0 0 1 7 9.05c-.26.43-.636.98-1.126 1.532C4.827 11.76 3.202 13 1 13H.5a.5.5 0 0 1 0-1H1c1.798 0 3.173-1.01 4.126-2.082A9.6 9.6 0 0 0 6.444 8a9.6 9.6 0 0 0-1.317-1.918C4.172 5.01 2.796 4 1 4H.5a.5.5 0 0 1-.5-.5"/>
-                                                        <path d="M13 5.466V1.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384l-2.36 1.966a.25.25 0 0 1-.41-.192m0 9v-3.932a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384l-2.36 1.966a.25.25 0 0 1-.41-.192"/>
+                                        <button @click.stop="toggleShuffle" class="control-btn"
+                                                :class="{ 'active': isShuffleOn }">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12"
+                                                        fill="currentColor" viewBox="0 0 16 16">
+                                                        <path fill-rule="evenodd"
+                                                                d="M0 3.5A.5.5 0 0 1 .5 3H1c2.202 0 3.827 1.24 4.874 2.418.49.552.865 1.102 1.126 1.532.26-.43.636-.98 1.126-1.532C9.173 4.24 10.798 3 13 3v1c-1.798 0-3.173 1.01-4.126 2.082A9.6 9.6 0 0 0 7.556 8a9.6 9.6 0 0 0 1.317 1.918C9.828 10.99 11.204 12 13 12v1c-2.202 0-3.827-1.24-4.874-2.418A10.6 10.6 0 0 1 7 9.05c-.26.43-.636.98-1.126 1.532C4.827 11.76 3.202 13 1 13H.5a.5.5 0 0 1 0-1H1c1.798 0 3.173-1.01 4.126-2.082A9.6 9.6 0 0 0 6.444 8a9.6 9.6 0 0 0-1.317-1.918C4.172 5.01 2.796 4 1 4H.5a.5.5 0 0 1-.5-.5" />
+                                                        <path
+                                                                d="M13 5.466V1.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384l-2.36 1.966a.25.25 0 0 1-.41-.192m0 9v-3.932a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384l-2.36 1.966a.25.25 0 0 1-.41-.192" />
                                                 </svg>
                                         </button>
                                 </div>
                                 <div class="progress-container">
                                         <div class="progress-bar" @click.stop="seekToPosition">
                                                 <div class="progress-track">
-                                                        <div class="progress-fill" :style="{ width: progressPercent + '%' }"></div>
+                                                        <div class="progress-fill"
+                                                                :style="{ width: progressPercent + '%' }"></div>
                                                 </div>
                                         </div>
                                 </div>
@@ -415,8 +454,8 @@ onUnmounted(() => {
 }
 
 .music-player-widget:hover {
-        background: rgba(255, 255, 255, 0.12);
-        border-color: rgba(255, 255, 255, 0.25);
+        background: var(--app-bg-hover);
+        border-color: var(--app-border);
         transform: translateY(-2px);
 }
 
@@ -473,21 +512,23 @@ onUnmounted(() => {
 
 /* 黑胶唱片样式 */
 .vinyl-record {
-        width: 100%;
-        height: 100%;
+        width: 95%;
+        height: 95%;
         position: relative;
         border-radius: 50%;
-        transition: transform 0.3s ease;
+        animation: spin 3s linear infinite;
 }
 
-.vinyl-record.spinning {
-        animation: spin 3s linear infinite;
+/* 暂停时停止动画 */
+.vinyl-record:not(.spinning) {
+        animation-play-state: paused;
 }
 
 @keyframes spin {
         from {
                 transform: rotate(0deg);
         }
+
         to {
                 transform: rotate(360deg);
         }
@@ -496,14 +537,20 @@ onUnmounted(() => {
 .vinyl-disc {
         width: 100%;
         height: 100%;
-        background: 
-                radial-gradient(circle at center, #1a1a1a 15%, #2d2d2d 15%, #2d2d2d 25%, #1a1a1a 25%, #1a1a1a 35%, #2d2d2d 35%),
-                radial-gradient(circle at center, transparent 45%, #0d0d0d 45%);
         border-radius: 50%;
         position: relative;
-        box-shadow: 
-                inset 0 0 10px rgba(0, 0, 0, 0.5),
-                0 2px 8px rgba(0, 0, 0, 0.3);
+        box-shadow:
+                inset 0 0 15px rgba(0, 0, 0, 0.7),
+                0 5px 20px rgba(0, 0, 0, 0.5);
+
+        background-color: #0a0a0a;
+        /* 关键：移除这里的光泽渐变，只保留凹槽纹理 */
+        background-image:
+                repeating-radial-gradient(circle at center,
+                        rgba(255, 255, 255, 0.03) 0,
+                        rgba(255, 255, 255, 0.03) 1px,
+                        transparent 1px,
+                        transparent 2.5px);
 }
 
 .vinyl-label {
@@ -519,7 +566,6 @@ onUnmounted(() => {
         border: 2px solid var(--app-border);
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
-
 .vinyl-label img {
         width: 100%;
         height: 100%;
@@ -619,7 +665,7 @@ onUnmounted(() => {
 }
 
 .play-btn:hover {
-        background: var(--accent-primary-dark, #1ed760);
+        background: var(--accent-darker, #1ed760);
 }
 
 .control-btn.disabled {
@@ -670,12 +716,12 @@ onUnmounted(() => {
 }
 
 .progress-bar:hover .progress-fill {
-        background: var(--accent-primary-light, #1ed760);
+        background: var(--accent-lighter, #1ed760);
 }
 
 /* 特殊状态样式调整 */
 .login-prompt .track-title {
-        color: #1DB954;
+        color: var(--accent-primary, #1DB954);
         font-weight: 700;
 }
 

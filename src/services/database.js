@@ -21,6 +21,9 @@ db.version(1).stores({
          * groupIds: 关联的群组ID数组
          * contextMemorySettings: 上下文记忆条数设置
          * avatarLibrary: 头像库数组（用于用户人格和角色）
+         * currentAvatar: 当前使用的头像URL
+         * chatBackground: 聊天背景URL
+         * worldbookGroupIds: 关联的世界书分组ID数组
          */
         actors: `
         &id,
@@ -33,6 +36,9 @@ db.version(1).stores({
         contextMemorySettings,
         status,
         *avatarLibrary,
+        *worldbookGroupIds,
+        currentAvatar,
+        chatBackground,
         isHidden
         `,
 
@@ -124,7 +130,7 @@ db.version(1).stores({
         /**
          * 辅助与设置表
          */
-        globalSettings: '&id, activeApiProfileId, activeTtsProfileId',
+        globalSettings: '&id', // 移除具体字段限制，支持动态字段
         apiProfiles: '++id, &profileName',
         ttsProfiles: '++id, &profileName',
         homeScreenLayout: '&id',
@@ -148,7 +154,19 @@ db.version(1).stores({
         widgetSettings: '&id, type, settings',
         stickers: '++id, &url, name, order',
         worldbooks: '&id, name, content, type, keywords, groupId, createTime, updateTime',
-        worldbookGroups: '&id, name'
+        worldbookGroups: '&id, name',
+        /**
+         * 表：favorites (收藏)
+         * 存储用户收藏的动态、聊天记录等
+         * ++id: 自增主键
+         * eventId: 关联的事件ID
+         * eventType: 事件类型
+         * authorId: 作者ID
+         * authorName: 作者名称
+         * content: 收藏内容快照
+         * createTime: 收藏时间
+         */
+        favorites: '++id, eventId, eventType, authorId, authorName, content, createTime, [authorId+eventType]'
         // 你未来可以增加更多的表，例如 'gallery', 'musicPlaylists' 等。
 });
 
