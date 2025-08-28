@@ -1,8 +1,9 @@
 <template>
         <div class="page-container">
-                <AppHeader 
-                        :title="multiSelectMode ? `已选择 ${selectedMessages.size} 条消息` : (isTyping ? '正在输入中…' : (actor?.name || '聊天'))" 
-                        :override-back-action="multiSelectMode ? exitMultiSelectMode : goBack">
+                <AppHeader
+                        :title="multiSelectMode ? `已选择 ${selectedMessages.size} 条消息` : (isTyping ? '正在输入中…' : (actor?.name || '聊天'))"
+                        :override-back-action="multiSelectMode ? exitMultiSelectMode : goBack"
+                        :title-clickable="!multiSelectMode && !!actor" :on-title-click="showStatusDetail">
                         <template #subtitle v-if="!multiSelectMode">
                                 <div class="status-indicator" v-if="actor">
                                         <div class="status-dot" :style="{ 
@@ -15,31 +16,44 @@
                         </template>
                         <template #left v-if="multiSelectMode">
                                 <div class="multi-select-actions">
-                                        <button class="multi-select-btn delete-btn" @click="deleteSelectedMessages" :disabled="selectedMessages.size === 0">
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                                                        <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z"/>
-                                                        <path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z"/>
+                                        <button class="multi-select-btn delete-btn" @click="deleteSelectedMessages"
+                                                :disabled="selectedMessages.size === 0">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                                                        fill="currentColor" viewBox="0 0 16 16">
+                                                        <path
+                                                                d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z" />
+                                                        <path
+                                                                d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z" />
                                                 </svg>
                                                 <span>删除</span>
                                         </button>
-                                        <button class="multi-select-btn favorite-btn" @click="favoriteSelectedMessages" :disabled="selectedMessages.size === 0">
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                                                        <path d="m8 2.748-.717-.737C5.6.281 2.514.878 1.4 3.053c-.523 1.023-.641 2.5.314 4.385.92 1.815 2.834 3.989 6.286 6.357 3.452-2.368 5.365-4.542 6.286-6.357.955-1.886.838-3.362.314-4.385C13.486.878 10.4.28 8.717 2.01zM8 15C-7.333 4.868 3.279-3.04 7.824 1.143q.09.083.176.171a3 3 0 0 1 .176-.17C12.72-3.042 23.333 4.867 8 15"/>
+                                        <button class="multi-select-btn favorite-btn" @click="favoriteSelectedMessages"
+                                                :disabled="selectedMessages.size === 0">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                                                        fill="currentColor" viewBox="0 0 16 16">
+                                                        <path
+                                                                d="m8 2.748-.717-.737C5.6.281 2.514.878 1.4 3.053c-.523 1.023-.641 2.5.314 4.385.92 1.815 2.834 3.989 6.286 6.357 3.452-2.368 5.365-4.542 6.286-6.357.955-1.886.838-3.362.314-4.385C13.486.878 10.4.28 8.717 2.01zM8 15C-7.333 4.868 3.279-3.04 7.824 1.143q.09.083.176.171a3 3 0 0 1 .176-.17C12.72-3.042 23.333 4.867 8 15" />
                                                 </svg>
                                                 <span>收藏</span>
                                         </button>
-                                        <button class="multi-select-btn forward-btn" @click="forwardSelectedMessages" :disabled="selectedMessages.size === 0">
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                                                        <path d="M1.5 1.5A.5.5 0 0 1 2 1h4.5a.5.5 0 0 1 0 1h-4v4a.5.5 0 0 1-1 0zm13 0a.5.5 0 0 1 .5.5v4a.5.5 0 0 1-1 0V2h-4a.5.5 0 0 1 0-1h4.5zM2 14.5a.5.5 0 0 1-.5-.5V10a.5.5 0 0 1 1 0v4h4a.5.5 0 0 1 0 1H2zm12 0h-4a.5.5 0 0 1 0-1h4v-4a.5.5 0 0 1 1 0v4a.5.5 0 0 1-.5.5z"/>
+                                        <button class="multi-select-btn forward-btn" @click="forwardSelectedMessages"
+                                                :disabled="selectedMessages.size === 0">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                                                        fill="currentColor" viewBox="0 0 16 16">
+                                                        <path
+                                                                d="M1.5 1.5A.5.5 0 0 1 2 1h4.5a.5.5 0 0 1 0 1h-4v4a.5.5 0 0 1-1 0zm13 0a.5.5 0 0 1 .5.5v4a.5.5 0 0 1-1 0V2h-4a.5.5 0 0 1 0-1h4.5zM2 14.5a.5.5 0 0 1-.5-.5V10a.5.5 0 0 1 1 0v4h4a.5.5 0 0 1 0 1H2zm12 0h-4a.5.5 0 0 1 0-1h4v-4a.5.5 0 0 1 1 0v4a.5.5 0 0 1-.5.5z" />
                                                 </svg>
                                                 <span>转发</span>
                                         </button>
                                 </div>
                         </template>
                         <template #right>
-                                <button v-if="multiSelectMode" class="header-action-button" @click="exitMultiSelectMode">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
-                                                <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0M5.354 4.646a.5.5 0 1 0-.708.708L7.293 8l-2.647 2.646a.5.5 0 0 0 .708.708L8 8.707l2.646 2.647a.5.5 0 0 0 .708-.708L8.707 8l2.647-2.646a.5.5 0 0 0-.708-.708L8 7.293z"/>
+                                <button v-if="multiSelectMode" class="header-action-button"
+                                        @click="exitMultiSelectMode">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"
+                                                fill="currentColor" viewBox="0 0 16 16">
+                                                <path
+                                                        d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0M5.354 4.646a.5.5 0 1 0-.708.708L7.293 8l-2.647 2.646a.5.5 0 0 0 .708.708L8 8.707l2.646 2.647a.5.5 0 0 0 .708-.708L8.707 8l2.647-2.646a.5.5 0 0 0-.708-.708L8 7.293z" />
                                         </svg>
                                 </button>
                                 <button v-else class="header-action-button" @click="goToProfile">
@@ -53,8 +67,7 @@
                 </AppHeader>
 
                 <!-- 聊天室音乐播放器 -->
-                <ChatMusicPlayer ref="chatMusicPlayer" 
-                        :listen-together="listenTogetherMode.active"
+                <ChatMusicPlayer ref="chatMusicPlayer" :listen-together="listenTogetherMode.active"
                         :listen-together-start-time="listenTogetherMode.startTime"
                         :listen-together-duration="currentActorListenTogetherDuration"
                         :listen-together-partner="actor?.name"
@@ -67,306 +80,358 @@
                                 <div v-if="isLoadingMore" class="loading-indicator">
                                         <p>加载更多消息...</p>
                                 </div>
-                                <div v-for="message in displayedMessages" :key="message.id" class="message-item"
-                                        :class="{ 
+                                <div v-for="message in displayedMessages" :key="message.id" class="message-item" :class="{ 
                                                 'own-message': message.actorId === userActorId,
                                                 'system-message': message.actorId === 'system' && message.content.isVisible,
                                                 'multi-select-mode': multiSelectMode,
                                                 'selected': selectedMessages.has(message.id || message.timestamp)
-                                        }"
-                                        v-show="!(message.actorId === 'system' && !message.content.isVisible)"
+                                        }" v-show="!(message.actorId === 'system' && !message.content.isVisible)"
                                         @click="multiSelectMode ? toggleMessageSelection(message) : null">
-                                        
+
                                         <!-- 多选模式复选框 -->
-                                        <div v-if="multiSelectMode" class="message-checkbox" @click.stop="toggleMessageSelection(message)">
-                                                <input type="checkbox" :checked="selectedMessages.has(message.id || message.timestamp)" @change="toggleMessageSelection(message)">
+                                        <div v-if="multiSelectMode" class="message-checkbox"
+                                                @click.stop="toggleMessageSelection(message)">
+                                                <input type="checkbox"
+                                                        :checked="selectedMessages.has(message.id || message.timestamp)"
+                                                        @change="toggleMessageSelection(message)">
                                         </div>
-                                        
+
                                         <!-- 系统消息 - 居中显示 -->
-                                        <div v-if="message.actorId === 'system' && message.content.isVisible" 
-                                             class="system-message-content">
+                                        <div v-if="message.actorId === 'system' && message.content.isVisible"
+                                                class="system-message-content">
                                                 <span>{{ message.content.content }}</span>
                                         </div>
-                                        
+
                                         <!-- 普通消息 -->
                                         <template v-else-if="message.actorId !== 'system'">
                                                 <!-- 对方头像 -->
                                                 <div class="message-avatar" v-if="message.actorId !== userActorId"
-                                                     @click="handleAvatarClick"
-                                                     @touchstart="handleAvatarTouchStart"
-                                                     @touchend="handleAvatarTouchEnd">
-                                                        <img v-if="getActorAvatar(actor)" :src="getActorAvatar(actor)" :alt="actor?.name">
-                                                        <span v-else class="avatar-initial">{{ actor?.name?.[0] || '#' }}</span>
+                                                        @click="handleAvatarClick" @touchstart="handleAvatarTouchStart"
+                                                        @touchend="handleAvatarTouchEnd">
+                                                        <img v-if="getActorAvatar(actor)" :src="getActorAvatar(actor)"
+                                                                :alt="actor?.name">
+                                                        <span v-else class="avatar-initial">{{ actor?.name?.[0] || '#'
+                                                                }}</span>
                                                 </div>
 
                                                 <!-- 用户头像 -->
                                                 <div class="message-avatar" v-else>
-                                                        <img v-if="currentUserPersona?.avatar" :src="currentUserPersona.avatar"
+                                                        <img v-if="currentUserPersona?.avatar"
+                                                                :src="currentUserPersona.avatar"
                                                                 :alt="currentUserPersona?.name || 'User'">
                                                         <span v-else class="avatar-initial">{{
                                                                 getInitial(currentUserPersona?.name || 'User') }}</span>
                                                 </div>
-                                        								<div class="message-content"
-									@contextmenu.prevent="handleMessageRightClick($event, message)"
-									@touchstart="handleMessageTouchStart($event, message)"
-									@touchend="handleMessageTouchEnd"
-									@touchmove="handleMessageTouchMove"
-									style="user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent;">
-									<!-- 文字消息 -->
-									<div v-if="!message.content.type || message.content.type === 'text'"
-										class="message-bubble">
-										<!-- 引用消息显示 -->
-										<div v-if="message.content.quotedMessage" class="quoted-message-in-bubble">
-											<div class="quoted-message-bar"></div>
-											<div class="quoted-message-info">
-												<span class="quoted-message-author-name">
-													{{ message.content.quotedMessage.actorId === userActorId ? '你' : (actor?.name || '对方') }}
-												</span>
-												<div class="quoted-message-content-text">
-													{{ getQuotedMessageText(message.content.quotedMessage) }}
-												</div>
-											</div>
-										</div>
-										<p>{{ message.content.content }}</p>
-										<div v-if="message.content.action" class="message-action">
-											<em>*{{ message.content.action }}*</em>
-										</div>
-									</div>
-
-                                                <!-- 表情包消息 -->
-                                                <div v-else-if="message.content.type === 'sticker'"
-                                                        class="sticker-message">
-                                                        <img :src="message.content.url"
-                                                                :alt="message.content.name || '表情包'"
-                                                                class="sticker-image" />
-                                                </div>
-
-                                                <!-- 图片消息 -->
-                                                <div v-else-if="message.content.type === 'image'" class="image-message">
-                                                        <!-- 文字图片 -->
-                                                        <div v-if="message.content.subtype === 'text'"
-                                                                class="text-image-placeholder">
-                                                                <div class="text-image-description">{{
-                                                                        message.content.description }}</div>
-                                                        </div>
-                                                        <!-- 真实图片 -->
-                                                        <img v-else :src="message.content.url"
-                                                                :alt="message.content.fileName || '图片'"
-                                                                class="real-image" @load="scrollToBottom" />
-                                                </div>
-
-                                                <!-- 支付消息 -->
-                                                <div v-else-if="message.content.type === 'payment'"
-                                                        class="payment-message"
-                                                        :class="{ 'clickable': message.actorId !== userActorId && !message.content.status }"
-                                                        @click="message.actorId !== userActorId && !message.content.status ? handlePaymentClick(message) : null">
-                                                        <div class="payment-header">
-                                                                <span class="payment-type">
-                                                                        {{ message.content.subtype === 'transfer' ? '转账'
-                                                                        : '代付' }}
-                                                                </span>
-                                                        </div>
-                                                        <div class="payment-amount">¥{{
-                                                                message.content.amount.toFixed(2) }}</div>
-                                                        <div v-if="message.content.productInfo" class="payment-product">
-                                                                商品：{{ message.content.productInfo }}
-                                                        </div>
-                                                        <div v-if="message.content.message" class="payment-note">
-                                                                {{ message.content.message }}
-                                                        </div>
-                                                        
-                                                        <!-- 支付状态显示 -->
-                                                        <div v-if="message.content.status" class="payment-status">
-                                                                <div v-if="message.content.status === 'accepted'" class="status-accepted">
-                                                                        ✓ 已接受
+                                                <div class="message-content"
+                                                        @contextmenu.prevent="handleMessageRightClick($event, message)"
+                                                        @touchstart="handleMessageTouchStart($event, message)"
+                                                        @touchend="handleMessageTouchEnd"
+                                                        @touchmove="handleMessageTouchMove"
+                                                        style="user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent;">
+                                                        <!-- 文字消息 -->
+                                                        <div v-if="!message.content.type || message.content.type === 'text'"
+                                                                class="message-bubble">
+                                                                <!-- 引用消息显示 -->
+                                                                <div v-if="message.content.quotedMessage"
+                                                                        class="quoted-message-in-bubble">
+                                                                        <div class="quoted-message-bar"></div>
+                                                                        <div class="quoted-message-info">
+                                                                                <span
+                                                                                        class="quoted-message-author-name">
+                                                                                        {{
+                                                                                        message.content.quotedMessage.actorId
+                                                                                        === userActorId ? '你' :
+                                                                                        (actor?.name || '对方') }}
+                                                                                </span>
+                                                                                <div
+                                                                                        class="quoted-message-content-text">
+                                                                                        {{
+                                                                                        getQuotedMessageText(message.content.quotedMessage)
+                                                                                        }}
+                                                                                </div>
+                                                                        </div>
                                                                 </div>
-                                                                <div v-else-if="message.content.status === 'rejected'" class="status-rejected">
-                                                                        ✗ 已拒绝
+                                                                <p>{{ message.content.content }}</p>
+                                                                <div v-if="message.content.action"
+                                                                        class="message-action">
+                                                                        <em>*{{ message.content.action }}*</em>
                                                                 </div>
                                                         </div>
-                                                        
-                                                        <!-- 未处理的支付消息提示 -->
-                                                        <div v-else-if="message.actorId !== userActorId" class="payment-pending">
-                                                                点击处理
-                                                        </div>
-                                                </div>
 
-                                                <!-- 拍一拍消息 -->
-                                                <div v-else-if="message.content.type === 'pat'" class="pat-message message-bubble">
-                                                        <p>
-                                                                {{ message.actorId === userActorId ? 
-                                                                   `你拍了拍${message.content.target}` : 
-                                                                   `${actor?.name || '对方'}拍了拍你` }}
-                                                                <span v-if="message.content.suffix" class="pat-suffix">，{{ message.content.suffix }}</span>
-                                                        </p>
-                                                </div>
-
-                                                <!-- 语音消息 -->
-                                                <VoiceBubble v-else-if="message.content.type === 'voice'"
-                                                        :text="message.content.text"
-                                                        :duration="message.content.duration"
-                                                        :is-own-message="message.actorId === userActorId"
-                                                        :auto-show="personalSettings.voiceMessage?.autoShowText ?? true" />
-
-                                                <!-- 一起听邀请消息 -->
-                                                <div v-else-if="message.content.type === 'listen-together-invite'"
-                                                        class="listen-together-invite message-bubble">
-                                                        <div class="invite-header">
-                                                                <svg xmlns="http://www.w3.org/2000/svg" width="16"
-                                                                        height="16" fill="currentColor"
-                                                                        class="bi bi-headphones" viewBox="0 0 16 16">
-                                                                        <path
-                                                                                d="M8 3a5 5 0 0 0-5 5v1h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V8a6 6 0 1 1 12 0v5a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1V8a5 5 0 0 0-5-5" />
-                                                                </svg>
-                                                                <span>一起听音乐</span>
+                                                        <!-- 表情包消息 -->
+                                                        <div v-else-if="message.content.type === 'sticker'"
+                                                                class="sticker-message">
+                                                                <img :src="message.content.url"
+                                                                        :alt="message.content.name || '表情包'"
+                                                                        class="sticker-image" />
                                                         </div>
-                                                        <div class="playlist-info">
-                                                                <div class="playlist-name">{{
-                                                                        message.content.playlist.name }}</div>
-                                                                <div class="playlist-tracks">{{
-                                                                        message.content.playlist.tracks }} 首歌曲</div>
+
+                                                        <!-- 图片消息 -->
+                                                        <div v-else-if="message.content.type === 'image'"
+                                                                class="image-message">
+                                                                <!-- 文字图片 -->
+                                                                <div v-if="message.content.subtype === 'text'"
+                                                                        class="text-image-placeholder">
+                                                                        <div class="text-image-description">{{
+                                                                                message.content.description }}</div>
+                                                                </div>
+                                                                <!-- 真实图片 -->
+                                                                <img v-else :src="message.content.url"
+                                                                        :alt="message.content.fileName || '图片'"
+                                                                        class="real-image" @load="scrollToBottom" />
                                                         </div>
-                                                        <div class="invite-message">{{ message.content.message }}</div>
-                                                        <div v-if="message.content.status === 'pending' && message.actorId !== userActorId"
-                                                                class="invite-actions">
-                                                                <button class="accept-btn"
-                                                                        @click="acceptListenTogetherInvite(message.timestamp, message.content.playlist)">
-                                                                        接受
+
+                                                        <!-- 支付消息 -->
+                                                        <div v-else-if="message.content.type === 'payment'"
+                                                                class="payment-message"
+                                                                :class="{ 'clickable': message.actorId !== userActorId && !message.content.status }"
+                                                                @click="message.actorId !== userActorId && !message.content.status ? handlePaymentClick(message) : null">
+                                                                <div class="payment-header">
+                                                                        <span class="payment-type">
+                                                                                {{ message.content.subtype ===
+                                                                                'transfer' ? '转账'
+                                                                                : '代付' }}
+                                                                        </span>
+                                                                </div>
+                                                                <div class="payment-amount">¥{{
+                                                                        message.content.amount.toFixed(2) }}</div>
+                                                                <div v-if="message.content.productInfo"
+                                                                        class="payment-product">
+                                                                        商品：{{ message.content.productInfo }}
+                                                                </div>
+                                                                <div v-if="message.content.message"
+                                                                        class="payment-note">
+                                                                        {{ message.content.message }}
+                                                                </div>
+
+                                                                <!-- 支付状态显示 -->
+                                                                <div v-if="message.content.status"
+                                                                        class="payment-status">
+                                                                        <div v-if="message.content.status === 'accepted'"
+                                                                                class="status-accepted">
+                                                                                ✓ 已接受
+                                                                        </div>
+                                                                        <div v-else-if="message.content.status === 'rejected'"
+                                                                                class="status-rejected">
+                                                                                ✗ 已拒绝
+                                                                        </div>
+                                                                </div>
+
+                                                                <!-- 未处理的支付消息提示 -->
+                                                                <div v-else-if="message.actorId !== userActorId"
+                                                                        class="payment-pending">
+                                                                        点击处理
+                                                                </div>
+                                                        </div>
+
+                                                        <!-- 拍一拍消息 -->
+                                                        <div v-else-if="message.content.type === 'pat'"
+                                                                class="pat-message message-bubble">
+                                                                <p>
+                                                                        {{ message.actorId === userActorId ?
+                                                                        `你拍了拍${message.content.target}` :
+                                                                        `${actor?.name || '对方'}拍了拍你` }}
+                                                                        <span v-if="message.content.suffix"
+                                                                                class="pat-suffix">，{{
+                                                                                message.content.suffix }}</span>
+                                                                </p>
+                                                        </div>
+
+                                                        <!-- 语音消息 -->
+                                                        <VoiceBubble v-else-if="message.content.type === 'voice'"
+                                                                :text="message.content.text"
+                                                                :duration="message.content.duration"
+                                                                :is-own-message="message.actorId === userActorId"
+                                                                :auto-show-text="personalSettings.voiceMessage?.autoShowText ?? true" />
+
+                                                        <!-- AI语音消息 -->
+                                                        <VoiceMessage v-else-if="message.content.type === 'ai_voice'"
+                                                                :audio-url="message.content.audioUrl"
+                                                                :text="message.content.text"
+                                                                :duration="message.content.duration"
+                                                                :is-own-message="message.actorId === userActorId" />
+
+                                                        <!-- 一起听邀请消息 -->
+                                                        <div v-else-if="message.content.type === 'listen-together-invite'"
+                                                                class="listen-together-invite message-bubble">
+                                                                <div class="invite-header">
+                                                                        <svg xmlns="http://www.w3.org/2000/svg"
+                                                                                width="16" height="16"
+                                                                                fill="currentColor"
+                                                                                class="bi bi-headphones"
+                                                                                viewBox="0 0 16 16">
+                                                                                <path
+                                                                                        d="M8 3a5 5 0 0 0-5 5v1h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V8a6 6 0 1 1 12 0v5a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1V8a5 5 0 0 0-5-5" />
+                                                                        </svg>
+                                                                        <span>一起听音乐</span>
+                                                                </div>
+                                                                <div class="playlist-info">
+                                                                        <div class="playlist-name">{{
+                                                                                message.content.playlist.name }}</div>
+                                                                        <div class="playlist-tracks">{{
+                                                                                message.content.playlist.tracks }} 首歌曲
+                                                                        </div>
+                                                                </div>
+                                                                <div class="invite-message">{{ message.content.message
+                                                                        }}</div>
+                                                                <div v-if="message.content.status === 'pending' && message.actorId !== userActorId"
+                                                                        class="invite-actions">
+                                                                        <button class="accept-btn"
+                                                                                @click="acceptListenTogetherInvite(message.timestamp, message.content.playlist)">
+                                                                                接受
+                                                                        </button>
+                                                                        <button class="decline-btn"
+                                                                                @click="declineListenTogetherInvite(message.timestamp)">
+                                                                                拒绝
+                                                                        </button>
+                                                                </div>
+                                                                <div v-else-if="message.content.status === 'accepted'"
+                                                                        class="invite-status accepted">
+                                                                        ✓ 已接受邀请
+                                                                </div>
+                                                                <div v-else-if="message.content.status === 'declined'"
+                                                                        class="invite-status declined">
+                                                                        ✗ 已拒绝邀请
+                                                                </div>
+                                                        </div>
+
+                                                        <!-- 一起听接受消息 -->
+                                                        <div v-else-if="message.content.type === 'listen-together-accept'"
+                                                                class="listen-together-accept message-bubble">
+                                                                <div class="accept-icon">
+                                                                        <svg xmlns="http://www.w3.org/2000/svg"
+                                                                                width="16" height="16"
+                                                                                fill="currentColor"
+                                                                                class="bi bi-check-circle"
+                                                                                viewBox="0 0 16 16">
+                                                                                <path
+                                                                                        d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16" />
+                                                                                <path
+                                                                                        d="m10.97 4.97-.02.022-3.473 4.425-2.093-2.094a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-1.071-1.05" />
+                                                                        </svg>
+                                                                </div>
+                                                                <span>{{ message.content.message }}</span>
+                                                        </div>
+
+                                                        <!-- 系统消息 -->
+                                                        <div v-else-if="message.content.type === 'system'"
+                                                                class="system-message">
+                                                                <div v-if="message.content.isVisible"
+                                                                        class="system-message-content">
+                                                                        {{ message.content.content }}
+                                                                </div>
+                                                                <!-- 不可见的系统消息不显示 -->
+                                                        </div>
+
+                                                        <!-- 转发消息 -->
+                                                        <ForwardedMessage
+                                                                v-else-if="message.content.type === 'forwarded_message'"
+                                                                :fromCharName="message.content.fromCharName"
+                                                                :userPersonaName="message.content.userPersonaName"
+                                                                :messages="message.content.messages" />
+
+                                                        <!-- 音乐卡片消息 -->
+                                                        <div v-else-if="message.content.type === 'music-card'"
+                                                                class="music-card message-bubble">
+                                                                <div class="music-card-header">
+                                                                        <svg xmlns="http://www.w3.org/2000/svg"
+                                                                                width="16" height="16"
+                                                                                fill="currentColor"
+                                                                                class="bi bi-music-note"
+                                                                                viewBox="0 0 16 16">
+                                                                                <path
+                                                                                        d="M9 13c0 1.105-1.12 2-2.5 2S4 14.105 4 13s1.12-2 2.5-2 2.5.895 2.5 2" />
+                                                                                <path fill-rule="evenodd"
+                                                                                        d="M9 3v10H8V3z" />
+                                                                                <path
+                                                                                        d="M8 2.82a1 1 0 0 1 .804-.98l3-.6A1 1 0 0 1 13 2.22V4L8 5z" />
+                                                                        </svg>
+                                                                        <span>音乐分享</span>
+                                                                </div>
+                                                                <div class="song-info">
+                                                                        <div class="song-name">{{
+                                                                                message.content.song.name }}
+                                                                        </div>
+                                                                        <div class="song-artist">{{
+                                                                                getArtistNames(message.content.song.artists)
+                                                                                }}
+                                                                        </div>
+                                                                        <div class="song-album">{{
+                                                                                message.content.song.album.name }}</div>
+                                                                </div>
+                                                                <div class="music-card-message">{{
+                                                                        message.content.message }}
+                                                                </div>
+                                                                <button class="play-song-btn"
+                                                                        @click="playSingleSong(message.content.song)">
+                                                                        <svg xmlns="http://www.w3.org/2000/svg"
+                                                                                width="16" height="16"
+                                                                                fill="currentColor"
+                                                                                class="bi bi-play-circle"
+                                                                                viewBox="0 0 16 16">
+                                                                                <path
+                                                                                        d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16" />
+                                                                                <path
+                                                                                        d="M6.271 5.055a.5.5 0 0 1 .52.038L11 7.055a.5.5 0 0 1 0 .89L6.791 9.907a.5.5 0 0 1-.791-.389V5.482a.5.5 0 0 1 .271-.427" />
+                                                                        </svg>
+                                                                        播放
                                                                 </button>
-                                                                <button class="decline-btn"
-                                                                        @click="declineListenTogetherInvite(message.timestamp)">
-                                                                        拒绝
-                                                                </button>
                                                         </div>
-                                                        <div v-else-if="message.content.status === 'accepted'"
-                                                                class="invite-status accepted">
-                                                                ✓ 已接受邀请
-                                                        </div>
-                                                        <div v-else-if="message.content.status === 'declined'"
-                                                                class="invite-status declined">
-                                                                ✗ 已拒绝邀请
-                                                        </div>
-                                                </div>
 
-                                                <!-- 一起听接受消息 -->
-                                                <div v-else-if="message.content.type === 'listen-together-accept'"
-                                                        class="listen-together-accept message-bubble">
-                                                        <div class="accept-icon">
-                                                                <svg xmlns="http://www.w3.org/2000/svg" width="16"
-                                                                        height="16" fill="currentColor"
-                                                                        class="bi bi-check-circle" viewBox="0 0 16 16">
-                                                                        <path
-                                                                                d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16" />
-                                                                        <path
-                                                                                d="m10.97 4.97-.02.022-3.473 4.425-2.093-2.094a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-1.071-1.05" />
-                                                                </svg>
-                                                        </div>
-                                                        <span>{{ message.content.message }}</span>
-                                                </div>
-
-                                                <!-- 系统消息 -->
-                                                <div v-else-if="message.content.type === 'system'"
-                                                        class="system-message">
-                                                        <div v-if="message.content.isVisible" class="system-message-content">
-                                                                {{ message.content.content }}
-                                                        </div>
-                                                        <!-- 不可见的系统消息不显示 -->
-                                                </div>
-
-                                                <!-- 转发消息 -->
-                                                <ForwardedMessage v-else-if="message.content.type === 'forwarded_message'"
-                                                        :fromCharName="message.content.fromCharName"
-                                                        :userPersonaName="message.content.userPersonaName"
-                                                        :messages="message.content.messages" />
-
-                                                <!-- 音乐卡片消息 -->
-                                                <div v-else-if="message.content.type === 'music-card'"
-                                                        class="music-card message-bubble">
-                                                        <div class="music-card-header">
-                                                                <svg xmlns="http://www.w3.org/2000/svg" width="16"
-                                                                        height="16" fill="currentColor"
-                                                                        class="bi bi-music-note" viewBox="0 0 16 16">
-                                                                        <path
-                                                                                d="M9 13c0 1.105-1.12 2-2.5 2S4 14.105 4 13s1.12-2 2.5-2 2.5.895 2.5 2" />
-                                                                        <path fill-rule="evenodd" d="M9 3v10H8V3z" />
-                                                                        <path
-                                                                                d="M8 2.82a1 1 0 0 1 .804-.98l3-.6A1 1 0 0 1 13 2.22V4L8 5z" />
-                                                                </svg>
-                                                                <span>音乐分享</span>
-                                                        </div>
-                                                        <div class="song-info">
-                                                                <div class="song-name">{{ message.content.song.name }}
+                                                        <!-- 通话消息 -->
+                                                        <div v-else-if="message.content.type === 'call'"
+                                                                class="call-message message-bubble">
+                                                                <div class="call-header">
+                                                                        <svg xmlns="http://www.w3.org/2000/svg"
+                                                                                width="16" height="16"
+                                                                                fill="currentColor"
+                                                                                :class="message.content.callType === 'video' ? 'bi bi-camera-video' : 'bi bi-telephone'"
+                                                                                viewBox="0 0 16 16">
+                                                                                <path v-if="message.content.callType === 'video'"
+                                                                                        d="M0 5a2 2 0 0 1 2-2h7.5a2 2 0 0 1 1.983 1.738l3.11-1.382A1 1 0 0 1 16 4.269v7.462a1 1 0 0 1-1.406.913l-3.111-1.382A2 2 0 0 1 9.5 13H2a2 2 0 0 1-2-2zm11.5 5.175 3.5 1.556V4.269l-3.5 1.556zM2 4a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h7.5a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1z" />
+                                                                                <path v-else
+                                                                                        d="M1.885.511a1.745 1.745 0 0 1 2.61.163L6.29 2.98c.329.423.445.974.315 1.494l-.547 2.19a.68.68 0 0 0 .178.643l2.457 2.457a.68.68 0 0 0 .644.178l2.189-.547a1.75 1.75 0 0 1 1.494.315l2.306 1.794c.829.645.905 1.87.163 2.611l-1.034 1.034c-.74.74-1.846 1.065-2.877.702a18.6 18.6 0 0 1-7.01-4.42 18.6 18.6 0 0 1-4.42-7.009c-.362-1.03-.037-2.137.703-2.877z" />
+                                                                        </svg>
+                                                                        <span>{{ message.content.callType === 'video' ?
+                                                                                '视频通话' : '语音通话' }}</span>
                                                                 </div>
-                                                                <div class="song-artist">{{
-                                                                        getArtistNames(message.content.song.artists) }}
+                                                                <div class="call-message-content">{{
+                                                                        message.content.message }}</div>
+                                                                <div class="call-actions"
+                                                                        v-if="message.actorId !== userActorId">
+                                                                        <button class="accept-call-btn"
+                                                                                @click="handleCallAccept(message)">
+                                                                                接听
+                                                                        </button>
+                                                                        <button class="decline-call-btn"
+                                                                                @click="handleCallDecline(message)">
+                                                                                拒绝
+                                                                        </button>
                                                                 </div>
-                                                                <div class="song-album">{{
-                                                                        message.content.song.album.name }}</div>
                                                         </div>
-                                                        <div class="music-card-message">{{ message.content.message }}
+
+                                                        <!-- 拍一拍消息 -->
+                                                        <div v-else-if="message.content.type === 'pat'"
+                                                                class="pat-message message-bubble">
+                                                                <div class="pat-content">
+                                                                        <span class="pat-icon">👋</span>
+                                                                        <span class="pat-text">{{
+                                                                                message.content.message }}</span>
+                                                                </div>
                                                         </div>
-                                                        <button class="play-song-btn"
-                                                                @click="playSingleSong(message.content.song)">
-                                                                <svg xmlns="http://www.w3.org/2000/svg" width="16"
-                                                                        height="16" fill="currentColor"
-                                                                        class="bi bi-play-circle" viewBox="0 0 16 16">
-                                                                        <path
-                                                                                d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16" />
-                                                                        <path
-                                                                                d="M6.271 5.055a.5.5 0 0 1 .52.038L11 7.055a.5.5 0 0 1 0 .89L6.791 9.907a.5.5 0 0 1-.791-.389V5.482a.5.5 0 0 1 .271-.427" />
-                                                                </svg>
-                                                                播放
-                                                        </button>
+
+                                                        <div class="message-time">
+                                                                {{ formatTimestamp(message.timestamp, true) }}
+                                                        </div>
                                                 </div>
-
-                                                								<!-- 通话消息 -->
-								<div v-else-if="message.content.type === 'call'"
-									class="call-message message-bubble">
-									<div class="call-header">
-										<svg xmlns="http://www.w3.org/2000/svg" width="16"
-											height="16" fill="currentColor"
-											:class="message.content.callType === 'video' ? 'bi bi-camera-video' : 'bi bi-telephone'"
-											viewBox="0 0 16 16">
-											<path v-if="message.content.callType === 'video'"
-												d="M0 5a2 2 0 0 1 2-2h7.5a2 2 0 0 1 1.983 1.738l3.11-1.382A1 1 0 0 1 16 4.269v7.462a1 1 0 0 1-1.406.913l-3.111-1.382A2 2 0 0 1 9.5 13H2a2 2 0 0 1-2-2zm11.5 5.175 3.5 1.556V4.269l-3.5 1.556zM2 4a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h7.5a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1z" />
-											<path v-else
-												d="M1.885.511a1.745 1.745 0 0 1 2.61.163L6.29 2.98c.329.423.445.974.315 1.494l-.547 2.19a.68.68 0 0 0 .178.643l2.457 2.457a.68.68 0 0 0 .644.178l2.189-.547a1.75 1.75 0 0 1 1.494.315l2.306 1.794c.829.645.905 1.87.163 2.611l-1.034 1.034c-.74.74-1.846 1.065-2.877.702a18.6 18.6 0 0 1-7.01-4.42 18.6 18.6 0 0 1-4.42-7.009c-.362-1.03-.037-2.137.703-2.877z" />
-										</svg>
-										<span>{{ message.content.callType === 'video' ? '视频通话' : '语音通话' }}</span>
-									</div>
-									<div class="call-message-content">{{ message.content.message }}</div>
-									<div class="call-actions" v-if="message.actorId !== userActorId">
-										<button class="accept-call-btn" 
-											@click="handleCallAccept(message)">
-											接听
-										</button>
-										<button class="decline-call-btn"
-											@click="handleCallDecline(message)">
-											拒绝
-										</button>
-									</div>
-								</div>
-
-								<!-- 拍一拍消息 -->
-								<div v-else-if="message.content.type === 'pat'"
-									class="pat-message message-bubble">
-									<div class="pat-content">
-										<span class="pat-icon">👋</span>
-										<span class="pat-text">{{ message.content.message }}</span>
-									</div>
-								</div>
-
-                                                <div class="message-time">
-                                                        {{ formatTimestamp(message.timestamp, true) }}
-                                                </div>
-                                        </div>
                                         </template>
                                 </div>
 
                                 <!-- AI正在输入的消息（包含思考和打字状态） -->
                                 <div v-if="isTyping || isGenerating" class="message-item">
                                         <div class="message-avatar">
-                                                <img v-if="getActorAvatar(actor)" :src="getActorAvatar(actor)" :alt="actor?.name">
+                                                <img v-if="getActorAvatar(actor)" :src="getActorAvatar(actor)"
+                                                        :alt="actor?.name">
                                                 <span v-else class="avatar-initial">{{ actor?.name?.[0] || '#' }}</span>
                                         </div>
                                         <div class="message-content">
@@ -396,11 +461,14 @@
                                 <div class="quoted-message-content">
                                         <div class="quoted-message-header">
                                                 <span class="quoted-message-author">
-                                                        {{ quotedMessage.actorId === userActorId ? '你' : (actor?.name || '对方') }}
+                                                        {{ quotedMessage.actorId === userActorId ? '你' : (actor?.name ||
+                                                        '对方') }}
                                                 </span>
                                                 <button class="quoted-message-close" @click="quotedMessage = null">
-                                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                                                                <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0M5.354 4.646a.5.5 0 1 0-.708.708L7.293 8l-2.647 2.646a.5.5 0 0 0 .708.708L8 8.707l2.646 2.647a.5.5 0 0 0 .708-.708L8.707 8l2.647-2.646a.5.5 0 0 0-.708-.708L8 7.293z"/>
+                                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                                                                fill="currentColor" viewBox="0 0 16 16">
+                                                                <path
+                                                                        d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0M5.354 4.646a.5.5 0 1 0-.708.708L7.293 8l-2.647 2.646a.5.5 0 0 0 .708.708L8 8.707l2.646 2.647a.5.5 0 0 0 .708-.708L8.707 8l2.647-2.646a.5.5 0 0 0-.708-.708L8 7.293z" />
                                                         </svg>
                                                 </button>
                                         </div>
@@ -409,7 +477,7 @@
                                         </div>
                                 </div>
                         </div>
-                        
+
                         <div class="input-container" @click.stop>
                                 <!-- 功能按钮行 -->
                                 <div class="function-buttons">
@@ -533,37 +601,114 @@
 
                 <!-- 歌曲搜索模态框 -->
                 <SongSearchModal v-if="showSongSearch" @select="onSongSelected" @cancel="showSongSearch = false" />
-                
-                				<!-- 支付详情模态框 -->
-				<PaymentDetailModal v-if="showPaymentDetail" 
-					:payment-data="currentPaymentData"
-					@accept="handlePaymentAccept"
-					@reject="handlePaymentReject" 
-					@close="showPaymentDetail = false" />
-				
-				<!-- 消息右键菜单 -->
-				<MessageContextMenu 
-					:visible="contextMenu.visible"
-					:x="contextMenu.x"
-					:y="contextMenu.y"
-					:message="contextMenu.message"
-					:is-own-message="contextMenu.message?.actorId === userActorId"
-					@hide="hideContextMenu"
-					@quote="handleQuoteMessage"
-					@favorite="handleFavoriteMessage"
-					@edit="handleEditMessage"
-					@multiSelect="handleMultiSelectMessage"
-					@delete="handleDeleteMessage" />
-					
-				<!-- 转发模态框 -->
-				<ForwardModal 
-					:visible="isForwardModalVisible"
-					:messages="forwardSelectedMessagesList"
-					:currentCharName="actor?.name || ''"
-					:currentCharId="actorId"
-					@close="handleForwardModalClose"
-					@forward="handleForwardConfirm" />
-		</div>
+
+                <!-- 支付详情模态框 -->
+                <PaymentDetailModal v-if="showPaymentDetail" :payment-data="currentPaymentData"
+                        @accept="handlePaymentAccept" @reject="handlePaymentReject"
+                        @close="showPaymentDetail = false" />
+
+                <!-- 消息右键菜单 -->
+                <MessageContextMenu :visible="contextMenu.visible" :x="contextMenu.x" :y="contextMenu.y"
+                        :message="contextMenu.message" :is-own-message="contextMenu.message?.actorId === userActorId"
+                        @hide="hideContextMenu" @quote="handleQuoteMessage" @favorite="handleFavoriteMessage"
+                        @edit="handleEditMessage" @multiSelect="handleMultiSelectMessage"
+                        @delete="handleDeleteMessage" />
+
+                <!-- 转发模态框 -->
+                <ForwardModal :visible="isForwardModalVisible" :messages="forwardSelectedMessagesList"
+                        :currentCharName="actor?.name || ''" :currentCharId="actorId" @close="handleForwardModalClose"
+                        @forward="handleForwardConfirm" />
+
+                <!-- 状态详情模态框 -->
+                <div v-if="showStatusModal" class="status-modal-overlay" @click="showStatusModal = false">
+                        <div class="status-modal" @click.stop>
+                                <div class="status-modal-header">
+                                        <h3>{{ actor?.name }}的状态</h3>
+                                        <button class="close-btn" @click="showStatusModal = false">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"
+                                                        fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                                                stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                                </svg>
+                                        </button>
+                                </div>
+                                <div class="status-modal-content">
+                                        <div class="status-item" v-if="actor?.status?.text">
+                                                <div class="status-icon">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"
+                                                                fill=" var(--accent-primary)">
+                                                                <path
+                                                                        d="M220-464 64-620l156-156 156 156-156 156ZM360-80v-200q-61-5-121-14.5T120-320l20-80q84 23 168.5 31.5T480-360q87 0 171.5-8.5T820-400l20 80q-59 16-119 25.5T600-280v200H360ZM220-576l44-44-44-44-44 44 44 44Zm260-104q-50 0-85-35t-35-85q0-50 35-85t85-35q50 0 85 35t35 85q0 50-35 85t-85 35Zm0 280q-33 0-56.5-23.5T400-480q0-33 23.5-56.5T480-560q33 0 56.5 23.5T560-480q0 33-23.5 56.5T480-400Zm0-360q17 0 28.5-11.5T520-800q0-17-11.5-28.5T480-840q-17 0-28.5 11.5T440-800q0 17 11.5 28.5T480-760Zm202 280-68-120 68-120h136l68 120-68 120H682Zm46-80h44l22-40-22-40h-44l-22 40 22 40Zm-508-60Zm260-180Zm270 200Z" />
+                                                        </svg>
+                                                </div>
+                                                <div class="status-info">
+                                                        <div class="status-label">活动</div>
+                                                        <div class="status-value">{{ actor.status.text }}</div>
+                                                </div>
+                                        </div>
+                                        <div class="status-item" v-if="actor?.status?.mood">
+                                                <div class="status-icon">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"
+                                                                fill=" var(--accent-primary)">
+                                                                <path
+                                                                        d="M620-520q25 0 42.5-17.5T680-580q0-25-17.5-42.5T620-640q-25 0-42.5 17.5T560-580q0 25 17.5 42.5T620-520Zm-280 0q25 0 42.5-17.5T400-580q0-25-17.5-42.5T340-640q-25 0-42.5 17.5T280-580q0 25 17.5 42.5T340-520Zm140 260q68 0 123.5-38.5T684-400h-66q-22 37-58.5 58.5T480-320q-43 0-79.5-21.5T342-400h-66q25 63 80.5 101.5T480-260Zm0 180q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm0-400Zm0 320q134 0 227-93t93-227q0-134-93-227t-227-93q-134 0-227 93t-93 227q0 134 93 227t227 93Z" />
+                                                        </svg>
+
+                                                </div>
+                                                <div class="status-info">
+                                                        <div class="status-label">心情</div>
+                                                        <div class="status-value">{{ actor.status.mood }}</div>
+                                                </div>
+                                        </div>
+                                        <div class="status-item" v-if="actor?.status?.location">
+                                                <div class="status-icon">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"
+                                                                fill=" var(--accent-primary)">
+                                                                <path
+                                                                        d="M480-480q33 0 56.5-23.5T560-560q0-33-23.5-56.5T480-640q-33 0-56.5 23.5T400-560q0 33 23.5 56.5T480-480Zm0 294q122-112 181-203.5T720-552q0-109-69.5-178.5T480-800q-101 0-170.5 69.5T240-552q0 71 59 162.5T480-186Zm0 106Q319-217 239.5-334.5T160-552q0-150 96.5-239T480-880q127 0 223.5 89T800-552q0 100-79.5 217.5T480-80Zm0-480Z" />
+                                                        </svg>
+
+                                                </div>
+                                                <div class="status-info">
+                                                        <div class="status-label">位置</div>
+                                                        <div class="status-value">{{ actor.status.location }}</div>
+                                                </div>
+                                        </div>
+                                        <div class="status-item" v-if="actor?.status?.outfit">
+                                                <div class="status-icon">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"
+                                                                fill=" var(--accent-primary)">
+                                                                <path
+                                                                        d="m240-522-40 22q-14 8-30 4t-24-18L66-654q-8-14-4-30t18-24l230-132h70q9 0 14.5 5.5T400-820v20q0 33 23.5 56.5T480-720q33 0 56.5-23.5T560-800v-20q0-9 5.5-14.5T580-840h70l230 132q14 8 18 24t-4 30l-80 140q-8 14-23.5 17.5T760-501l-40-20v361q0 17-11.5 28.5T680-120H280q-17 0-28.5-11.5T240-160v-362Zm80-134v456h320v-456l124 68 42-70-172-100q-15 51-56.5 84.5T480-640q-56 0-97.5-33.5T326-758L154-658l42 70 124-68Zm160 177Z" />
+                                                        </svg>
+                                                </div>
+                                                <div class="status-info">
+                                                        <div class="status-label">穿着</div>
+                                                        <div class="status-value">{{ actor.status.outfit }}</div>
+                                                </div>
+                                        </div>
+                                        <div class="status-item" v-if="actor?.status?.innerThoughts">
+                                                <div class="status-icon">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" 
+                                                                viewBox="0 -960 960 960"  fill="var(--accent-primary)">
+                                                                <path
+                                                                        d="m440-803-83 83H240v117l-83 83 83 83v117h117l83 83 100-100 168 85-86-167 101-101-83-83v-117H523l-83-83Zm0-113 116 116h164v164l116 116-116 116 115 226q7 13 4 25.5T828-132q-8 8-20.5 11t-25.5-4L556-240 440-124 324-240H160v-164L44-520l116-116v-164h164l116-116Zm0 396Z" />
+                                                        </svg>
+                                                </div>
+                                                <div class="status-info">
+                                                        <div class="status-label">心声</div>
+                                                        <div class="status-value inner-thoughts">{{
+                                                                actor.status.innerThoughts }}</div>
+                                                </div>
+                                        </div>
+                                        <div class="status-item"
+                                                v-if="!actor?.status?.text && !actor?.status?.mood && !actor?.status?.location && !actor?.status?.outfit && !actor?.status?.innerThoughts">
+                                                <div class="status-empty">暂无详细状态信息</div>
+                                        </div>
+                                </div>
+                        </div>
+                </div>
+        </div>
 </template>
 
 <script setup>
@@ -576,6 +721,7 @@ import { CirclesToRhombusesSpinner, SpringSpinner } from 'epic-spinners';
 import db from '../services/database.js';
 import AppHeader from '../components/layout/Header.vue';
 import VoiceBubble from '../components/ui/VoiceBubble.vue';
+import VoiceMessage from '../components/ui/VoiceMessage.vue';
 import ChatMusicPlayer from '../components/ui/ChatMusicPlayer.vue';
 import PlaylistPickerModal from '../components/ui/PlaylistPickerModal.vue';
 import SongSearchModal from '../components/ui/SongSearchModal.vue';
@@ -595,6 +741,7 @@ import { addToFavorites, toggleFavorite as toggleFavoriteService } from '../serv
 import spotifyService from '../services/spotifyService.js';
 import * as listenTogetherService from '../services/listenTogetherService.js';
 import { setCurrentChatRoom, clearCurrentChatRoom, isCurrentChatRoom } from '../services/currentStateService.js';
+import { generateVoiceMessage } from '../services/voiceMessageService.js';
 
 const route = useRoute();
 const router = useRouter();
@@ -1884,6 +2031,81 @@ const processAIEvents = async (events) => {
 	for (let i = 0; i < events.length; i++) {
 		const event = events[i];
 		
+		// 检查是否需要生成AI语音消息
+		if (event.content.type === 'text') {
+			// 检查角色是否有TTS配置
+			const currentActor = await db.actors.get(actorId.value);
+			if (currentActor?.ttsProfileId || currentActor?.voiceId) {
+				try {
+					// 生成语音消息
+					const voiceResult = await generateVoiceMessage(currentActor, event.content.content);
+					if (voiceResult.success) {
+						// 创建AI语音消息事件
+						const voiceEvent = {
+							timestamp: event.timestamp + 1, // 稍微延迟显示
+							actorId: event.actorId,
+							contextId: event.contextId,
+							type: event.type,
+							content: {
+								type: 'ai_voice',
+								text: event.content.content,
+								audioUrl: voiceResult.audioUrl,
+								duration: voiceResult.duration
+							}
+						};
+						
+						// 保存语音消息
+						await db.events.add(voiceEvent);
+						await updateConversation(voiceEvent);
+						
+						console.log('AI语音消息已生成:', voiceResult);
+					} else {
+						console.warn('AI语音生成失败，fallback到文字消息:', voiceResult.error);
+						// Fallback: 创建带有fallback标记的文字消息
+						const fallbackEvent = {
+							timestamp: event.timestamp + 1, // 稍微延迟显示
+							actorId: event.actorId,
+							contextId: event.contextId,
+							type: event.type,
+							content: {
+								type: 'text',
+								content: event.content.content,
+								isTtsFallback: true, // 标记为TTS fallback
+								ttsError: voiceResult.error // 记录错误信息
+							}
+						};
+						
+						// 保存fallback消息
+						await db.events.add(fallbackEvent);
+						await updateConversation(fallbackEvent);
+						
+						console.log('已保存TTS fallback消息');
+					}
+				} catch (voiceError) {
+					console.error('AI语音生成出错，fallback到文字消息:', voiceError);
+					// Fallback: 创建带有fallback标记的文字消息
+					const fallbackEvent = {
+						timestamp: event.timestamp + 1, // 稍微延迟显示
+						actorId: event.actorId,
+						contextId: event.contextId,
+						type: event.type,
+						content: {
+							type: 'text',
+							content: event.content.content,
+							isTtsFallback: true, // 标记为TTS fallback
+							ttsError: voiceError.message || '语音生成服务错误'
+						}
+					};
+					
+					// 保存fallback消息
+					await db.events.add(fallbackEvent);
+					await updateConversation(fallbackEvent);
+					
+					console.log('已保存TTS fallback消息');
+				}
+			}
+		}
+		
 		// 只对text类型的消息使用打字特效
 		if (event.content.type === 'text' && personalSettings.value.typingSimulation.enabled) {
 			isTyping.value = true;
@@ -2070,10 +2292,7 @@ const updateConversation = async (message, contextId = null) => {
 	const conversation = {
 		id: conversationId,
 		lastEventTimestamp: message.timestamp,
-		lastEventContent: {
-			...message.content,
-			textSummary: textContent // 添加文字摘要
-		},
+		lastEventContent: {  type: 'text', content: textContent },
 		unreadCount: unreadCount,
 		summaryState: null
 	};
@@ -2096,6 +2315,8 @@ const convertMessageToText = (content) => {
 			return `[图片: ${content.fileName || '图片'}]`;
 		case 'voice':
 			return `[语音消息: ${content.text || '语音'}]`;
+		case 'ai_voice':
+			return `[AI语音消息: ${content.text || '语音'}]`;
 		case 'payment':
 			const paymentType = content.subtype === 'transfer' ? '转账' : '代付';
 			const amount = content.amount || 0;
@@ -2119,6 +2340,23 @@ const convertMessageToText = (content) => {
 			const userPersonaName = content.userPersonaName || '用户';
 			const messageCount = content.messageCount || 0;
 			return `[转发消息: ${fromCharName}和${userPersonaName}的 ${messageCount} 条消息]`;
+		case 'system':
+			// 处理系统消息的不同类型
+			if (content.systemType === 'post_created') {
+				return `[发布了一条新动态]`;
+			} else if (content.systemType === 'post_liked') {
+				return `[点赞了一条动态]`;
+			} else if (content.systemType === 'post_unliked') {
+				return `[取消点赞了一条动态]`;
+			} else if (content.systemType === 'post_commented') {
+				return `[评论了一条动态]`;
+			} else if (content.systemType === 'call_initiate') {
+				return content.content || '[发起通话]';
+			} else if (content.systemType === 'call_response') {
+				return content.content || '[回应通话]';
+			} else {
+				return content.content || '[系统消息]';
+			}
 		default:
 			return content.content || content.text || '[消息]';
 	}
@@ -2145,6 +2383,13 @@ const goBack = () => {
 // 跳转到profile
 const goToProfile = () => {
         router.push(`/profile/${actorId.value}`);
+};
+
+// 显示状态详情
+const showStatusDetail = () => {
+        if (actor.value) {
+                showStatusModal.value = true;
+        }
 };
 
 // 拍一拍功能
@@ -2407,6 +2652,8 @@ const getMessageText = (content) => {
 			return `[图片: ${content.fileName || '图片'}]`;
 		case 'voice':
 			return `[语音消息: ${content.text || '语音'}]`;
+		case 'ai_voice':
+			return `[AI语音消息: ${content.text || '语音'}]`;
 		case 'payment':
 			const paymentType = content.subtype === 'transfer' ? '转账' : '代付';
 			const amount = content.amount || 0;
@@ -2474,6 +2721,9 @@ const forwardSelectedMessagesList = computed(() => {
 
 // 引用消息相关状态
 const quotedMessage = ref(null);
+
+// 状态详情模态框
+const showStatusModal = ref(false);
 
 
 
@@ -2860,6 +3110,8 @@ const getMessageContent = (message) => {
                 return message.content.content || message.content.text || '[消息]';
         } else if (message.content?.type === 'voice' || message.content?.type === 'voice_message') {
                 return `[语音消息: ${message.content.text || '语音'}]`;
+        } else if (message.content?.type === 'ai_voice') {
+                return `[AI语音消息: ${message.content.text || '语音'}]`;
         } else if (message.content?.type === 'sticker') {
                 return `[表情包: ${message.content.name || '表情'}]`;
         } else if (message.content?.type === 'image') {
@@ -3865,7 +4117,7 @@ onUnmounted(() => {
 
 .system-message-content {
         background: var(--app-bg);
-        color: white;
+        color: var(--accent-primary);
         backdrop-filter: blur(20px);
         -webkit-backdrop-filter: blur(20px);
         padding: 8px 16px;
@@ -4203,5 +4455,151 @@ onUnmounted(() => {
 	-webkit-line-clamp: 2;
 	line-clamp: 2;
 	-webkit-box-orient: vertical;
+}
+
+/* 状态详情模态框样式 */
+.status-modal-overlay {
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background-color: rgba(0, 0, 0, 0.6);
+	backdrop-filter: blur(4px);
+	-webkit-backdrop-filter: blur(4px);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 1000;
+	padding: 20px;
+}
+
+.status-modal {
+	background: var(--bg-card);
+	border-radius: 16px;
+	width: 100%;
+	max-width: 400px;
+	max-height: 80vh;
+	overflow: hidden;
+	box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+	border: 1px solid var(--border-color);
+}
+
+.status-modal-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 20px 24px 16px;
+	border-bottom: 1px solid var(--border-color);
+}
+
+.status-modal-header h3 {
+	margin: 0;
+	font-size: 18px;
+	font-weight: 600;
+	color: var(--text-primary);
+}
+
+.close-btn {
+	background: none;
+	border: none;
+	color: var(--text-secondary);
+	cursor: pointer;
+	padding: 4px;
+	border-radius: 50%;
+	transition: all 0.2s ease;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.close-btn:hover {
+	background-color: var(--bg-secondary);
+	color: var(--text-primary);
+}
+
+.status-modal-content {
+	padding: 24px;
+}
+
+.status-item {
+	display: flex;
+	align-items: flex-start;
+	gap: 12px;
+	padding: 12px 0;
+}
+
+.status-item:not(:last-child) {
+	border-bottom: 1px solid var(--border-light);
+}
+
+.status-icon {
+	font-size: 24px;
+	width: 32px;
+	height: 32px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background-color: var(--bg-secondary);
+	border-radius: 8px;
+	flex-shrink: 0;
+}
+
+.status-info {
+	flex: 1;
+	min-width: 0;
+}
+
+.status-label {
+	font-size: 12px;
+	color: var(--text-secondary);
+	margin-bottom: 4px;
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+}
+
+.status-value {
+	font-size: 16px;
+	color: var(--text-primary);
+	font-weight: 500;
+	word-wrap: break-word;
+}
+
+.status-value.inner-thoughts {
+	font-style: italic;
+	color: var(--text-secondary);
+	background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
+	border-left: 3px solid var(--accent-primary);
+	padding: 12px 16px;
+	border-radius: 0 8px 8px 0;
+	margin-top: 4px;
+	position: relative;
+}
+
+.status-value.inner-thoughts::before {
+	content: '"';
+	font-size: 24px;
+	color: var(--accent-primary);
+	position: absolute;
+	left: 8px;
+	top: -2px;
+	opacity: 0.5;
+}
+
+.status-value.inner-thoughts::after {
+	content: '"';
+	font-size: 24px;
+	color: var(--accent-primary);
+	position: absolute;
+	right: 8px;
+	bottom: -10px;
+	opacity: 0.5;
+}
+
+.status-empty {
+	text-align: center;
+	color: var(--text-secondary);
+	font-style: italic;
+	padding: 32px 16px;
 }
 </style>

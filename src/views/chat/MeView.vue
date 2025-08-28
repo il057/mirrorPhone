@@ -30,6 +30,14 @@
                         </router-link>
 
                         <div class="menu-list">
+                                <router-link to="/memories" class="menu-item">
+                                        <span>回忆</span>
+                                        <svg class="chevron" xmlns="http://www.w3.org/2000/svg" fill="none"
+                                                viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                        d="M9 5l7 7-7 7" />
+                                        </svg>
+                                </router-link>
                                 <router-link to="/stickers" class="menu-item">
                                         <span>表情</span>
                                         <svg class="chevron" xmlns="http://www.w3.org/2000/svg" fill="none"

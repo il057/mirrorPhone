@@ -3,8 +3,8 @@
                 <nav class="footer-nav">
                         <router-link v-for="item in navItems" :key="item.id" :to="item.path" class="nav-item">
                                 <span class="nav-text">{{ item.name }}</span>
-                                <!-- 仅为“消息”和“动态”项添加光晕效果 -->
-                                <!--<span v-if="(item.id === 'messages' || item.id === 'moments') && hasNotification" class="notification-glow" ></span>-->
+                                <span v-if="(item.id === 'messages' || item.id === 'moments') && hasNotification"
+                                        class="notification-glow"></span>
                         </router-link>
                 </nav>
         </footer>

@@ -4,6 +4,9 @@ import router from './router'
 import './assets/main.css' // 引入全局样式
 import { populateMockData } from './services/mockData.js';
 import { initializeGlobalSettings, initializeDefaultFonts, initializeUserEntity } from './services/database.js';
+import { startBackgroundActivityTimer } from './services/backgroundActivityService.js'; 
+import { initializeBackupTracking } from './services/incrementalBackupService.js';
+
 import db from './services/database.js';
 import { getContrastTextColor, generateColorScheme } from './utils/colorUtils.js';
 
@@ -44,6 +47,18 @@ async function initializeTheme() {
         }
 }
 
+const registerServiceWorker = () => {
+        if ('serviceWorker' in navigator) {
+                window.addEventListener('load', () => {
+                        navigator.serviceWorker.register('/sw.js').then(registration => {
+                                console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                        }).catch(err => {
+                                console.log('ServiceWorker registration failed: ', err);
+                        });
+                });
+        }
+    };
+
 const app = createApp(App)
 
 app.use(router) // 使用路由
@@ -56,4 +71,8 @@ Promise.all([
         initializeTheme()
 ]).then(() => {
         app.mount('#app');
+        startBackgroundActivityTimer(); // 在应用挂载后启动定时器
+        initializeBackupTracking(); // 初始化备份跟踪
+        registerServiceWorker();
+
     });

@@ -527,59 +527,6 @@ onMounted(() => {
         opacity: 0.7;
 }
 
-/* 开关切换器样式 */
-.toggle-switch {
-        position: relative;
-        display: inline-block;
-}
-
-.toggle-switch input {
-        opacity: 0;
-        width: 0;
-        height: 0;
-}
-
-.toggle-label {
-        display: block;
-        width: 44px;
-        height: 24px;
-        background-color: var(--bg-secondary);
-        border-radius: 12px;
-        position: relative;
-        cursor: pointer;
-        transition: background-color 0.3s ease;
-}
-
-.toggle-label.disabled {
-        cursor: not-allowed;
-        opacity: 0.5;
-}
-
-.toggle-slider {
-        position: absolute;
-        top: 2px;
-        left: 2px;
-        width: 20px;
-        height: 20px;
-        background-color: white;
-        border-radius: 50%;
-        transition: transform 0.3s ease;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-}
-
-.toggle-switch input:checked + .toggle-label {
-        background-color: var(--accent-primary);
-}
-
-.toggle-switch input:checked + .toggle-label .toggle-slider {
-        transform: translateX(20px);
-}
-
-.toggle-switch input:disabled + .toggle-label {
-        cursor: not-allowed;
-        opacity: 0.5;
-}
-
 /* 速度设置 */
 .speed-setting {
         margin-top: 15px;

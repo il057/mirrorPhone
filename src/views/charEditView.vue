@@ -897,18 +897,23 @@ onMounted(async () => {
                                 .and(rel => rel.targetId === currentUserId)
                                 .first();
                         
+                        console.log('加载关系数据 - 角色ID:', actorId.value, '用户ID:', currentUserId);
+                        console.log('查询到的关系数据:', relationship);
+                        
                         if (relationship) {
                                 userRelationship.value = {
                                         score: relationship.score || 0,
                                         type: relationship.type || '',
                                         tags: relationship.tags || []
                                 };
+                                console.log('设置的用户关系数据:', userRelationship.value);
                         } else {
                                 userRelationship.value = {
                                         score: 0,
                                         type: '',
                                         tags: []
                                 };
+                                console.log('未找到关系数据，使用默认值:', userRelationship.value);
                         }
                 } else {
                         showToast('找不到该角色', 'error');

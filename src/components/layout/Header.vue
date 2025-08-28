@@ -10,7 +10,7 @@
                                 </a>
                         </slot>
                 </div>
-                <div class="header-title">
+                <div class="header-title" :class="{ 'clickable': titleClickable }" @click="handleTitleClick">
                         <div class="title-text">{{ title }}</div>
                         <slot name="subtitle"></slot>
                 </div>
@@ -32,6 +32,14 @@ const props = defineProps({
         overrideBackAction: {
                 type: Function,
                 default: null,
+        },
+        titleClickable: {
+                type: Boolean,
+                default: false
+        },
+        onTitleClick: {
+                type: Function,
+                default: null
         }
 });
 
@@ -46,6 +54,13 @@ const handleBackClick = () => {
         } else {
                 // Otherwise, perform the default action: go to the homepage.
                 router.push('/');
+        }
+};
+
+// Handle title click
+const handleTitleClick = () => {
+        if (props.titleClickable && props.onTitleClick) {
+                props.onTitleClick();
         }
 };
 </script>
@@ -110,6 +125,18 @@ const handleBackClick = () => {
         flex-direction: column;
         align-items: center;
         gap: 2px;
+}
+
+.header-title.clickable {
+        cursor: pointer;
+        transition: all 0.2s ease;
+        border-radius: 8px;
+        padding: 4px 10px;
+}
+
+.header-title.clickable:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+        color: var(--accent-primary);
 }
 
 .title-text {

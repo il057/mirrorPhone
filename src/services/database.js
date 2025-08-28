@@ -21,7 +21,7 @@ db.version(1).stores({
          * specialCare: 特别关心设置
          * groupIds: 关联的群组ID数组
          * contextMemorySettings: 上下文记忆条数设置
-         * status: 当前状态
+         * status: 当前状态 (包含 text, color, mood, location, outfit)
          * avatarLibrary: 头像库数组（用于用户人格和角色）
          * currentAvatar: 当前使用的头像URL
          * chatBackground: 聊天背景URL
@@ -120,18 +120,27 @@ db.version(1).stores({
 
         /**
          * 表：memories (主观记忆库)
-         * 存储 AI 对事件进行思考和总结后形成的高级记忆。
+         * 存储 AI 对事件进行思考和总结后形成的高级记忆和用户的回忆。
          * ++id: 自增主键
          * actorId: 记忆的拥有者ID
-         * type: 记忆的类型 ('diary', 'fact', 'countdown', 'summary')
+         * type: 记忆的类型 ('diary', 'fact', 'countdown', 'anniversary', 'summary')
+         * content: 记忆内容
          * keywords: 用于未来回忆的触发关键词 (数组)
-         * relatedEventIds: 关联的原始事件ID (数组)
+         * timestamp: 记忆创建时间
+         * targetDate: 目标日期（用于倒计时和纪念日）
+         * relatedActorId: 相关角色ID（用于筛选特定角色的回忆）
          */
         memories: `
         ++id,
         actorId,
         type,
-        *keywords`, // *keywords 表示这是一个多值索引，可以高效地按关键词搜索
+        content,
+        *keywords,
+        timestamp,
+        targetDate,
+        relatedActorId,
+        [actorId+type],
+        [actorId+relatedActorId]`, // *keywords 表示这是一个多值索引，可以高效地按关键词搜索
 
         /**
          * 辅助与设置表
@@ -221,6 +230,12 @@ export async function initializeGlobalSettings() {
                         cloudinaryUploadPreset: '',
                         githubGistId: '',
                         githubToken: '',
+                        backgroundActivity: {
+                                enabled: true,
+                                interval: 100000, // 100秒
+                                probability: 50,  // 50%
+                                maxChars: 2
+                        },
                         // 使用统一的壁纸和主题设置
                         wallpaper: 'linear-gradient(to top, #2c3e50, #bdc3c7)', // 默认渐变壁纸
                         themeColor: '#778088', // 默认主题色
@@ -245,6 +260,16 @@ export async function initializeGlobalSettings() {
                                 { "type": "animated", "name": "霓虹", "info": ["#39ff14", "#000000", 45], "theme": "#39ff14", "isDefault": true },
                                 { "type": "animated", "name": "闪电", "info": ["#ffd700", "#191970", 60], "theme": "#ffd700", "isDefault": true }
                         ]
+                });
+        } else if (!settings.backgroundActivity) {
+                // 如果已存在设置但没有后台活动字段，则添加它
+                await db.globalSettings.update('global', {
+                        backgroundActivity: {
+                                enabled: true,
+                                interval: 100000,
+                                probability: 50,
+                                maxChars: 2
+                        }
                 });
         } else {
                 // 如果设置已存在，检查并更新动态渐变预设的格式
@@ -304,18 +329,18 @@ export async function resolveUserPersonaForContext(contextId) {
         try {
                 // 首先尝试获取该上下文绑定的用户人格
                 const boundPersona = await db.actors
-                        .filter(actor => 
-                                actor.id && 
-                                actor.id.startsWith('user_') && 
-                                actor.groupIds && 
+                        .filter(actor =>
+                                actor.id &&
+                                actor.id.startsWith('user_') &&
+                                actor.groupIds &&
                                 actor.groupIds.includes(contextId)
                         )
                         .first();
-                
+
                 if (boundPersona) {
                         return boundPersona.id;
                 }
-                
+
                 // 如果没有绑定的人格，返回默认人格
                 const defaultPersona = await db.actors
                         .filter(actor => actor.id && actor.id.startsWith('user_') && actor.isDefault)

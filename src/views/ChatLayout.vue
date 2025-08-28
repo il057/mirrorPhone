@@ -25,7 +25,7 @@
                         <router-view />
                 </main>
 
-                <AppFooter :has-notification="true" />
+                <AppFooter :has-notification="hasUnreadMessages" />
 
                 <HeaderDropdownMenu :is-open="isDropdownOpen" @close="isDropdownOpen = false">
                         <template v-if="route.name === 'chat-messages' || route.name === 'chat-contacts'">
@@ -68,6 +68,16 @@ const showPlusMenu = computed(() => {
         }
         return routesWithPlus.includes(route.name);
 });
+
+const conversations = useObservable(
+        liveQuery(() => db.conversations.toArray()),
+        { initialValue: [] }
+);
+
+const hasUnreadMessages = computed(() => {
+        return conversations.value.some(convo => convo.unreadCount > 0);
+});
+
 
 watch(
         () => route,

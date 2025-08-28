@@ -90,6 +90,13 @@ const router = createRouter({
                         component: () => import('../views/PersonalSettingsView.vue'),
                         meta: { title: '个人设置' }
                 },
+                // 回忆界面路由
+                {
+                        path: '/memories',
+                        name: 'memories',
+                        component: () => import('../views/MemoriesView.vue'),
+                        meta: { title: '回忆' }
+                },
                 // 个人动态页面 - 移到ChatLayout外部，不在Footer控制范围内
                 {
                         path: '/moments/:id',
@@ -121,7 +128,7 @@ const router = createRouter({
                         // :id? '?'表示id参数是可选的。没有id时，我们就认为是“新建”模式。
                         path: '/edit/:id?',
                         name: 'char-edit',
-                        component: () => import('../views/CharEditView.vue'),
+                        component: () => import('../views/charEditView.vue'),
                         meta: { title: '编辑资料' },
                         props: true // 同样，将 :id 作为 prop 传递
                 }

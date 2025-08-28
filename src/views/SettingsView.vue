@@ -107,6 +107,70 @@
 
                         <section class="settings-card">
                                 <div class="card-header">
+                                        <h2>后台活动</h2>
+                                </div>
+                                <div class="setting-section">
+                                        <div class="setting-header">
+                                                <h3>启用后台活动</h3>
+                                                <div class="toggle-switch">
+                                                        <input type="checkbox" id="background-activity-enabled"
+                                                                v-model="globalSettings.backgroundActivity.enabled" />
+                                                        <label for="background-activity-enabled" class="toggle-label">
+                                                                <span class="toggle-slider"></span>
+                                                        </label>
+                                                </div>
+                                        </div>
+                                        <p class="setting-description">
+                                                启用后，应用会在后台模拟角色的活动，例如发送消息或发布动态。
+                                        </p>
+                                </div>
+
+                                <div v-if="globalSettings.backgroundActivity.enabled" class="profile-form">
+                                        <div class="form-group">
+                                                <label>活动概率 (%)</label>
+                                                <RangeSlider v-model="globalSettings.backgroundActivity.probability"
+                                                        :min="0" :max="100" :step="1" />
+                                        </div>
+                                        <div class="form-group">
+                                                <label>单次最大唤醒角色数</label>
+                                                <input type="number"
+                                                        v-model.number="globalSettings.backgroundActivity.maxChars"
+                                                        min="1" placeholder="默认: 2">
+                                        </div>
+                                        <div class="form-group">
+                                                <label>活动检测间隔 (毫秒)</label>
+                                                <input type="number"
+                                                        v-model.number="globalSettings.backgroundActivity.interval"
+                                                        min="10000" placeholder="默认: 100000">
+                                                <p class="form-help">
+                                                        应用会每隔设定的时间尝试触发一次后台活动。
+                                                </p>
+                                        </div>
+                                </div>
+                        </section>
+                        <section class="settings-card">
+                                <div class="card-header">
+                                        <h2>通知设置</h2>
+                                </div>
+                                <div class="setting-section">
+                                        <div class="setting-header">
+                                                <h3>启用推送通知</h3>
+                                                <div class="toggle-switch">
+                                                        <input type="checkbox" id="push-notifications-enabled"
+                                                                :checked="notificationPermission === 'granted'"
+                                                                @change="handleNotificationToggle" />
+                                                        <label for="push-notifications-enabled" class="toggle-label">
+                                                                <span class="toggle-slider"></span>
+                                                        </label>
+                                                </div>
+                                        </div>
+                                        <p class="setting-description">
+                                                当有后台活动或新消息时，接收系统通知。这需要浏览器授权。
+                                        </p>
+                                </div>
+                        </section>
+                        <section class="settings-card">
+                                <div class="card-header">
                                         <h2>图片上传服务 (Cloudinary)</h2>
                                 </div>
                                 <div class="form-group">
@@ -122,47 +186,105 @@
                                 </div>
                         </section>
 
-                        <section class="settings-card">
-                                <div class="card-header">
-                                        <h2>云端同步 (GitHub Gist)</h2>
-                                        <div class="sync-status">
-                                                <span v-if="isSyncing" class="status-indicator syncing">同步中...</span>
-                                                <span v-else-if="lastSyncTime" class="status-indicator success">
-                                                        最后同步: {{ lastSyncTime }}
-                                                </span>
+                <section class="settings-card">
+                        <div class="card-header">
+                                <h2>云端同步 (GitHub Gist)</h2>
+                                <div class="sync-status">
+                                        <span v-if="isSyncing" class="status-indicator syncing">同步中...</span>
+                                        <span v-else-if="lastSyncTime" class="status-indicator success">
+                                                最后同步: {{ lastSyncTime }}
+                                        </span>
+                                </div>
+                        </div>
+                        <div class="form-group">
+                                <label for="githubToken">GitHub Personal Access Token</label>
+                                <input id="githubToken" type="password" v-model="globalSettings.githubToken"
+                                        placeholder="ghp_xxxxxxxxxxxxxxxxxxxx">
+                                <p class="form-help">
+                                        需要具有 'gist' 权限的 Personal Access Token。
+                                        <a href="https://github.com/settings/tokens" target="_blank"
+                                                rel="noopener">创建 Token</a>
+                                </p>
+                        </div>
+                        <div class="form-group">
+                                <label for="gistId">Gist ID (可选)</label>
+                                <input id="gistId" type="text" v-model="globalSettings.githubGistId"
+                                        placeholder="留空则自动创建新的 Gist">
+                                <p class="form-help">如果已有备份 Gist，请填入其 ID</p>
+                        </div>
+                        
+                        <!-- 自动备份设置 -->
+                        <div class="setting-section">
+                                <div class="setting-header">
+                                        <h3>自动云端备份</h3>
+                                        <div class="toggle-switch">
+                                                <input type="checkbox" id="auto-backup-enabled"
+                                                        v-model="autoBackupSettings.enabled" />
+                                                <label for="auto-backup-enabled" class="toggle-label">
+                                                        <span class="toggle-slider"></span>
+                                                </label>
                                         </div>
                                 </div>
+                                <p class="setting-description">
+                                        启用后，应用会自动将数据备份到 GitHub Gist，无需手动操作。
+                                </p>
+                        </div>
+
+                        <div v-if="autoBackupSettings.enabled" class="auto-backup-settings">
                                 <div class="form-group">
-                                        <label for="githubToken">GitHub Personal Access Token</label>
-                                        <input id="githubToken" type="password" v-model="globalSettings.githubToken"
-                                                placeholder="ghp_xxxxxxxxxxxxxxxxxxxx">
+                                        <label>备份间隔</label>
+                                        <select v-model.number="autoBackupSettings.interval">
+                                                <option :value="6 * 60 * 60 * 1000">每 6 小时</option>
+                                                <option :value="12 * 60 * 60 * 1000">每 12 小时</option>
+                                                <option :value="24 * 60 * 60 * 1000">每 24 小时</option>
+                                                <option :value="48 * 60 * 60 * 1000">每 48 小时</option>
+                                                <option :value="7 * 24 * 60 * 60 * 1000">每周</option>
+                                        </select>
+                                </div>
+                                <div class="form-group">
+                                        <label>变更阈值</label>
+                                        <input type="number" v-model.number="autoBackupSettings.maxChanges" 
+                                               min="10" max="500" placeholder="达到指定变更数时自动备份">
                                         <p class="form-help">
-                                                需要具有 'gist' 权限的 Personal Access Token。
-                                                <a href="https://github.com/settings/tokens" target="_blank"
-                                                        rel="noopener">创建 Token</a>
+                                                当数据变更达到指定次数时，即使未到时间间隔也会触发备份
                                         </p>
                                 </div>
-                                <div class="form-group">
-                                        <label for="gistId">Gist ID (可选)</label>
-                                        <input id="gistId" type="text" v-model="globalSettings.githubGistId"
-                                                placeholder="留空则自动创建新的 Gist">
-                                        <p class="form-help">如果已有备份 Gist，请填入其 ID</p>
+                                <div v-if="backupStats" class="backup-stats">
+                                        <h4>备份统计</h4>
+                                        <div class="stats-grid">
+                                                <div class="stat-item">
+                                                        <span class="stat-label">当前变更数</span>
+                                                        <span class="stat-value">{{ backupStats.changeCount }}</span>
+                                                </div>
+                                                <div class="stat-item">
+                                                        <span class="stat-label">最后自动备份</span>
+                                                        <span class="stat-value">
+                                                                {{ backupStats.lastAutoBackup ? formatDate(backupStats.lastAutoBackup) : '从未' }}
+                                                        </span>
+                                                </div>
+                                                <div class="stat-item">
+                                                        <span class="stat-label">下次备份时间</span>
+                                                        <span class="stat-value">
+                                                                {{ backupStats.nextAutoBackup ? formatDate(backupStats.nextAutoBackup) : '未知' }}
+                                                        </span>
+                                                </div>
+                                        </div>
                                 </div>
-                                <div class="sync-actions">
-                                        <button @click="handleSyncToGist" :disabled="!canSync || isSyncing"
-                                                class="sync-button primary">
-                                                <span v-if="isSyncing">同步中...</span>
-                                                <span v-else>{{ globalSettings.githubGistId ? '更新到 Gist' : '创建并同步到 Gist'
-                                                        }}</span>
-                                        </button>
-                                        <button @click="handleRestoreFromGist" :disabled="!canRestore || isSyncing"
-                                                class="sync-button secondary">
-                                                从 Gist 恢复
-                                        </button>
-                                </div>
-                        </section>
+                        </div>
 
-                        <section class="settings-card">
+                        <div class="sync-actions">
+                                <button @click="handleSyncToGist" :disabled="!canSync || isSyncing"
+                                        class="sync-button primary">
+                                        <span v-if="isSyncing">同步中...</span>
+                                        <span v-else>{{ globalSettings.githubGistId ? '更新到 Gist' : '创建并同步到 Gist'
+                                                }}</span>
+                                </button>
+                                <button @click="handleRestoreFromGist" :disabled="!canRestore || isSyncing"
+                                        class="sync-button secondary">
+                                        从 Gist 恢复
+                                </button>
+                        </div>
+                </section>                        <section class="settings-card">
                                 <div class="card-header">
                                         <h2>本地数据管理</h2>
                                 </div>
@@ -199,6 +321,14 @@ import MainDropdown from '../components/ui/MainDropdown.vue';
 import { packDataForExport, unpackAndImportData } from '../services/dataService.js';
 import { syncToGist, restoreFromGist } from '../services/gistService.js';
 import { showToast, showConfirm } from '../services/uiService.js';
+import RangeSlider from '../components/ui/RangeSlider.vue';
+import { requestNotificationPermission } from '../services/notificationService.js'; 
+import { 
+        getAutoBackupSettings, 
+        saveAutoBackupSettings, 
+        getBackupStats, 
+        initializeBackupTracking 
+} from '../services/incrementalBackupService.js'; 
 
 const router = useRouter();
 
@@ -211,10 +341,18 @@ const currentProfile = ref(null); // 正在编辑的方案的完整数据对象
 const currentTtsProfile = ref(null); // 正在编辑的TTS方案的完整数据对象
 const isNewProfile = ref(false); // 标记是否正在创建新方案
 const isNewTtsProfile = ref(false); // 标记是否正在创建新TTS方案
-const globalSettings = ref({});
+const globalSettings = ref({
+        backgroundActivity: {
+                enabled: true,
+                probability: 50,
+                maxChars: 2,
+                interval: 100000,
+        }
+    });
 const isFetchingModels = ref(false);
 const availableModels = ref([]);
 const fileInput = ref(null); // 用于访问隐藏的文件输入框
+const notificationPermission = ref('default'); 
 
 // ElevenLabs TTS 状态
 const elevenLabsVoices = ref([]);
@@ -222,6 +360,14 @@ const elevenLabsVoices = ref([]);
 // 云端同步相关状态
 const isSyncing = ref(false);
 const lastSyncTime = ref('');
+
+// 自动备份相关状态
+const autoBackupSettings = ref({
+        enabled: false,
+        interval: 24 * 60 * 60 * 1000, // 24小时
+        maxChanges: 50
+});
+const backupStats = ref(null);
 
 // 计算属性
 const canSync = computed(() => {
@@ -259,12 +405,44 @@ const modelOptions = computed(() => {
         }));
 });
 
+
+const checkNotificationPermission = () => {
+        if ('Notification' in window) {
+                notificationPermission.value = Notification.permission;
+        }
+};
+
+const handleNotificationToggle = async (event) => {
+        const isEnabled = event.target.checked;
+
+        if (isEnabled) {
+                // 只需请求权限
+                await requestNotificationPermission();
+        } else {
+                // 浏览器没有提供直接撤销权限的API
+                // 只能提示用户去浏览器设置中关闭
+                showToast('请在浏览器设置中关闭通知权限', 'info');
+                // 由于无法编程方式撤销，我们将开关状态重置回它本来的状态
+                event.target.checked = (notificationPermission.value === 'granted');
+                return;
+        }
+
+        // 重新检查并更新UI状态
+        checkNotificationPermission();
+};
+
 // --- 生命周期钩子 ---
 onMounted(async () => {
         await initializeGlobalSettings();
         await loadApiProfiles();
         await loadTtsProfiles();
         await loadGlobalSettings();
+        checkNotificationPermission();
+        
+        // 初始化备份相关
+        loadAutoBackupSettings();
+        loadBackupStats();
+        initializeBackupTracking();
 });
 
 // --- 监听下拉框选择变化 ---
@@ -321,7 +499,7 @@ async function handleFetchModels() {
 async function loadGlobalSettings() {
         const settings = await db.globalSettings.get('global');
         if (settings) {
-                globalSettings.value = settings; // 加载所有全局设置
+                globalSettings.value = { ...globalSettings.value, ...settings }; 
                 if (settings.activeApiProfileId) {
                         activeProfileId.value = settings.activeApiProfileId;
                         loadProfileForEditing(activeProfileId.value);
@@ -423,6 +601,16 @@ async function deleteCurrentProfile(type) {
 
 async function saveChanges() {
         try {
+                if (globalSettings.value.backgroundActivity.enabled) {
+                        const confirmed = await showConfirm(
+                                '启用后台活动确认',
+                                '后台活动会持续调用AI服务并可能产生费用。您确定要启用并保存设置吗？'
+                        );
+                        if (!confirmed) {
+                                showToast('操作已取消', 'info');
+                                return; // 如果用户取消，则不执行任何保存操作
+                        }
+                }
                 // 1. 保存 API 方案（如果有修改）
                 if (currentProfile.value) {
                         const profileToSave = { ...currentProfile.value };
@@ -479,6 +667,8 @@ async function saveChanges() {
                         cloudinaryUploadPreset: globalSettings.value.cloudinaryUploadPreset,
                         githubGistId: globalSettings.value.githubGistId,
                         githubToken: globalSettings.value.githubToken,
+                        backgroundActivity: JSON.parse(JSON.stringify(globalSettings.value.backgroundActivity)),
+
                 };
 
                 // 使用 put 方法保存合并后的完整设置对象
@@ -506,6 +696,27 @@ async function testElevenLabsConnection() {
                 elevenLabsVoices.value = [];
                 showToast(`连接失败: ${error.message}`, 'error');
         }
+}
+
+// --- 自动备份相关方法 ---
+function loadAutoBackupSettings() {
+        autoBackupSettings.value = getAutoBackupSettings();
+}
+
+function loadBackupStats() {
+        backupStats.value = getBackupStats();
+}
+
+// 监听自动备份设置变化
+watch(autoBackupSettings, (newSettings) => {
+        saveAutoBackupSettings(newSettings);
+        loadBackupStats(); // 更新统计信息
+}, { deep: true });
+
+// 格式化日期
+function formatDate(timestamp) {
+        if (!timestamp) return '从未';
+        return new Date(timestamp).toLocaleString('zh-CN');
 }
 
 // --- 云端同步处理 ---
@@ -855,5 +1066,128 @@ async function handleLocalImport(event) {
 .button-text small {
         font-size: 12px;
         color: var(--text-secondary);
+}
+
+/* 自动备份样式 */
+.auto-backup-settings {
+        margin-top: 16px;
+        padding-top: 16px;
+        border-top: 1px solid var(--border-color);
+}
+
+.backup-stats {
+        margin-top: 20px;
+        padding: 16px;
+        background: var(--bg-primary);
+        border-radius: 8px;
+        border: 1px solid var(--border-color);
+}
+
+.backup-stats h4 {
+        margin: 0 0 12px 0;
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--text-primary);
+}
+
+.stats-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+}
+
+.stat-item {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+}
+
+.stat-label {
+        font-size: 12px;
+        color: var(--text-secondary);
+}
+
+.stat-value {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--text-primary);
+}
+
+/* Toggle Switch 样式 */
+.setting-section {
+        margin: 20px 0;
+        padding: 16px;
+        background: var(--bg-primary);
+        border-radius: 8px;
+        border: 1px solid var(--border-color);
+}
+
+.setting-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+}
+
+.setting-header h3 {
+        margin: 0;
+        font-size: 16px;
+        font-weight: 600;
+        color: var(--text-primary);
+}
+
+.setting-description {
+        margin: 0;
+        font-size: 14px;
+        color: var(--text-secondary);
+        line-height: 1.5;
+}
+
+.toggle-switch {
+        position: relative;
+        display: inline-block;
+}
+
+.toggle-switch input[type="checkbox"] {
+        opacity: 0;
+        width: 0;
+        height: 0;
+}
+
+.toggle-label {
+        display: block;
+        width: 52px;
+        height: 28px;
+        background-color: var(--bg-secondary);
+        border-radius: 14px;
+        position: relative;
+        cursor: pointer;
+        transition: background-color 0.2s;
+        border: 1px solid var(--border-color);
+}
+
+.toggle-label:hover {
+        background-color: var(--bg-card);
+}
+
+.toggle-slider {
+        position: absolute;
+        top: 3px;
+        left: 3px;
+        width: 20px;
+        height: 20px;
+        background-color: white;
+        border-radius: 50%;
+        transition: transform 0.2s;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.toggle-switch input[type="checkbox"]:checked + .toggle-label {
+        background-color: var(--accent-primary);
+        border-color: var(--accent-primary);
+}
+
+.toggle-switch input[type="checkbox"]:checked + .toggle-label .toggle-slider {
+        transform: translateX(24px);
 }
 </style>

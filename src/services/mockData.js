@@ -508,7 +508,6 @@ export async function populateMockData() {
                 await db.transaction('rw', db.actors, db.groups, db.conversations, db.relationships, db.events, db.stickers, db.globalAlbum, async () => {
                         await db.actors.bulkPut(mockActors);
                         await db.groups.bulkPut(mockGroups);
-                        await db.conversations.bulkPut(mockConversations);
                         await db.relationships.bulkPut(mockRelationships);
                         await db.events.bulkPut(mockEvents);
                         await db.stickers.bulkPut(mockStickers);
