@@ -187,20 +187,18 @@
                                         <div class="setting-item">
                                                 <div class="setting-header">
                                                         <h4>聊天气泡样式</h4>
-                                                        <button 
-                                                                v-if="!isEditingBubblePresets" 
-                                                                @click="toggleEditMode" 
-                                                                class="edit-presets-btn"
-                                                        >
-                                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                                                        <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+                                                        <button v-if="!isEditingBubblePresets" @click="toggleEditMode"
+                                                                class="edit-presets-btn">
+                                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none"
+                                                                        viewBox="0 0 24 24" stroke-width="1.5"
+                                                                        stroke="currentColor">
+                                                                        <path stroke-linecap="round"
+                                                                                stroke-linejoin="round"
+                                                                                d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
                                                                 </svg>
                                                         </button>
-                                                        <button 
-                                                                v-else 
-                                                                @click="exitEditMode" 
-                                                                class="edit-presets-btn done"
-                                                        >
+                                                        <button v-else @click="exitEditMode"
+                                                                class="edit-presets-btn done">
                                                                 完成
                                                         </button>
                                                 </div>
@@ -208,76 +206,70 @@
                                                         <!-- 预设区域 -->
                                                         <div class="preset-grid">
                                                                 <!-- 添加新预设按钮 -->
-                                                                <div 
-                                                                        class="preset-item add-preset" 
+                                                                <div class="preset-item add-preset"
                                                                         @click="toggleBubbleEditor"
-                                                                        :class="{ active: isAddingBubblePreset }"
-                                                                >
+                                                                        :class="{ active: isAddingBubblePreset }">
                                                                         <div class="add-icon">+</div>
                                                                         <span>添加预设</span>
                                                                 </div>
-                                                                
+
                                                                 <!-- 现有预设 -->
-                                                                <div 
-                                                                        v-for="preset in bubbleStylePresets" 
+                                                                <div v-for="preset in bubbleStylePresets"
                                                                         :key="preset.name"
                                                                         class="preset-item bubble-preset"
                                                                         :class="{ active: activeBubblePreset?.name === preset.name }"
-                                                                        @click="selectBubblePreset(preset)"
-                                                                >
+                                                                        @click="selectBubblePreset(preset)">
                                                                         <!-- 删除按钮（编辑模式下显示） -->
-                                                                        <button 
-                                                                                v-if="isEditingBubblePresets && !preset.isDefault"
+                                                                        <button v-if="isEditingBubblePresets && !preset.isDefault"
                                                                                 @click.stop="deleteBubblePreset(preset)"
-                                                                                class="delete-preset-btn"
-                                                                        >
-                                                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                                                                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                                                                class="delete-preset-btn">
+                                                                                <svg xmlns="http://www.w3.org/2000/svg"
+                                                                                        fill="none" viewBox="0 0 24 24"
+                                                                                        stroke-width="1.5"
+                                                                                        stroke="currentColor">
+                                                                                        <path stroke-linecap="round"
+                                                                                                stroke-linejoin="round"
+                                                                                                d="M6 18L18 6M6 6l12 12" />
                                                                                 </svg>
                                                                         </button>
-                                                                        
+
                                                                         <div class="bubble-preview-gradient" :style="{ 
                                                                                 background: `linear-gradient(45deg, ${preset.charBubbleBg} 0%, ${preset.userBubbleBg} 33%, ${preset.userBubbleText} 66%, ${preset.charBubbleText} 100%)`
                                                                         }"></div>
-                                                                        <span class="preset-name">{{ preset.name }}</span>
+                                                                        <span class="preset-name">{{ preset.name
+                                                                                }}</span>
                                                                 </div>
                                                         </div>
 
                                                         <!-- 颜色编辑器（展开时显示） -->
-                                                        <div v-if="isAddingBubblePreset" class="bubble-color-editor-minimal">
+                                                        <div v-if="isAddingBubblePreset"
+                                                                class="bubble-color-editor-minimal">
                                                                 <div class="color-inputs-row">
-                                                                        <input 
-                                                                                type="color" 
+                                                                        <input type="color"
                                                                                 v-model="editableBubbleStyle.charBubbleBg"
                                                                                 @input="handleBubbleStyleChange"
                                                                                 class="color-picker-mini"
-                                                                                title="角色气泡背景"
-                                                                        />
-                                                                        <input 
-                                                                                type="color" 
+                                                                                title="角色气泡背景" />
+                                                                        <input type="color"
                                                                                 v-model="editableBubbleStyle.charBubbleText"
                                                                                 @input="handleBubbleStyleChange"
                                                                                 class="color-picker-mini"
-                                                                                title="角色气泡文字"
-                                                                        />
-                                                                        <input 
-                                                                                type="color" 
+                                                                                title="角色气泡文字" />
+                                                                        <input type="color"
                                                                                 v-model="editableBubbleStyle.userBubbleBg"
                                                                                 @input="handleBubbleStyleChange"
                                                                                 class="color-picker-mini"
-                                                                                title="用户气泡背景"
-                                                                        />
-                                                                        <input 
-                                                                                type="color" 
+                                                                                title="用户气泡背景" />
+                                                                        <input type="color"
                                                                                 v-model="editableBubbleStyle.userBubbleText"
                                                                                 @input="handleBubbleStyleChange"
                                                                                 class="color-picker-mini"
-                                                                                title="用户气泡文字"
-                                                                        />
+                                                                                title="用户气泡文字" />
                                                                 </div>
-                                                                
+
                                                                 <!-- 保存按钮 -->
-                                                                <button @click="saveBubblePreset" class="save-bubble-preset-btn-mini">
+                                                                <button @click="saveBubblePreset"
+                                                                        class="save-bubble-preset-btn-mini">
                                                                         保存预设
                                                                 </button>
                                                         </div>
@@ -343,13 +335,30 @@
                                         <!-- 语音设定 -->
                                         <div class="setting-item">
                                                 <h4>语音设定</h4>
-                                                <div class="placeholder-content">
-                                                        <p>此功能待开发。</p>
+                                                <div class="form-group">
+                                                        <label>TTS 方案</label>
+                                                        <MainDropdown v-model="actor.ttsProfileId"
+                                                                :options="ttsProfileOptions" placeholder="选择 TTS 方案" />
+                                                </div>
+                                                <div v-if="actor.ttsProfileId" class="form-group">
+                                                        <label>声音模型</label>
+                                                        <div class="model-group">
+                                                                <MainDropdown v-if="availableVoices.length > 0"
+                                                                        v-model="actor.voiceId" :options="voiceOptions"
+                                                                        placeholder="选择声音" />
+                                                                <input v-else type="text" v-model="actor.voiceId"
+                                                                        placeholder="请先拉取声音列表">
+
+                                                                <button @click="fetchVoices"
+                                                                        :disabled="isFetchingVoices"
+                                                                        class="pull-button">
+                                                                        {{ isFetchingVoices ? '拉取中...' : '拉取声音' }}
+                                                                </button>
+                                                        </div>
                                                 </div>
                                         </div>
                                 </div>
                         </AccordionItem>
-
                         <!-- 危险操作 -->
                         <section v-if="!isNew" class="form-section danger-zone">
                                 <button class="danger-btn">拉黑</button>
@@ -376,6 +385,7 @@ import { showToast, showConfirm, showAvatarPickerModal, showAlbumPickerModal, pr
 import { USER_ACTOR_ID } from '../services/database.js';
 import { getBubbleStylePresets, saveBubbleStylePresets, initializeDefaultBubbleStyles } from '../services/bubbleStyleService.js';
 import { applyActorTheme, restoreOriginalTheme } from '../services/themeService.js';
+import { fetchElevenLabsVoices } from '../services/elevenLabsService.js'; 
 
 const route = useRoute();
 const router = useRouter();
@@ -768,22 +778,59 @@ const saveBubblePresetsToDatabase = async () => {
         }
 };
 
-const startLongPress = (type, preset) => {
-        if (preset.isDefault) return; // 默认预设不允许删除
-        
-        longPressTimer = setTimeout(() => {
-                if (type === 'bubble') {
-                        deleteBubblePreset(preset);
-                }
-        }, 800);
-};
 
-const cancelLongPress = () => {
-        if (longPressTimer) {
-                clearTimeout(longPressTimer);
-                longPressTimer = null;
+// TTS 相关状态
+const ttsProfiles = ref([]);
+const isFetchingVoices = ref(false);
+const availableVoices = ref([]);
+
+const ttsProfileOptions = computed(() => {
+        return ttsProfiles.value.map(profile => ({
+                label: profile.profileName,
+                value: profile.id
+        }));
+});
+
+const voiceOptions = computed(() => {
+        return availableVoices.value.map(voice => ({
+                label: `${voice.name} (${voice.labels.gender}, ${voice.labels.age})`,
+                value: voice.voice_id
+        }));
+});
+
+
+// 拉取声音列表
+const fetchVoices = async () => {
+        if (!actor.value.ttsProfileId) {
+                showToast('请先选择一个 TTS 方案。', 'info');
+                return;
+        }
+
+        const selectedProfile = ttsProfiles.value.find(p => p.id === actor.value.ttsProfileId);
+        if (!selectedProfile || !selectedProfile.apiKey) {
+                showToast('选择的 TTS 方案无效或缺少 API Key。', 'error');
+                return;
+        }
+
+        isFetchingVoices.value = true;
+        try {
+                const voices = await fetchElevenLabsVoices(selectedProfile.apiKey);
+                availableVoices.value = voices;
+                showToast(`成功获取 ${voices.length} 个声音模型！`, 'success');
+
+                // 如果当前角色的 voiceId 不在列表中，则清空
+                if (actor.value.voiceId && !voices.some(v => v.voice_id === actor.value.voiceId)) {
+                        actor.value.voiceId = null;
+                }
+        } catch (error) {
+                showToast(`拉取声音失败: ${error.message}`, 'error');
+        } finally {
+                isFetchingVoices.value = false;
         }
 };
+
+
+
 
 // 加载数据
 onMounted(async () => {
@@ -813,6 +860,8 @@ onMounted(async () => {
                 };
         } else {
                 const data = await db.actors.get(actorId.value);
+                // 加载 TTS 预设方案
+                ttsProfiles.value = await db.ttsProfiles.toArray();
                 if (data) {
                         actor.value = { ...data };
                         if (!Array.isArray(actor.value.groupIds)) {
@@ -826,6 +875,7 @@ onMounted(async () => {
                         }
                         // 加载聊天背景
                         chatBackground.value = actor.value.chatBackground || '';
+                        
                         
                         // 确保上下文记忆设置存在
                         if (!actor.value.contextMemorySettings) {
@@ -904,7 +954,9 @@ const saveChanges = async () => {
                         worldbookGroupIds: Array.isArray(actor.value.worldbookGroupIds) ? [...actor.value.worldbookGroupIds] : [],
                         currentAvatar: actor.value.currentAvatar || '',
                         chatBackground: actor.value.chatBackground || '',
-                        bubbleStylePreset: activeBubblePreset.value?.name || null
+                        bubbleStylePreset: activeBubblePreset.value?.name || null,
+                        ttsProfileId: actor.value.ttsProfileId || null, 
+                        voiceId: actor.value.voiceId || null 
                 }));
                 
                 // 删除临时字段
@@ -1104,7 +1156,6 @@ onUnmounted(() => {
 
 /* 确保下拉菜单有足够的 z-index */
 .dropdown-group {
-        z-index: 100;
         position: relative;
 }
 
@@ -1775,6 +1826,37 @@ onUnmounted(() => {
         color: var(--text-primary);
         font-size: 16px;
         font-weight: 600;
+}
+.model-group {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        width: 100%;
+}
+
+.model-group input,
+.model-group .main-dropdown {
+        flex-grow: 1;
+}
+
+.model-group input {
+        height: 48px;
+}
+
+.pull-button {
+        padding: 0 20px;
+        height: 48px;
+        background-color: var(--bg-secondary);
+        color: var(--text-primary);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        cursor: pointer;
+        white-space: nowrap;
+}
+
+.pull-button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
 }
 
 /* 响应式设计 */

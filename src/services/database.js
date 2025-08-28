@@ -43,7 +43,9 @@ db.version(1).stores({
         currentAvatar,
         chatBackground,
         isHidden,
-        listenTogetherTotalDuration
+        listenTogetherTotalDuration,
+        ttsProfileId,
+        voiceId
         `,
 
         /**

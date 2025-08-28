@@ -60,8 +60,8 @@
                                                 <div v-else-if="item.type === 'widget'" class="widget-wrapper">
                                                         <div class="widget-container">
                                                                 <component :is="item.component" class="widget-component"
-                                                                        :widgetId="item.id"
-                                                                        :widgetSize="item.gridSpan" />
+                                                                        :widgetId="item.id" :widgetSize="item.gridSpan"
+                                                                        :global-listen-together-info="globalListenTogetherInfo" />
                                                         </div>
                                                 </div>
                                         </div>
@@ -105,6 +105,9 @@
 
 <script setup>
 import { ref, shallowRef, onMounted, onBeforeUnmount, watchEffect, createApp, computed } from 'vue';
+import { useObservable } from '@vueuse/rxjs';
+import { liveQuery } from 'dexie';
+import * as listenTogetherService from '../services/listenTogetherService.js';
 import { useRouter } from 'vue-router';
 import db from '../services/database.js';
 import { getContrastTextColor } from '../utils/colorUtils.js';
@@ -162,6 +165,21 @@ const componentMap = {
         'CalendarWidget': CalendarWidget
 };
 
+// 获取全局一起听会话信息
+const globalListenTogetherInfo = useObservable(
+        liveQuery(async () => {
+                const sessionInfo = await listenTogetherService.getCurrentListenTogetherSessionInfo();
+                if (sessionInfo) {
+                        const totalDuration = await listenTogetherService.getTotalListenTogetherDurationWithCurrent(sessionInfo.actorId);
+                        return {
+                                ...sessionInfo,
+                                totalDuration
+                        };
+                }
+                return null;
+        }),
+        { initialValue: null }
+);
 
 // 动态计算网格配置
 const calculateGridConfig = () => {

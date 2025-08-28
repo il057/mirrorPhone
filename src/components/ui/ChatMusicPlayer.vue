@@ -91,6 +91,7 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import spotifyService from '../../services/spotifyService.js';
+import { formatDuration } from '../../utils/datetime.js';
 
 const props = defineProps({
         // 是否启用一起听模式
@@ -159,38 +160,24 @@ const isListenTogether = computed(() => {
 
 // 一起听显示文本
 const listenTogetherText = computed(() => {
-        if (!props.listenTogetherDuration) return '';
-        
-        // 如果全局有一起听会话，且当前用户是参与者之一
-        if (props.globalListenTogetherInfo) {
+        // 如果有全局一起听信息，显示全局信息
+        if (props.globalListenTogetherInfo && props.globalListenTogetherInfo.totalDuration > 0) {
                 const partnerName = props.globalListenTogetherInfo.partner;
-                
+                const globalDuration = props.globalListenTogetherInfo.totalDuration;
+                const globalFormattedDuration = formatDuration(globalDuration);
+
                 // 如果在对应角色的聊天室中
                 if (props.listenTogetherPartner === partnerName) {
-                        return `一起听了：${formatListenDuration.value}`;
+                        return `一起听了：${globalFormattedDuration}`;
                 } else {
-                        // 在其他角色的聊天室中
-                        return `和${partnerName}一起听了：${formatListenDuration.value}`;
+                        // 在其他角色的聊天室中，显示全局状态
+                        return `和${partnerName}一起听了：${globalFormattedDuration}`;
                 }
         }
-        
-        // 默认显示
-        return `一起听了：${formatListenDuration.value}`;
-});
 
-const formatListenDuration = computed(() => {
-        if (!props.listenTogetherDuration) return '';
-        
-        const totalSeconds = Math.floor(props.listenTogetherDuration / 1000);
-        const hours = Math.floor(totalSeconds / 3600);
-        const minutes = Math.floor((totalSeconds % 3600) / 60);
-        const seconds = totalSeconds % 60;
-        
-        if (hours > 0) {
-                return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-        } else {
-                return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-        }
+        // 如果没有全局信息但有当前角色的一起听时长，显示空字符串
+        // 因为当前角色不是正在一起听的角色
+        return '';
 });
 
 // 方法

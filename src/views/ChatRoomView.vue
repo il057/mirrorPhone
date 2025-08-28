@@ -468,11 +468,17 @@ const listenTogetherSession = useObservable(
         { initialValue: null }
 );
 
-// 计算属性：当前角色的一起听总时长（包括当前会话）
+// 计算属性：正在一起听的角色的总时长（包括当前会话）
 const currentActorListenTogetherDuration = useObservable(
         liveQuery(async () => {
-                if (!actorId.value) return 0;
-                return await listenTogetherService.getTotalListenTogetherDurationWithCurrent(actorId.value);
+                // 获取当前活跃的一起听会话
+                const currentSession = await listenTogetherService.getCurrentListenTogetherSession();
+                if (!currentSession || !currentSession.isActive) {
+                        return 0; // 如果没有活跃会话，返回0
+                }
+                
+                // 返回正在一起听的角色的总时长
+                return await listenTogetherService.getTotalListenTogetherDurationWithCurrent(currentSession.actorId);
         }),
         { initialValue: 0 }
 );
@@ -480,7 +486,15 @@ const currentActorListenTogetherDuration = useObservable(
 // 计算属性：全局一起听会话信息
 const globalListenTogetherSessionInfo = useObservable(
         liveQuery(async () => {
-                return await listenTogetherService.getCurrentListenTogetherSessionInfo();
+                const sessionInfo = await listenTogetherService.getCurrentListenTogetherSessionInfo();
+                if (!sessionInfo) return null;
+                
+                // 添加总时长信息
+                const totalDuration = await listenTogetherService.getTotalListenTogetherDurationWithCurrent(sessionInfo.actorId);
+                return {
+                        ...sessionInfo,
+                        totalDuration
+                };
         }),
         { initialValue: null }
 );
@@ -1116,9 +1130,13 @@ const acceptListenTogetherInvite = async (inviteTimestamp, playlist = null) => {
                                 
                                 showToast(`开始播放「${playlist.name}」`, 'success');
                                 
-                                // 发送当前播放歌曲的消息
                                 setTimeout(async () => {
-                                        await sendMusicPlayMessage();
+                                        // 先从Spotify获取最新的播放状态
+                                        const playbackState = await spotifyService.getCurrentPlayback();
+                                        if (playbackState && playbackState.item) {
+                                                // 将获取到的歌曲信息传递下去
+                                                await sendMusicPlayMessage(playbackState.item);
+                                        }
                                 }, 2000);
                                 
                                 // 监听播放状态变化
@@ -1339,13 +1357,11 @@ const startTrackingMusic = () => {
                                 
                                 // 检查是否换歌了
                                 if (!lastTrackedSong || lastTrackedSong.id !== track.id) {
-                                        // 发送音乐播放状态消息
-                                        await sendMusicPlayMessage(trackInfo, lastTrackedSong);
-                                        
-                                        // 更新一起听会话的当前曲目（如果正在一起听）
+                                        // 检查是否正在一起听，只有当前角色是一起听的角色时才发送消息
                                         const currentSession = await listenTogetherService.getCurrentListenTogetherSession();
                                         if (currentSession && currentSession.isActive && currentSession.actorId === actorId.value) {
-                                                await listenTogetherService.updateCurrentTrack(currentSession.actorId, trackInfo);
+                                                // 发送音乐播放状态消息
+                                                await sendMusicPlayMessage(trackInfo, lastTrackedSong);
                                         }
                                         
                                         // 记录当前歌曲
@@ -1815,9 +1831,13 @@ const sendSystemMessage = async (content, isVisible = true, type = 'system') => 
 
 // 发送音乐播放状态消息（用户不可见）
 const sendMusicPlayMessage = async (trackInfo, previousTrack = null, nextTrack = null) => {
+        if (!trackInfo) {
+                console.warn('sendMusicPlayMessage: trackInfo is undefined, skipping.');
+                return;
+        }
         try {
                 const artistNames = Array.isArray(trackInfo.artists) ? 
-                        trackInfo.artists.join(', ') : 
+                        trackInfo.artists.map(a => a.name).join(', ') :
                         (trackInfo.artists || '未知艺术家');
                 
                 let content = `当前播放音乐："${trackInfo.name}"，歌手"${artistNames}"`;
@@ -1866,16 +1886,18 @@ const getInitial = (name) => {
         return name.charAt(0).toUpperCase();
 };
 
+
 // 刷新个人设置
 const refreshPersonalSettings = async () => {
         try {
                 const settings = await getPersonalSettings();
                 personalSettings.value = settings;
-                console.log('ChatRoom: Refreshed personal settings:', settings);
+                // console.log('ChatRoom: Refreshed personal settings:', settings);
         } catch (error) {
                 console.error('ChatRoom: Failed to refresh personal settings:', error);
         }
 };
+
 
 // 监听表情包面板状态变化
 watch(showStickerPanel, (newVal, oldVal) => {

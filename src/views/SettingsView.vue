@@ -1,4 +1,3 @@
-<!-- src/views/SettingsView.vue -->
 <template>
         <div class="page-container">
                 <AppHeader title="设置">
@@ -8,27 +7,24 @@
                 </AppHeader>
 
                 <main class="settings-content content">
-                        <!-- AI API 设置卡片 -->
                         <section class="settings-card">
                                 <div class="card-header">
                                         <h2>AI API 设置</h2>
                                         <div class="profile-actions">
-                                                <button @click="addNewProfile" class="action-button">+ 新增</button>
-                                                <button @click="deleteCurrentProfile" :disabled="!activeProfileId"
-                                                        class="action-button delete">- 删除</button>
+                                                <button @click="addNewProfile('api')" class="action-button">+
+                                                        新增</button>
+                                                <button @click="deleteCurrentProfile('api')"
+                                                        :disabled="!activeProfileId" class="action-button delete">-
+                                                        删除</button>
                                         </div>
                                 </div>
 
                                 <div class="form-group">
                                         <label>当前方案</label>
-                                        <MainDropdown
-                                                v-model="activeProfileId"
-                                                :options="profileOptions"
-                                                placeholder="-- 请选择一个方案 --"
-                                        />
+                                        <MainDropdown v-model="activeProfileId" :options="profileOptions"
+                                                placeholder="-- 请选择一个方案 --" />
                                 </div>
 
-                                <!-- 方案编辑表单 -->
                                 <div v-if="currentProfile" class="profile-form">
                                         <div class="form-group">
                                                 <label>方案名称</label>
@@ -37,11 +33,8 @@
                                         </div>
                                         <div class="form-group">
                                                 <label>API 服务商</label>
-                                                <MainDropdown
-                                                        v-model="currentProfile.connectionType"
-                                                        :options="connectionTypeOptions"
-                                                        placeholder="选择服务商"
-                                                />
+                                                <MainDropdown v-model="currentProfile.connectionType"
+                                                        :options="connectionTypeOptions" placeholder="选择服务商" />
                                         </div>
                                         <div v-if="currentProfile.connectionType === 'proxy'" class="form-group">
                                                 <label>AI API 地址 (反代)</label>
@@ -56,14 +49,9 @@
                                         <div class="form-group">
                                                 <label>AI 模型</label>
                                                 <div class="model-group">
-                                                        <!-- 如果已拉取到模型列表，则显示下拉框 -->
-                                                        <MainDropdown
-                                                                v-if="availableModels.length > 0"
-                                                                v-model="currentProfile.model"
-                                                                :options="modelOptions"
-                                                                placeholder="选择模型"
-                                                        />
-                                                        <!-- 否则，显示文本输入框 -->
+                                                        <MainDropdown v-if="availableModels.length > 0"
+                                                                v-model="currentProfile.model" :options="modelOptions"
+                                                                placeholder="选择模型" />
                                                         <input v-else type="text" v-model="currentProfile.model"
                                                                 placeholder="例如: gemini-2.5-pro">
 
@@ -76,16 +64,47 @@
                                 </div>
                         </section>
 
-                        <!-- TTS 设置卡片 (框架) -->
                         <section class="settings-card">
                                 <div class="card-header">
-                                        <h2>TTS 语音服务</h2>
-                                        <!-- 未来可以添加新增/删除按钮 -->
+                                        <h2>ElevenLabs TTS</h2>
+                                        <div class="profile-actions">
+                                                <button @click="addNewProfile('tts')" class="action-button">+
+                                                        新增</button>
+                                                <button @click="deleteCurrentProfile('tts')"
+                                                        :disabled="!activeTtsProfileId" class="action-button delete">-
+                                                        删除</button>
+                                        </div>
                                 </div>
-                                <p class="description">此功能待开发。</p>
+                                <div class="form-group">
+                                        <label>当前方案</label>
+                                        <MainDropdown v-model="activeTtsProfileId" :options="ttsProfileOptions"
+                                                placeholder="-- 请选择一个方案 --" />
+                                </div>
+                                <div v-if="currentTtsProfile" class="profile-form">
+                                        <div class="form-group">
+                                                <label>方案名称</label>
+                                                <input type="text" v-model="currentTtsProfile.profileName"
+                                                        placeholder="为你的方案起个名字">
+                                        </div>
+                                        <div class="form-group">
+                                                <label for="elevenLabsApiKey">API 密钥</label>
+                                                <div class="model-group">
+                                                        <input id="elevenLabsApiKey" type="password"
+                                                                v-model="currentTtsProfile.apiKey"
+                                                                placeholder="你的 ElevenLabs API Key">
+                                                        <button @click="testElevenLabsConnection"
+                                                                :disabled="!currentTtsProfile.apiKey"
+                                                                class="save-button pull-button">
+                                                                测试
+                                                        </button>
+                                                </div>
+                                        </div>
+                                        <div v-if="elevenLabsVoices.length > 0" class="form-group">
+                                                <p class="description">连接成功！</p>
+                                        </div>
+                                </div>
                         </section>
 
-                        <!-- 图片上传服务卡片 -->
                         <section class="settings-card">
                                 <div class="card-header">
                                         <h2>图片上传服务 (Cloudinary)</h2>
@@ -103,7 +122,6 @@
                                 </div>
                         </section>
 
-                        <!-- 云端同步卡片 -->
                         <section class="settings-card">
                                 <div class="card-header">
                                         <h2>云端同步 (GitHub Gist)</h2>
@@ -120,7 +138,8 @@
                                                 placeholder="ghp_xxxxxxxxxxxxxxxxxxxx">
                                         <p class="form-help">
                                                 需要具有 'gist' 权限的 Personal Access Token。
-                                                <a href="https://github.com/settings/tokens" target="_blank" rel="noopener">创建 Token</a>
+                                                <a href="https://github.com/settings/tokens" target="_blank"
+                                                        rel="noopener">创建 Token</a>
                                         </p>
                                 </div>
                                 <div class="form-group">
@@ -130,19 +149,19 @@
                                         <p class="form-help">如果已有备份 Gist，请填入其 ID</p>
                                 </div>
                                 <div class="sync-actions">
-                                        <button @click="handleSyncToGist" :disabled="!canSync || isSyncing" 
+                                        <button @click="handleSyncToGist" :disabled="!canSync || isSyncing"
                                                 class="sync-button primary">
                                                 <span v-if="isSyncing">同步中...</span>
-                                                <span v-else>{{ globalSettings.githubGistId ? '更新到 Gist' : '创建并同步到 Gist' }}</span>
+                                                <span v-else>{{ globalSettings.githubGistId ? '更新到 Gist' : '创建并同步到 Gist'
+                                                        }}</span>
                                         </button>
-                                        <button @click="handleRestoreFromGist" :disabled="!canRestore || isSyncing" 
+                                        <button @click="handleRestoreFromGist" :disabled="!canRestore || isSyncing"
                                                 class="sync-button secondary">
                                                 从 Gist 恢复
                                         </button>
                                 </div>
                         </section>
 
-                        <!-- 数据管理卡片 -->
                         <section class="settings-card">
                                 <div class="card-header">
                                         <h2>本地数据管理</h2>
@@ -162,7 +181,6 @@
                                                 </span>
                                         </button>
                                 </div>
-                                <!-- 隐藏的文件输入框 -->
                                 <input type="file" ref="fileInput" @change="handleLocalImport" accept=".json"
                                         style="display: none;">
                         </section>
@@ -175,6 +193,7 @@ import { ref, onMounted, watch, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import db, { initializeGlobalSettings } from '../services/database.js';
 import { fetchModels } from '../services/APIConnection.js';
+import { fetchElevenLabsVoices } from '../services/elevenLabsService.js';
 import AppHeader from '../components/layout/Header.vue';
 import MainDropdown from '../components/ui/MainDropdown.vue';
 import { packDataForExport, unpackAndImportData } from '../services/dataService.js';
@@ -185,13 +204,20 @@ const router = useRouter();
 
 // --- 状态管理 ---
 const apiProfiles = ref([]); // 存储所有API方案的列表
+const ttsProfiles = ref([]); // 存储所有TTS方案的列表
 const activeProfileId = ref(null); // 当前选中的方案ID
+const activeTtsProfileId = ref(null); // 当前选中的TTS方案ID
 const currentProfile = ref(null); // 正在编辑的方案的完整数据对象
+const currentTtsProfile = ref(null); // 正在编辑的TTS方案的完整数据对象
 const isNewProfile = ref(false); // 标记是否正在创建新方案
+const isNewTtsProfile = ref(false); // 标记是否正在创建新TTS方案
 const globalSettings = ref({});
 const isFetchingModels = ref(false);
 const availableModels = ref([]);
 const fileInput = ref(null); // 用于访问隐藏的文件输入框
+
+// ElevenLabs TTS 状态
+const elevenLabsVoices = ref([]);
 
 // 云端同步相关状态
 const isSyncing = ref(false);
@@ -214,6 +240,13 @@ const profileOptions = computed(() => {
         }));
 });
 
+const ttsProfileOptions = computed(() => {
+        return ttsProfiles.value.map(profile => ({
+                label: profile.profileName,
+                value: profile.id
+        }));
+});
+
 const connectionTypeOptions = [
         { label: 'Gemini 直连', value: 'direct' },
         { label: '默认 / 其他反代', value: 'proxy' }
@@ -230,6 +263,7 @@ const modelOptions = computed(() => {
 onMounted(async () => {
         await initializeGlobalSettings();
         await loadApiProfiles();
+        await loadTtsProfiles();
         await loadGlobalSettings();
 });
 
@@ -239,6 +273,17 @@ watch(activeProfileId, (newId) => {
         if (newId !== null) {
                 isNewProfile.value = false;
                 loadProfileForEditing(newId);
+        } else {
+                currentProfile.value = null;
+        }
+});
+
+watch(activeTtsProfileId, (newId) => {
+        if (newId !== null) {
+                isNewTtsProfile.value = false;
+                loadTtsProfileForEditing(newId);
+        } else {
+                currentTtsProfile.value = null;
         }
 });
 
@@ -283,6 +328,12 @@ async function loadGlobalSettings() {
                 } else {
                         currentProfile.value = null;
                 }
+                if (settings.activeTtsProfileId) {
+                        activeTtsProfileId.value = settings.activeTtsProfileId;
+                        loadTtsProfileForEditing(activeTtsProfileId.value);
+                } else {
+                        currentTtsProfile.value = null;
+                }
         }
 }
 
@@ -290,43 +341,83 @@ async function loadApiProfiles() {
         apiProfiles.value = await db.apiProfiles.toArray();
 }
 
+async function loadTtsProfiles() {
+        ttsProfiles.value = await db.ttsProfiles.toArray();
+}
+
 async function loadProfileForEditing(id) {
         const profile = await db.apiProfiles.get(id);
         currentProfile.value = profile ? { ...profile } : null;
 }
 
+async function loadTtsProfileForEditing(id) {
+        const profile = await db.ttsProfiles.get(id);
+        currentTtsProfile.value = profile ? { ...profile } : null;
+}
+
 // --- 用户操作 ---
-function addNewProfile() {
-        isNewProfile.value = true;
-        activeProfileId.value = null;
-        availableModels.value = []; // 新建时也清空
-        currentProfile.value = {
-                profileName: '',
-                connectionType: 'proxy',
-                apiUrl: '',
-                apiKey: '',
-                model: '',
-        };
-      }
-
-async function deleteCurrentProfile() {
-        if (!activeProfileId.value) return;
-        const confirmed = await showConfirm(
-                '删除方案',
-                `确定要删除方案 "${currentProfile.value.profileName}" 吗？`,
-        );
-        if (confirmed) {
-                const deletedId = activeProfileId.value;
-                await db.apiProfiles.delete(deletedId);
-
-                if (globalSettings.value.activeApiProfileId === deletedId) {
-                        globalSettings.value.activeApiProfileId = null;
-                }
-
+function addNewProfile(type) {
+        if (type === 'api') {
+                isNewProfile.value = true;
                 activeProfileId.value = null;
-                currentProfile.value = null;
-                await loadApiProfiles();
-                showToast('方案已删除。', 'success');
+                availableModels.value = []; // 新建时也清空
+                currentProfile.value = {
+                        profileName: '',
+                        connectionType: 'proxy',
+                        apiUrl: '',
+                        apiKey: '',
+                        model: '',
+                };
+        } else if (type === 'tts') {
+                isNewTtsProfile.value = true;
+                activeTtsProfileId.value = null;
+                elevenLabsVoices.value = [];
+                currentTtsProfile.value = {
+                        profileName: '',
+                        apiKey: '',
+                };
+        }
+}
+
+async function deleteCurrentProfile(type) {
+        if (type === 'api') {
+                if (!activeProfileId.value) return;
+                const confirmed = await showConfirm(
+                        '删除方案',
+                        `确定要删除方案 "${currentProfile.value.profileName}" 吗？`,
+                );
+                if (confirmed) {
+                        const deletedId = activeProfileId.value;
+                        await db.apiProfiles.delete(deletedId);
+
+                        if (globalSettings.value.activeApiProfileId === deletedId) {
+                                globalSettings.value.activeApiProfileId = null;
+                        }
+
+                        activeProfileId.value = null;
+                        currentProfile.value = null;
+                        await loadApiProfiles();
+                        showToast('方案已删除。', 'success');
+                }
+        } else if (type === 'tts') {
+                if (!activeTtsProfileId.value) return;
+                const confirmed = await showConfirm(
+                        '删除方案',
+                        `确定要删除方案 "${currentTtsProfile.value.profileName}" 吗？`,
+                );
+                if (confirmed) {
+                        const deletedId = activeTtsProfileId.value;
+                        await db.ttsProfiles.delete(deletedId);
+
+                        if (globalSettings.value.activeTtsProfileId === deletedId) {
+                                globalSettings.value.activeTtsProfileId = null;
+                        }
+
+                        activeTtsProfileId.value = null;
+                        currentTtsProfile.value = null;
+                        await loadTtsProfiles();
+                        showToast('方案已删除。', 'success');
+                }
         }
 }
 
@@ -346,14 +437,35 @@ async function saveChanges() {
                                 savedId = profileToSave.id;
                                 await db.apiProfiles.put(profileToSave);
                         }
-                        
+
                         // 将当前编辑的方案ID同步到全局设置中
                         globalSettings.value.activeApiProfileId = savedId;
                         activeProfileId.value = savedId; // 更新下拉框
                         await loadApiProfiles();
                 }
 
-                // 2. 保存所有全局设置
+                // 2. 保存 TTS 方案（如果有修改）
+                if (currentTtsProfile.value) {
+                        const profileToSave = { ...currentTtsProfile.value };
+
+                        let savedId;
+                        if (isNewTtsProfile.value) {
+                                // 使用纯净对象进行 add 操作
+                                savedId = await db.ttsProfiles.add(profileToSave);
+                                isNewTtsProfile.value = false;
+                        } else {
+                                // 使用纯净对象进行 put 操作
+                                savedId = profileToSave.id;
+                                await db.ttsProfiles.put(profileToSave);
+                        }
+
+                        // 将当前编辑的方案ID同步到全局设置中
+                        globalSettings.value.activeTtsProfileId = savedId;
+                        activeTtsProfileId.value = savedId; // 更新下拉框
+                        await loadTtsProfiles();
+                }
+
+                // 3. 保存所有全局设置
                 const existingSettings = await db.globalSettings.get('global') || {};
 
                 // 然后，创建一个新的对象，包含旧设置和当前页面要更新的设置
@@ -362,10 +474,11 @@ async function saveChanges() {
                         id: 'global', // 确保主键存在
                         // 更新 SettingsView 相关的字段
                         activeApiProfileId: globalSettings.value.activeApiProfileId,
+                        activeTtsProfileId: globalSettings.value.activeTtsProfileId,
                         cloudinaryCloudName: globalSettings.value.cloudinaryCloudName,
                         cloudinaryUploadPreset: globalSettings.value.cloudinaryUploadPreset,
                         githubGistId: globalSettings.value.githubGistId,
-                        githubToken: globalSettings.value.githubToken
+                        githubToken: globalSettings.value.githubToken,
                 };
 
                 // 使用 put 方法保存合并后的完整设置对象
@@ -375,6 +488,23 @@ async function saveChanges() {
         } catch (error) {
                 console.error('保存失败:', error);
                 showToast('保存失败。', 'error');
+        }
+}
+
+// --- ElevenLabs TTS a ---
+async function testElevenLabsConnection() {
+        if (!currentTtsProfile.value.apiKey) {
+                showToast('请输入 ElevenLabs API Key', 'error');
+                return;
+        }
+
+        try {
+                const voices = await fetchElevenLabsVoices(currentTtsProfile.value.apiKey);
+                elevenLabsVoices.value = voices;
+                showToast(`连接成功！获取到 ${voices.length} 个声音。`, 'success');
+        } catch (error) {
+                elevenLabsVoices.value = [];
+                showToast(`连接失败: ${error.message}`, 'error');
         }
 }
 
@@ -389,13 +519,13 @@ async function handleSyncToGist() {
         isSyncing.value = true;
         try {
                 const gistId = await syncToGist(globalSettings.value.githubToken, globalSettings.value.githubGistId);
-                
+
                 // 如果是新创建的 Gist，更新设置中的 Gist ID
                 if (!globalSettings.value.githubGistId) {
                         globalSettings.value.githubGistId = gistId;
                         await saveChanges(); // 保存新的 Gist ID
                 }
-                
+
                 lastSyncTime.value = new Date().toLocaleString('zh-CN');
                 showToast('数据已成功同步到 GitHub Gist！', 'success');
         } catch (error) {
@@ -416,7 +546,7 @@ async function handleRestoreFromGist() {
                 '从 Gist 恢复',
                 '这将覆盖所有本地数据，确定要继续吗？'
         );
-        
+
         if (!confirmed) return;
 
         isSyncing.value = true;
@@ -499,7 +629,6 @@ async function handleLocalImport(event) {
 </script>
 
 <style scoped>
-
 .header-action-button {
         background: none;
         border: none;
@@ -512,11 +641,13 @@ async function handleLocalImport(event) {
         display: flex;
         gap: 10px;
 }
+
 .button-group {
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 10px;
 }
+
 .action-button {
         background: none;
         border: 1px solid var(--border-color);

@@ -148,13 +148,14 @@
                                         </div>
                                 </div>
                         </div>
+                        <!-- 一起听状态显示 -->
+                        <div v-if="globalListenTogetherText" class="listen-together-info">
+                                {{ globalListenTogetherText }}
+                        </div>
                         <div class="track-info">
+
                                 <div class="track-title">{{ currentTrack.name }}</div>
                                 <div class="track-artist">{{ getArtistNames(currentTrack.artists) }}</div>
-                                <!-- 一起听状态显示 -->
-                                <div v-if="globalListenTogetherText" class="listen-together-info">
-                                        {{ globalListenTogetherText }}
-                                </div>
                                 <div class="controls">
                                         <button @click.stop="previousTrack" class="control-btn">
                                                 <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12"
@@ -222,8 +223,17 @@ const isShuffleOn = ref(false);
 const isVinylMode = ref(false); // 黑胶唱片模式
 const isInitializing = ref(false); // 初始化状态
 
+const props = defineProps({
+        globalListenTogetherInfo: {
+                type: Object,
+                default: null
+        }
+});
+
+
 // 一起听会话状态
 const globalListenTogetherInfo = ref(null);
+
 
 // 自动刷新定时器
 let refreshInterval = null;
@@ -236,8 +246,10 @@ const progressPercent = computed(() => {
 
 // 全局一起听状态显示文本
 const globalListenTogetherText = computed(() => {
-        if (!globalListenTogetherInfo.value) return '';
-        return `和${globalListenTogetherInfo.value.partner}一起听了${formatDuration(globalListenTogetherInfo.value.totalDuration)}`;
+        if (!props.globalListenTogetherInfo) return '';
+        const partnerName = props.globalListenTogetherInfo.partner;
+        const formattedDuration = formatDuration(props.globalListenTogetherInfo.totalDuration);
+        return `和${partnerName}一起听了${formattedDuration}`;
 });
 
 // 方法
@@ -665,14 +677,21 @@ onUnmounted(() => {
 }
 
 .listen-together-info {
+        position: absolute;
+        top: 8px;
+        right: 12px;
         font-size: 11px;
         color: var(--accent-primary, #1DB954);
-        margin-bottom: 6px;
+        margin-bottom: 0;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
         line-height: 1.2;
         font-weight: 500;
+        z-index: 2;
+}
+.track-info {
+        position: relative;
 }
 
 /* 控制按钮 */

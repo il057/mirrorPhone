@@ -4,7 +4,6 @@ import router from './router'
 import './assets/main.css' // 引入全局样式
 import { populateMockData } from './services/mockData.js';
 import { initializeGlobalSettings, initializeDefaultFonts, initializeUserEntity } from './services/database.js';
-import { cleanupCorruptedSessions } from './services/listenTogetherService.js';
 import db from './services/database.js';
 import { getContrastTextColor, generateColorScheme } from './utils/colorUtils.js';
 
@@ -54,8 +53,7 @@ Promise.all([
         initializeDefaultFonts(),
         initializeUserEntity(),
         populateMockData(),
-        initializeTheme(),
-        cleanupCorruptedSessions()
+        initializeTheme()
 ]).then(() => {
         app.mount('#app');
     });

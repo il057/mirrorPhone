@@ -40,7 +40,7 @@ const toggleExpanded = () => {
         background-color: var(--bg-card);
         border-radius: 8px;
         margin-bottom: 15px;
-        overflow: hidden;
+        overflow: visible;
 }
 
 .accordion-header {
