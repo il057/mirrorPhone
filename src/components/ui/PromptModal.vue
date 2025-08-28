@@ -36,7 +36,7 @@ const inputValue = ref(props.initialValue || '');
 
 const handleConfirm = () => {
         if (!props.isOptional && !inputValue.value.trim()) {
-                showToast("Input cannot be empty", "error" );
+                showToast("输入不能为空！", "error" );
                 return;
         }
         props.onConfirm(inputValue.value);

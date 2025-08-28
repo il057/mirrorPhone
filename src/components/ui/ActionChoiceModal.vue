@@ -84,10 +84,14 @@ const svgIcons = {
         <line x1="15" y1="9" x2="15.01" y2="9" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>`,
 
-        'music': `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" width="36" height="36">
-        <path d="M9 18V5l12-2v13" stroke-linecap="round" stroke-linejoin="round"/>
-        <circle cx="6" cy="18" r="3" stroke-linecap="round" stroke-linejoin="round"/>
-        <circle cx="18" cy="16" r="3" stroke-linecap="round" stroke-linejoin="round"/>
+        'song': `<svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" class="bi bi-music-player" viewBox="0 0 16 16">
+        <path d="M4 3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1zm1 0v3h6V3zm3 9a1 1 0 1 0 0-2 1 1 0 0 0 0 2"/>
+        <path d="M11 11a3 3 0 1 1-6 0 3 3 0 0 1 6 0m-3 2a2 2 0 1 0 0-4 2 2 0 0 0 0 4"/>
+        <path d="M2 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2zm2-1a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1z"/>
+        </svg>`,
+
+        'listen-together': `<svg xmlns="http://www.w3.org/2000/svg"  fill="currentColor" class="bi bi-headphones" viewBox="0 0 16 16">
+        <path d="M8 3a5 5 0 0 0-5 5v1h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V8a6 6 0 1 1 12 0v5a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1V8a5 5 0 0 0-5-5"/>
         </svg>`,
 
         'location': `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" width="36" height="36">

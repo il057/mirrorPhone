@@ -64,6 +64,46 @@
                                                 语音消息自动转换为文字（功能开发中...）
                                         </p>
                                 </div>
+
+                                <!-- 语音消息显示设置 -->
+                                <div class="setting-section">
+                                        <div class="setting-header">
+                                                <h3>语音消息自动显示文字</h3>
+                                                <div class="toggle-switch">
+                                                        <input
+                                                                type="checkbox"
+                                                                id="voice-auto-show"
+                                                                v-model="settings.voiceMessage.autoShowText"
+                                                        />
+                                                        <label for="voice-auto-show" class="toggle-label">
+                                                                <span class="toggle-slider"></span>
+                                                        </label>
+                                                </div>
+                                        </div>
+                                        <p class="setting-description">
+                                                开启后，语音消息将自动显示文字内容；关闭后需点击语音气泡查看文字
+                                        </p>
+                                </div>
+
+                                <!-- 一起听自动接受设置 -->
+                                <div class="setting-section">
+                                        <div class="setting-header">
+                                                <h3>自动接受一起听邀请</h3>
+                                                <div class="toggle-switch">
+                                                        <input
+                                                                type="checkbox"
+                                                                id="auto-accept-listen-together"
+                                                                v-model="settings.musicSharing.autoAcceptListenTogether"
+                                                        />
+                                                        <label for="auto-accept-listen-together" class="toggle-label">
+                                                                <span class="toggle-slider"></span>
+                                                        </label>
+                                                </div>
+                                        </div>
+                                        <p class="setting-description">
+                                                开启后，角色会自动接受一起听音乐的邀请。注意：角色发起的邀请仍需您手动接受
+                                        </p>
+                                </div>
                         </AccordionItem>
 
                         <!-- 世界设置 -->
@@ -239,6 +279,12 @@ const settings = reactive({
         voiceToText: {
                 enabled: false
         },
+        voiceMessage: {
+                autoShowText: true // 默认自动显示语音内容
+        },
+        musicSharing: {
+                autoAcceptListenTogether: false // 默认关闭自动接受一起听邀请
+        },
         offlineSimulation: {
                 enabled: false
         }
@@ -385,6 +431,8 @@ const saveSettings = async () => {
                 const success = await savePersonalSettings({
                         typingSimulation: settings.typingSimulation,
                         voiceToText: settings.voiceToText,
+                        voiceMessage: settings.voiceMessage,
+                        musicSharing: settings.musicSharing,
                         offlineSimulation: settings.offlineSimulation
                 });
                 
@@ -836,7 +884,6 @@ onMounted(() => {
 }
 
 .header-action-button:hover {
-        background-color: var(--button-bg-hover);
         color: var(--accent-primary);
 }
 </style>

@@ -49,6 +49,10 @@
                                                         <p>{{ userProfile.followers?.total || 0 }} 关注者</p>
                                                 </div>
                                         </div>
+                                        <!-- 一起听状态显示（右上角） -->
+                                        <div v-if="globalListenTogetherText" class="listen-together-status">
+                                                {{ globalListenTogetherText }}
+                                        </div>
                                         <!-- Web播放器初始化按钮 -->
                                         <div class="player-controls">
                                                 <button v-if="!webPlayerReady" @click="initializePlayer"
@@ -224,6 +228,8 @@ import { useRouter, useRoute } from 'vue-router';
 import Header from '../components/layout/Header.vue';
 import SpotifyPlayer from '../components/ui/SpotifyPlayer.vue';
 import spotifyService from '../services/spotifyService.js';
+import * as listenTogetherService from '../services/listenTogetherService.js';
+import { formatDuration } from '../utils/datetime.js';
 import { SPOTIFY_CONFIG } from '../config/spotify.js';
 
 const router = useRouter();
@@ -238,6 +244,9 @@ const playlists = ref([]);
 const webPlayerReady = ref(false);
 const isInitializingPlayer = ref(false);
 
+// 一起听会话状态
+const globalListenTogetherInfo = ref(null);
+
 // 播放列表详情相关
 const showPlaylistModal = ref(false);
 const selectedPlaylist = ref(null);
@@ -246,6 +255,12 @@ const isLoadingTracks = ref(false);
 
 // 计算属性
 const hasClientId = computed(() => !!SPOTIFY_CONFIG.CLIENT_ID);
+
+// 全局一起听状态显示文本
+const globalListenTogetherText = computed(() => {
+        if (!globalListenTogetherInfo.value) return '';
+        return `和${globalListenTogetherInfo.value.partner}一起听了${formatDuration(globalListenTogetherInfo.value.totalDuration)}`;
+});
 
 // 方法
 const loginToSpotify = async () => {
@@ -275,6 +290,26 @@ const logout = () => {
 
 const clearError = () => {
         error.value = '';
+};
+
+// 更新一起听信息
+const updateListenTogetherInfo = async () => {
+        try {
+                const sessionInfo = await listenTogetherService.getCurrentListenTogetherSessionInfo();
+                if (sessionInfo) {
+                        const totalDuration = await listenTogetherService.getTotalListenTogetherDurationWithCurrent(sessionInfo.actorId);
+                        globalListenTogetherInfo.value = {
+                                partner: sessionInfo.partner,
+                                partnerId: sessionInfo.actorId,
+                                totalDuration
+                        };
+                } else {
+                        globalListenTogetherInfo.value = null;
+                }
+        } catch (error) {
+                console.error('获取一起听信息失败:', error);
+                globalListenTogetherInfo.value = null;
+        }
 };
 
 // 初始化Web播放器
@@ -357,13 +392,6 @@ const playTrack = async (track) => {
         }
 };
 
-const formatDuration = (ms) => {
-        if (!ms) return '--:--';
-        const minutes = Math.floor(ms / 60000);
-        const seconds = Math.floor((ms % 60000) / 1000);
-        return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-};
-
 // 数据加载方法
 const loadUserProfile = async () => {
         try {
@@ -430,6 +458,10 @@ onMounted(async () => {
                 await handleAuthCallback();
         } else if (isLoggedIn.value) {
                 await loadUserData();
+                await updateListenTogetherInfo();
+                
+                // 定期更新一起听信息（每60秒）
+                setInterval(updateListenTogetherInfo, 60000);
         }
 });
 </script><style scoped>
@@ -574,6 +606,21 @@ onMounted(async () => {
         margin-bottom: 24px;
         flex-wrap: wrap;
         gap: 16px;
+        position: relative;
+}
+
+.listen-together-status {
+        position: absolute;
+        top: 16px;
+        right: 20px;
+        background: var(--accent-primary);
+        color: white;
+        padding: 6px 12px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 500;
+        white-space: nowrap;
+        box-shadow: 0 2px 8px rgba(29, 185, 84, 0.3);
 }
 
 .user-info {

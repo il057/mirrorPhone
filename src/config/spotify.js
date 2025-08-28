@@ -2,7 +2,6 @@
 export const SPOTIFY_CONFIG = {
         CLIENT_ID: 'd060cc92cb3346e8a1e2327b3826f35c',
         REDIRECT_URI: window.location.origin + '/music',
-        // REDIRECT_URI: 'http://127.0.0.1:5173/music',
         SCOPES: [
                 'user-read-private',
                 'user-read-email',

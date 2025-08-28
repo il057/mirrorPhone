@@ -22,6 +22,14 @@
                         </template>
                 </AppHeader>
 
+                <!-- 聊天室音乐播放器 -->
+                <ChatMusicPlayer ref="chatMusicPlayer" 
+                        :listen-together="listenTogetherMode.active"
+                        :listen-together-start-time="listenTogetherMode.startTime"
+                        :listen-together-duration="currentActorListenTogetherDuration"
+                        :listen-together-partner="actor?.name"
+                        :global-listen-together-info="globalListenTogetherSessionInfo" />
+
                 <main v-if="actor" class="chat-content content" @click="handleContentClick">
                         <!-- 消息列表 -->
                         <div class="messages-container" :class="{ 'sticker-panel-open': showStickerPanel }"
@@ -30,20 +38,33 @@
                                         <p>加载更多消息...</p>
                                 </div>
                                 <div v-for="message in displayedMessages" :key="message.id" class="message-item"
-                                        :class="{ 'own-message': message.actorId === userActorId }">
-                                        <!-- 对方头像 -->
-                                        <div class="message-avatar" v-if="message.actorId !== userActorId">
-                                                <img v-if="actor?.avatar" :src="actor.avatar" :alt="actor.name">
-                                                <span v-else class="avatar-initial">{{ actor?.name?.[0] || '#' }}</span>
+                                        :class="{ 
+                                                'own-message': message.actorId === userActorId,
+                                                'system-message': message.actorId === 'system' && message.content.isVisible
+                                        }"
+                                        v-show="!(message.actorId === 'system' && !message.content.isVisible)">
+                                        
+                                        <!-- 系统消息 - 居中显示 -->
+                                        <div v-if="message.actorId === 'system' && message.content.isVisible" 
+                                             class="system-message-content">
+                                                <span>{{ message.content.content }}</span>
                                         </div>
+                                        
+                                        <!-- 普通消息 -->
+                                        <template v-else-if="message.actorId !== 'system'">
+                                                <!-- 对方头像 -->
+                                                <div class="message-avatar" v-if="message.actorId !== userActorId">
+                                                        <img v-if="actor?.avatar" :src="actor.avatar" :alt="actor.name">
+                                                        <span v-else class="avatar-initial">{{ actor?.name?.[0] || '#' }}</span>
+                                                </div>
 
-                                        <!-- 用户头像 -->
-                                        <div class="message-avatar" v-else>
-                                                <img v-if="currentUserPersona?.avatar" :src="currentUserPersona.avatar"
-                                                        :alt="currentUserPersona?.name || 'User'">
-                                                <span v-else class="avatar-initial">{{
-                                                        getInitial(currentUserPersona?.name || 'User') }}</span>
-                                        </div>
+                                                <!-- 用户头像 -->
+                                                <div class="message-avatar" v-else>
+                                                        <img v-if="currentUserPersona?.avatar" :src="currentUserPersona.avatar"
+                                                                :alt="currentUserPersona?.name || 'User'">
+                                                        <span v-else class="avatar-initial">{{
+                                                                getInitial(currentUserPersona?.name || 'User') }}</span>
+                                                </div>
                                         <div class="message-content">
                                                 <!-- 文字消息 -->
                                                 <div v-if="!message.content.type || message.content.type === 'text'"
@@ -67,7 +88,6 @@
                                                         <!-- 文字图片 -->
                                                         <div v-if="message.content.subtype === 'text'"
                                                                 class="text-image-placeholder">
-                                                                <div class="text-image-icon">🖼️</div>
                                                                 <div class="text-image-description">{{
                                                                         message.content.description }}</div>
                                                         </div>
@@ -81,10 +101,6 @@
                                                 <div v-else-if="message.content.type === 'payment'"
                                                         class="payment-message">
                                                         <div class="payment-header">
-                                                                <span class="payment-icon">
-                                                                        {{ message.content.subtype === 'transfer' ? '💸'
-                                                                        : '💳' }}
-                                                                </span>
                                                                 <span class="payment-type">
                                                                         {{ message.content.subtype === 'transfer' ? '转账'
                                                                         : '代付' }}
@@ -100,10 +116,123 @@
                                                         </div>
                                                 </div>
 
+                                                <!-- 语音消息 -->
+                                                <VoiceBubble v-else-if="message.content.type === 'voice'"
+                                                        :text="message.content.text"
+                                                        :duration="message.content.duration"
+                                                        :is-own-message="message.actorId === userActorId"
+                                                        :auto-show="personalSettings.voiceMessage?.autoShowText ?? true" />
+
+                                                <!-- 一起听邀请消息 -->
+                                                <div v-else-if="message.content.type === 'listen-together-invite'"
+                                                        class="listen-together-invite message-bubble">
+                                                        <div class="invite-header">
+                                                                <svg xmlns="http://www.w3.org/2000/svg" width="16"
+                                                                        height="16" fill="currentColor"
+                                                                        class="bi bi-headphones" viewBox="0 0 16 16">
+                                                                        <path
+                                                                                d="M8 3a5 5 0 0 0-5 5v1h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V8a6 6 0 1 1 12 0v5a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1V8a5 5 0 0 0-5-5" />
+                                                                </svg>
+                                                                <span>一起听音乐</span>
+                                                        </div>
+                                                        <div class="playlist-info">
+                                                                <div class="playlist-name">{{
+                                                                        message.content.playlist.name }}</div>
+                                                                <div class="playlist-tracks">{{
+                                                                        message.content.playlist.tracks }} 首歌曲</div>
+                                                        </div>
+                                                        <div class="invite-message">{{ message.content.message }}</div>
+                                                        <div v-if="message.content.status === 'pending' && message.actorId !== userActorId"
+                                                                class="invite-actions">
+                                                                <button class="accept-btn"
+                                                                        @click="acceptListenTogetherInvite(message.timestamp, message.content.playlist)">
+                                                                        接受
+                                                                </button>
+                                                                <button class="decline-btn"
+                                                                        @click="declineListenTogetherInvite(message.timestamp)">
+                                                                        拒绝
+                                                                </button>
+                                                        </div>
+                                                        <div v-else-if="message.content.status === 'accepted'"
+                                                                class="invite-status accepted">
+                                                                ✓ 已接受邀请
+                                                        </div>
+                                                        <div v-else-if="message.content.status === 'declined'"
+                                                                class="invite-status declined">
+                                                                ✗ 已拒绝邀请
+                                                        </div>
+                                                </div>
+
+                                                <!-- 一起听接受消息 -->
+                                                <div v-else-if="message.content.type === 'listen-together-accept'"
+                                                        class="listen-together-accept message-bubble">
+                                                        <div class="accept-icon">
+                                                                <svg xmlns="http://www.w3.org/2000/svg" width="16"
+                                                                        height="16" fill="currentColor"
+                                                                        class="bi bi-check-circle" viewBox="0 0 16 16">
+                                                                        <path
+                                                                                d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16" />
+                                                                        <path
+                                                                                d="m10.97 4.97-.02.022-3.473 4.425-2.093-2.094a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-1.071-1.05" />
+                                                                </svg>
+                                                        </div>
+                                                        <span>{{ message.content.message }}</span>
+                                                </div>
+
+                                                <!-- 系统消息 -->
+                                                <div v-else-if="message.content.type === 'system'"
+                                                        class="system-message">
+                                                        <div v-if="message.content.isVisible" class="system-message-content">
+                                                                {{ message.content.content }}
+                                                        </div>
+                                                        <!-- 不可见的系统消息不显示 -->
+                                                </div>
+
+                                                <!-- 音乐卡片消息 -->
+                                                <div v-else-if="message.content.type === 'music-card'"
+                                                        class="music-card message-bubble">
+                                                        <div class="music-card-header">
+                                                                <svg xmlns="http://www.w3.org/2000/svg" width="16"
+                                                                        height="16" fill="currentColor"
+                                                                        class="bi bi-music-note" viewBox="0 0 16 16">
+                                                                        <path
+                                                                                d="M9 13c0 1.105-1.12 2-2.5 2S4 14.105 4 13s1.12-2 2.5-2 2.5.895 2.5 2" />
+                                                                        <path fill-rule="evenodd" d="M9 3v10H8V3z" />
+                                                                        <path
+                                                                                d="M8 2.82a1 1 0 0 1 .804-.98l3-.6A1 1 0 0 1 13 2.22V4L8 5z" />
+                                                                </svg>
+                                                                <span>音乐分享</span>
+                                                        </div>
+                                                        <div class="song-info">
+                                                                <div class="song-name">{{ message.content.song.name }}
+                                                                </div>
+                                                                <div class="song-artist">{{
+                                                                        getArtistNames(message.content.song.artists) }}
+                                                                </div>
+                                                                <div class="song-album">{{
+                                                                        message.content.song.album.name }}</div>
+                                                        </div>
+                                                        <div class="music-card-message">{{ message.content.message }}
+                                                        </div>
+                                                        <button class="play-song-btn"
+                                                                @click="playSingleSong(message.content.song)">
+                                                                <svg xmlns="http://www.w3.org/2000/svg" width="16"
+                                                                        height="16" fill="currentColor"
+                                                                        class="bi bi-play-circle" viewBox="0 0 16 16">
+                                                                        <path
+                                                                                d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16" />
+                                                                        <path
+                                                                                d="M6.271 5.055a.5.5 0 0 1 .52.038L11 7.055a.5.5 0 0 1 0 .89L6.791 9.907a.5.5 0 0 1-.791-.389V5.482a.5.5 0 0 1 .271-.427" />
+                                                                </svg>
+                                                                播放
+                                                        </button>
+                                                </div>
+
                                                 <div class="message-time">
                                                         {{ formatTimestamp(message.timestamp, true) }}
                                                 </div>
                                         </div>
+                                        </template>
                                 </div>
 
                                 <!-- AI正在输入的消息（包含思考和打字状态） -->
@@ -154,7 +283,7 @@
                                                 </svg>
 
                                         </button>
-                                        <button class="function-btn" title="语音">
+                                        <button class="function-btn" @click.stop="handleVoiceMessage" title="语音">
                                                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"
                                                         fill="currentColor" class="bi bi-mic" viewBox="0 0 16 16">
                                                         <path
@@ -171,7 +300,7 @@
                                                                 d="m9 7.5 3 4.5m0 0 3-4.5M12 12v5.25M15 12H9m6 3H9m12-3a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
                                                 </svg>
                                         </button>
-                                        <button class="function-btn" title="听歌">
+                                        <button class="function-btn" @click.stop="handleMusicShare" title="听歌">
                                                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"
                                                         fill="currentColor" class="bi bi-music-note"
                                                         viewBox="0 0 16 16">
@@ -221,8 +350,8 @@
                                         <button class="action-button send-btn" @click="sendMessage"
                                                 :disabled="!newMessage.trim()" title="发送">
                                                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"
-                                                        fill="none" viewBox="0 0 24 24"
-                                                        stroke-width="2" stroke="currentColor" class="size-6">
+                                                        fill="none" viewBox="0 0 24 24" stroke-width="2"
+                                                        stroke="currentColor" class="size-6">
                                                         <path stroke-linecap="round" stroke-linejoin="round"
                                                                 d="M4.5 10.5 12 3m0 0 7.5 7.5M12 3v18" />
                                                 </svg>
@@ -250,6 +379,13 @@
                                 </div>
                         </div>
                 </transition>
+
+                <!-- 歌单选择模态框 -->
+                <PlaylistPickerModal v-if="showPlaylistPicker" @select="onPlaylistSelected"
+                        @cancel="showPlaylistPicker = false" />
+
+                <!-- 歌曲搜索模态框 -->
+                <SongSearchModal v-if="showSongSearch" @select="onSongSelected" @cancel="showSongSearch = false" />
         </div>
 </template>
 
@@ -262,14 +398,20 @@ import { pinyin } from 'pinyin-pro';
 import { CirclesToRhombusesSpinner, SpringSpinner } from 'epic-spinners';
 import db from '../services/database.js';
 import AppHeader from '../components/layout/Header.vue';
-import { formatTimestamp } from '../utils/datetime.js';
+import VoiceBubble from '../components/ui/VoiceBubble.vue';
+import ChatMusicPlayer from '../components/ui/ChatMusicPlayer.vue';
+import PlaylistPickerModal from '../components/ui/PlaylistPickerModal.vue';
+import SongSearchModal from '../components/ui/SongSearchModal.vue';
+import { formatTimestamp, formatDuration } from '../utils/datetime.js';
 import { generateAIReply } from '../services/aiChatAPIService.js';
 import { getUserPersonaForGroup, getUserPersonaForUngrouped, getDefaultUserPersona } from '../services/userPersonaService.js';
 import { USER_ACTOR_ID } from '../services/database.js';
-import { getPersonalSettings, getTypingDelayConfig, getRandomMessageDelay } from '../services/personalSettingsService.js';
+import { getPersonalSettings, getTypingDelayConfig, getRandomMessageDelay, calculateVoiceDuration } from '../services/personalSettingsService.js';
 import { getActorBubbleStyle, applyBubbleStyles } from '../services/bubbleStyleService.js';
 import { applyActorTheme, toggleActorTheme, restoreOriginalTheme, getActorThemeChoice } from '../services/themeService.js';
 import { showActionChoiceModal, showPaymentModal, showUploadChoiceModal, promptForInput, showToast } from '../services/uiService.js';
+import spotifyService from '../services/spotifyService.js';
+import * as listenTogetherService from '../services/listenTogetherService.js';
 
 const route = useRoute();
 const router = useRouter();
@@ -302,6 +444,9 @@ const personalSettings = ref({
         typingSimulation: {
                 enabled: true,
                 speed: 5
+        },
+        voiceMessage: {
+                autoShowText: true
         }
 });
 
@@ -309,6 +454,56 @@ const personalSettings = ref({
 const currentBubbleStyle = ref(null);
 // 从localStorage读取用户对这个角色的主题选择
 const isUsingUserBubbleTheme = ref(getActorThemeChoice(actorId.value));
+
+// 音乐相关状态
+const chatMusicPlayer = ref(null);
+const showPlaylistPicker = ref(false);
+const showSongSearch = ref(false);
+
+// 一起听状态 - 从数据库读取
+const listenTogetherSession = useObservable(
+        liveQuery(async () => {
+                return await listenTogetherService.getCurrentListenTogetherSession();
+        }),
+        { initialValue: null }
+);
+
+// 计算属性：当前角色的一起听总时长（包括当前会话）
+const currentActorListenTogetherDuration = useObservable(
+        liveQuery(async () => {
+                if (!actorId.value) return 0;
+                return await listenTogetherService.getTotalListenTogetherDurationWithCurrent(actorId.value);
+        }),
+        { initialValue: 0 }
+);
+
+// 计算属性：全局一起听会话信息
+const globalListenTogetherSessionInfo = useObservable(
+        liveQuery(async () => {
+                return await listenTogetherService.getCurrentListenTogetherSessionInfo();
+        }),
+        { initialValue: null }
+);
+
+// 计算属性：一起听模式状态（为了兼容现有组件）
+const listenTogetherMode = computed(() => {
+        const session = listenTogetherSession.value;
+        if (!session || !session.isActive || session.actorId !== actorId.value) {
+                return {
+                        active: false,
+                        startTime: null,
+                        playlist: null,
+                        inviteMessageId: null
+                };
+        }
+        
+        return {
+                active: true,
+                startTime: session.startTime,
+                playlist: session.playlistInfo,
+                inviteMessageId: session.id
+        };
+});
 
 // 获取角色信息
 const actor = useObservable(
@@ -637,6 +832,52 @@ const sendRealImage = async (imageData) => {
         }
 };
 
+// 处理语音消息
+const handleVoiceMessage = async () => {
+        const description = await promptForInput(
+                '语音描述', 
+                '请输入语音消息内容...', 
+                true, // 使用多行文本框
+                false // 不允许为空
+        );
+        
+        if (!description) return;
+        
+        await sendVoiceMessage(description);
+};
+
+// 发送语音消息
+const sendVoiceMessage = async (text) => {
+        const duration = calculateVoiceDuration(text);
+        
+        const message = {
+                id: Date.now() + Math.random(),
+                actorId: userActorId,
+                contextId: actorId.value,
+                type: 'privateMessage',
+                content: {
+                        type: 'voice',
+                        text: text,
+                        duration: duration
+                },
+                timestamp: Date.now()
+        };
+
+        try {
+                await db.events.add(message);
+                await updateConversation(message);
+                showToast('语音消息发送成功', 'success');
+                
+                // 自动生成AI回复
+                setTimeout(() => {
+                        generateReply();
+                }, 500);
+        } catch (error) {
+                console.error('发送语音消息失败:', error);
+                showToast('发送失败', 'error');
+        }
+};
+
 // 处理转账
 const handlePayment = async () => {
         const actions = [
@@ -693,41 +934,437 @@ const handleCall = async () => {
         }
 };
 
-// 处理更多功能选项
-const handleMoreActions = async () => {
+// 处理音乐分享
+const handleMusicShare = async () => {
+        // 检查当前是否正在与此角色一起听
+        const isListeningTogether = await listenTogetherService.isListeningTogetherWith(actorId.value);
+        
         const actions = [
-                { key: 'red-packet', label: '发红包', iconType: 'red-packet' },
-                { key: 'sticker', label: '表情包', iconType: 'sticker' },
-                { key: 'music', label: '音乐分享', iconType: 'music' },
-                { key: 'location', label: '位置分享', iconType: 'location' },
-                { key: 'file', label: '文件分享', iconType: 'file' },
-                { key: 'gift', label: '送礼物', iconType: 'gift' }
+                { 
+                        key: 'listen-together', 
+                        label: isListeningTogether ? '退出一起听' : '一起听', 
+                        iconType: isListeningTogether ? 'exit-listen-together' : 'listen-together' 
+                },
+                { key: 'song', label: '分享单曲', iconType: 'song' }
         ];
         
-        const choice = await showActionChoiceModal('更多功能', actions);
-        if (choice) {
-                switch (choice) {
-                        case 'red-packet':
-                                showToast('红包功能开发中', 'info');
-                                break;
-                        case 'sticker':
-                                showToast('表情包功能开发中', 'info');
-                                break;
-                        case 'music':
-                                showToast('音乐分享功能开发中', 'info');
-                                break;
-                        case 'location':
-                                showToast('位置分享功能开发中', 'info');
-                                break;
-                        case 'file':
-                                showToast('文件分享功能开发中', 'info');
-                                break;
-                        case 'gift':
-                                showToast('礼物功能开发中', 'info');
-                                break;
+        const choice = await showActionChoiceModal('音乐分享', actions);
+        if (!choice) return;
+        
+        if (choice === 'listen-together') {
+                if (isListeningTogether) {
+                        await handleExitListenTogether();
+                } else {
+                        await handleListenTogether();
+                }
+        } else if (choice === 'song') {
+                await handleShareSong();
+        }
+};
+
+// 处理一起听功能
+// 处理一起听功能
+const handleListenTogether = async () => {
+        try {
+                // 检查是否登录Spotify
+                if (!spotifyService.isLoggedIn()) {
+                        showToast('请先登录Spotify', 'warning');
+                        return;
+                }
+                
+                // 尝试清理可能存在的损坏数据
+                try {
+                        const currentSession = await listenTogetherService.getCurrentListenTogetherSession();
+                        if (currentSession && currentSession.actorId === actorId.value) {
+                                // 如果当前已经有会话，先结束它
+                                await listenTogetherService.endListenTogetherSession(actorId.value);
+                        }
+                } catch (cleanupError) {
+                        console.warn('清理现有会话时出错:', cleanupError);
+                        // 如果清理失败，尝试强制清理
+                        await listenTogetherService.cleanupCorruptedSessions();
+                }
+                
+                // 显示歌单选择界面
+                showPlaylistPicker.value = true;
+                
+        } catch (error) {
+                console.error('发起一起听失败:', error);
+                
+                // 如果是数据库错误，尝试修复
+                if (error.name === 'DexieError' || error.message.includes('IDBObjectStore')) {
+                        try {
+                                console.log('检测到数据库错误，尝试修复...');
+                                await listenTogetherService.cleanupCorruptedSessions();
+                                showToast('已修复数据错误，请重试', 'info');
+                        } catch (fixError) {
+                                console.error('修复失败:', fixError);
+                                showToast('数据库错误，请刷新页面重试', 'error');
+                        }
+                } else {
+                        showToast('发起一起听失败', 'error');
                 }
         }
 };
+
+// 处理退出一起听功能
+const handleExitListenTogether = async () => {
+        try {
+                // 结束一起听会话
+                await listenTogetherService.endListenTogetherSession(actorId.value);
+                
+                // 发送系统消息
+                await sendSystemMessage('已结束一起听音乐', true, 'listen-together-end');
+                
+                showToast('已退出一起听', 'success');
+                
+        } catch (error) {
+                console.error('退出一起听失败:', error);
+                showToast('退出一起听失败', 'error');
+        }
+};
+
+// 选择歌单后发送邀请
+const onPlaylistSelected = async (playlist) => {
+        showPlaylistPicker.value = false;
+        
+        try {
+                // 直接发送邀请消息，不立即播放
+                await sendListenTogetherInvite(playlist);
+        } catch (error) {
+                console.error('发送邀请失败:', error);
+                showToast('发送邀请失败', 'error');
+        }
+};
+
+// 发送一起听邀请
+const sendListenTogetherInvite = async (playlist) => {
+        const message = {
+                timestamp: Date.now(),
+                actorId: USER_ACTOR_ID,
+                contextId: actorId.value,
+                type: 'privateMessage',
+                content: {
+                        type: 'listen-together-invite',
+                        playlist: {
+                                id: playlist.id,
+                                name: playlist.name,
+                                tracks: playlist.tracks?.total || 0,
+                                uri: playlist.uri,
+                                // 只存储第一张图片的URL，避免复杂对象
+                                imageUrl: playlist.images?.[0]?.url || null
+                        },
+                        status: 'pending', // pending, accepted, declined
+                        message: `邀请你一起听「${playlist.name}」`
+                }
+        };
+
+        try {
+                await db.events.add(message);
+                await updateConversation(message);
+                
+                showToast('邀请已发送', 'success');
+                
+                // 根据个人设置决定是否自动接受邀请
+                if (personalSettings.value.musicSharing?.autoAcceptListenTogether) {
+                        setTimeout(async () => {
+                                await acceptListenTogetherInvite(message.timestamp, playlist);
+                        }, 1000);
+                }
+                
+        } catch (error) {
+                console.error('发送一起听邀请失败:', error);
+                showToast('发送邀请失败', 'error');
+        }
+};
+
+// 接受一起听邀请
+const acceptListenTogetherInvite = async (inviteTimestamp, playlist = null) => {
+        try {
+                // 如果没有传入playlist，尝试从消息中获取
+                if (!playlist) {
+                        const inviteMessage = displayedMessages.value.find(msg => 
+                                msg.timestamp === inviteTimestamp && 
+                                msg.content.type === 'listen-together-invite'
+                        );
+                        if (inviteMessage && inviteMessage.content.playlist) {
+                                playlist = inviteMessage.content.playlist;
+                        }
+                }
+                
+                // 启动一起听会话（不再存储playlist和track信息到数据库）
+                await listenTogetherService.startListenTogetherSession(actorId.value);
+                
+                // 发送系统消息通知开始一起听
+                const systemMessage = `开始一起听音乐`;
+                await sendSystemMessage(systemMessage);
+                
+                // 如果有播放列表信息，开始播放并发送音乐消息
+                if (playlist && playlist.uri) {
+                        try {
+                                // 确保播放器可用
+                                await ensurePlayerAvailable();
+                                
+                                // 使用安全播放操作，自动处理设备问题
+                                await spotifyService.safePlaybackOperation(async () => {
+                                        // 先停止当前播放
+                                        await spotifyService.pausePlayback();
+                                        
+                                        // 播放选择的歌单
+                                        await spotifyService.playPlaylist(playlist.uri);
+                                });
+                                
+                                showToast(`开始播放「${playlist.name}」`, 'success');
+                                
+                                // 发送当前播放歌曲的消息
+                                setTimeout(async () => {
+                                        await sendMusicPlayMessage();
+                                }, 2000);
+                                
+                                // 监听播放状态变化
+                                startTrackingMusic();
+                        } catch (playError) {
+                                console.error('播放歌单失败:', playError);
+                                showToast('播放歌单失败，但一起听会话已建立', 'warning');
+                        }
+                }
+                
+                // 更新原始邀请消息的状态
+                const inviteMessage = await db.events.where('timestamp').equals(inviteTimestamp).first();
+                if (inviteMessage) {
+                        await db.events.update(inviteMessage.id, {
+                                'content.status': 'accepted'
+                        });
+                }
+
+                // 更新播放器状态
+                if (chatMusicPlayer.value) {
+                        setTimeout(async () => {
+                                await chatMusicPlayer.value.updatePlaybackState();
+                        }, 1000);
+                }
+                
+                showToast('开始一起听音乐！', 'success');
+                
+        } catch (error) {
+                console.error('接受一起听邀请失败:', error);
+                
+                // 如果是数据库错误，尝试修复
+                if (error.name === 'DexieError' || error.message.includes('IDBObjectStore')) {
+                        try {
+                                console.log('检测到数据库错误，尝试修复...');
+                                await listenTogetherService.cleanupCorruptedSessions();
+                                showToast('已修复数据错误，请重试接受邀请', 'info');
+                        } catch (fixError) {
+                                console.error('修复失败:', fixError);
+                                showToast('数据库错误，请刷新页面重试', 'error');
+                        }
+                } else {
+                        showToast('接受邀请失败', 'error');
+                }
+        }
+};
+
+// 处理分享单曲
+const handleShareSong = async () => {
+        try {
+                // 检查是否登录Spotify
+                if (!spotifyService.isLoggedIn()) {
+                        showToast('请先登录Spotify', 'warning');
+                        return;
+                }
+                
+                // 显示歌曲搜索界面
+                showSongSearch.value = true;
+                
+        } catch (error) {
+                console.error('分享单曲失败:', error);
+                showToast('分享单曲失败', 'error');
+        }
+};
+
+// 选择歌曲后发送卡片
+const onSongSelected = async (song) => {
+        showSongSearch.value = false;
+        
+        try {
+                await sendSongCard(song);
+        } catch (error) {
+                console.error('发送音乐卡片失败:', error);
+                showToast('发送失败', 'error');
+        }
+};
+
+// 发送音乐卡片
+const sendSongCard = async (song) => {
+        const message = {
+                timestamp: Date.now(),
+                actorId: USER_ACTOR_ID,
+                contextId: actorId.value,
+                type: 'privateMessage',
+                content: {
+                        type: 'music-card',
+                        song: {
+                                id: song.id,
+                                name: song.name,
+                                // 只存储艺术家的基本信息
+                                artists: song.artists?.map(artist => ({
+                                        id: artist.id,
+                                        name: artist.name
+                                })) || [],
+                                // 只存储专辑的基本信息
+                                album: {
+                                        id: song.album?.id,
+                                        name: song.album?.name,
+                                        imageUrl: song.album?.images?.[0]?.url || null
+                                },
+                                duration_ms: song.duration_ms,
+                                uri: song.uri,
+                                // 只存储必要的外部链接
+                                spotify_url: song.external_urls?.spotify || null,
+                                preview_url: song.preview_url
+                        },
+                        message: `分享了歌曲「${song.name} - ${song.artists?.map(a => a.name).join(', ')}」`
+                }
+        };
+
+        try {
+                await db.events.add(message);
+                await updateConversation(message);
+                
+                showToast('音乐卡片已发送', 'success');
+                
+                // AI可能会回复
+                setTimeout(() => {
+                        generateReply();
+                }, 1000);
+                
+        } catch (error) {
+                console.error('发送音乐卡片失败:', error);
+                showToast('发送失败', 'error');
+        }
+};
+
+// 拒绝一起听邀请
+const declineListenTogetherInvite = async (inviteTimestamp) => {
+        try {
+                // 更新原始邀请消息的状态
+                const inviteMessage = await db.events.where('timestamp').equals(inviteTimestamp).first();
+                if (inviteMessage) {
+                        await db.events.update(inviteMessage.id, {
+                                'content.status': 'declined'
+                        });
+                }
+                
+                // 发送系统消息
+                await listenTogetherService.sendSystemMessage(
+                        actorId.value,
+                        '已拒绝一起听邀请',
+                        true,
+                        'listen-together-decline'
+                );
+                
+                showToast('已拒绝邀请', 'info');
+                
+        } catch (error) {
+                console.error('拒绝一起听邀请失败:', error);
+                showToast('操作失败', 'error');
+        }
+};
+
+// 播放单曲
+const playSingleSong = async (song) => {
+        try {
+                if (!spotifyService.isLoggedIn()) {
+                        showToast('请先登录Spotify', 'warning');
+                        return;
+                }
+                
+                // 确保播放器可用
+                await ensurePlayerAvailable();
+                
+                // 播放指定歌曲
+                await spotifyService.playTrack(song.uri);
+                showToast(`开始播放「${song.name}」`, 'success');
+                
+                // 发送音乐播放状态消息
+                const trackInfo = {
+                        name: song.name,
+                        artists: song.artists ? song.artists.map(a => a.name) : ['未知艺术家'],
+                        album: song.album?.name || null
+                };
+                await sendMusicPlayMessage(trackInfo);
+                
+                // 更新播放器状态
+                if (chatMusicPlayer.value) {
+                        setTimeout(async () => {
+                                await chatMusicPlayer.value.updatePlaybackState();
+                        }, 1000);
+                }
+                
+        } catch (error) {
+                console.error('播放单曲失败:', error);
+                showToast('播放失败，请确保有可用的播放设备', 'error');
+        }
+};
+
+// 获取艺术家名称
+const getArtistNames = (artists) => {
+        return artists?.map(a => a.name).join(', ') || '未知艺术家';
+};
+
+// 音乐播放监听功能
+let musicTrackingInterval = null;
+let lastTrackedSong = null; // 记录上一首歌
+
+const startTrackingMusic = () => {
+        // 清除现有的监听
+        if (musicTrackingInterval) {
+                clearInterval(musicTrackingInterval);
+        }
+        
+        // 每5秒检查一次播放状态
+        musicTrackingInterval = setInterval(async () => {
+                try {
+                        // 获取当前播放信息
+                        const playbackState = await spotifyService.getCurrentPlayback();
+                        if (playbackState && playbackState.item) {
+                                const track = playbackState.item;
+                                const trackInfo = {
+                                        id: track.id,
+                                        name: track.name,
+                                        artists: track.artists.map(a => a.name),
+                                        album: track.album.name
+                                };
+                                
+                                // 检查是否换歌了
+                                if (!lastTrackedSong || lastTrackedSong.id !== track.id) {
+                                        // 发送音乐播放状态消息
+                                        await sendMusicPlayMessage(trackInfo, lastTrackedSong);
+                                        
+                                        // 更新一起听会话的当前曲目（如果正在一起听）
+                                        const currentSession = await listenTogetherService.getCurrentListenTogetherSession();
+                                        if (currentSession && currentSession.isActive && currentSession.actorId === actorId.value) {
+                                                await listenTogetherService.updateCurrentTrack(currentSession.actorId, trackInfo);
+                                        }
+                                        
+                                        // 记录当前歌曲
+                                        lastTrackedSong = trackInfo;
+                                }
+                        }
+                } catch (error) {
+                        console.error('音乐监听失败:', error);
+                }
+        }, 5000);
+};
+
+const stopTrackingMusic = () => {
+        if (musicTrackingInterval) {
+                clearInterval(musicTrackingInterval);
+                musicTrackingInterval = null;
+        }
+};
+
 
 // 发送消息
 const sendMessage = async () => {
@@ -1108,15 +1745,17 @@ const generateGenericPinyin = (char) => {
 
 // 更新conversation表
 const updateConversation = async (message) => {
-        const conversation = {
-                id: actorId.value,
-                lastEventTimestamp: message.timestamp,
-                lastEventContent: message.content,
-                unreadCount: message.actorId === USER_ACTOR_ID ? 0 : 1, // 如果是用户发送则重置未读数
-                summaryState: null
-        };
-
-        await db.conversations.put(conversation);
+        // 忽略系统消息，不更新会话列表
+        if (message.actorId !== "system") {
+                const conversation = {
+                        id: actorId.value,
+                        lastEventTimestamp: message.timestamp,
+                        lastEventContent: message.content,
+                        unreadCount: message.actorId === USER_ACTOR_ID ? 0 : 1, // 如果是用户发送则重置未读数
+                        summaryState: null
+                };
+                await db.conversations.put(conversation);
+        }
 };
 
 // 返回上一页
@@ -1137,6 +1776,88 @@ const goBack = () => {
 // 跳转到profile
 const goToProfile = () => {
         router.push(`/profile/${actorId.value}`);
+};
+
+// 发送系统消息到聊天室
+const sendSystemMessage = async (content, isVisible = true, type = 'system') => {
+        try {
+                const message = {
+                        timestamp: Date.now(),
+                        actorId: 'system',
+                        contextId: actorId.value,
+                        type: 'privateMessage',
+                        content: {
+                                type: type,
+                                content: content,
+                                isVisible: isVisible
+                        }
+                };
+                
+                await db.events.add(message);
+                
+                // 更新对话记录
+                const conversation = {
+                        id: actorId.value,
+                        lastEventTimestamp: message.timestamp,
+                        lastEventContent: message.content,
+                        unreadCount: 0, // 系统消息不计入未读数
+                        summaryState: null
+                };
+                
+                await db.conversations.put(conversation);
+                
+                return message;
+        } catch (error) {
+                console.error('发送系统消息失败:', error);
+                throw error;
+        }
+};
+
+// 发送音乐播放状态消息（用户不可见）
+const sendMusicPlayMessage = async (trackInfo, previousTrack = null, nextTrack = null) => {
+        try {
+                const artistNames = Array.isArray(trackInfo.artists) ? 
+                        trackInfo.artists.join(', ') : 
+                        (trackInfo.artists || '未知艺术家');
+                
+                let content = `当前播放音乐："${trackInfo.name}"，歌手"${artistNames}"`;
+                
+                if (trackInfo.album) {
+                        content += `，专辑"${trackInfo.album}"`;
+                }
+                
+                if (previousTrack) {
+                        content += `，上一首"${previousTrack.name}"`;
+                }
+                
+                if (nextTrack) {
+                        content += `，下一首"${nextTrack.name}"`;
+                }
+                
+                await sendSystemMessage(content, false, 'music-play');
+        } catch (error) {
+                console.error('发送音乐播放状态消息失败:', error);
+        }
+};
+
+// 确保播放器可用
+const ensurePlayerAvailable = async () => {
+        try {
+                // 检查是否有可用设备
+                const playback = await spotifyService.getCurrentPlayback();
+                
+                if (!playback || !playback.device) {
+                        console.log('没有可用播放设备，初始化Web播放器...');
+                        await spotifyService.initializeWebPlayer();
+                        return true;
+                }
+                
+                return true;
+        } catch (error) {
+                console.log('检查播放设备失败，初始化Web播放器...', error);
+                await spotifyService.initializeWebPlayer();
+                return true;
+        }
 };
 
 // 生成首字母头像（参考 MeView 的逻辑）
@@ -1165,12 +1886,14 @@ watch(showStickerPanel, (newVal, oldVal) => {
         }
 });
 
+/*
 // 监听个人设置变化，实时更新
 watch(() => personalSettings.value, async (newSettings) => {
         if (newSettings) {
                 console.log('ChatRoom: Personal settings updated:', newSettings);
         }
 }, { deep: true });
+*/
 
 // 初始化默认状态
 onMounted(async () => {
@@ -1267,6 +1990,13 @@ onMounted(async () => {
         window.addEventListener('resize', handleResize);
         document.addEventListener('visibilitychange', handleVisibilityChange);
         
+        // 检查是否有进行中的一起听歌会话
+        const activeSession = await listenTogetherService.getCurrentListenTogetherSession(route.params.actorId);
+        if (activeSession) {
+                console.log('发现进行中的一起听歌会话，开始音乐跟踪');
+                startTrackingMusic();
+        }
+        
         // 清理事件监听器
         return () => {
                 window.removeEventListener('resize', handleResize);
@@ -1277,6 +2007,8 @@ onMounted(async () => {
 // 组件卸载时恢复原始主题
 onUnmounted(() => {
         restoreOriginalTheme();
+        // 停止音乐跟踪
+        stopTrackingMusic();
 });
 </script>
 
@@ -1337,14 +2069,16 @@ onUnmounted(() => {
         overflow: hidden;
         display: flex;
         flex-direction: column;
-        padding: 0;
+        margin-top:  calc(-1 * var(--header-height) - 132px);
+
 }
 
 .messages-container {
         flex-grow: 1;
         overflow-y: auto;
         padding: 0 20px;
-        padding-top: calc(var(--header-height) + 15px);
+        /* 为header和音乐播放器预留空间 */
+        padding-top: 132px;
         display: flex;
         flex-direction: column;
         gap: 15px;
@@ -1705,35 +2439,33 @@ onUnmounted(() => {
         margin: 4px 0;
 }
 
-.text-image-placeholder {
+.text-image-placeholder,
+.real-image {
         background-color: var(--bg-secondary);
-        border: 2px dashed var(--border-color);
+        border: none;
         border-radius: 12px;
-        padding: 20px;
         text-align: center;
-        max-width: 200px;
-        min-width: 150px;
+        width: 30vw;
+        aspect-ratio: 1 / 1;    
         color: var(--text-secondary);
+        object-fit: cover;
+        
 }
-
-.text-image-icon {
-        font-size: 32px;
-        margin-bottom: 8px;
-}
-
 .text-image-description {
         font-size: 14px;
         line-height: 1.4;
-        word-wrap: break-word;
+        word-break: break-all;
+        white-space: pre-wrap;
+        display: flex;
+        align-items: flex-start; /* 顶部对齐 */
+        justify-content: center;
+        height: 100%;
+        width: 100%;
+        text-align: center;
+        overflow-y: auto;
+        padding-top: 8px; /* 增加顶部内边距，防止被遮挡 */
 }
 
-.real-image {
-        max-width: 200px;
-        max-height: 200px;
-        border-radius: 12px;
-        cursor: pointer;
-        transition: transform 0.2s;
-}
 
 .real-image:hover {
         transform: scale(1.02);
@@ -1752,16 +2484,11 @@ onUnmounted(() => {
 
 .payment-header {
         display: flex;
-        align-items: center;
-        justify-content: center;
+        align-items: flex-start;
+        justify-content: left;
         gap: 8px;
         margin-bottom: 8px;
 }
-
-.payment-icon {
-        font-size: 18px;
-}
-
 .payment-type {
         font-weight: 600;
         font-size: 14px;
@@ -1777,12 +2504,14 @@ onUnmounted(() => {
         font-size: 12px;
         opacity: 0.9;
         margin-bottom: 4px;
+        text-align: left;
 }
 
 .payment-note {
         font-size: 12px;
         opacity: 0.8;
         font-style: italic;
+        text-align: left;
 }
 
 /* 面板切换动画 */
@@ -1852,5 +2581,198 @@ onUnmounted(() => {
 .input-container {
         background: var(--bg-primary);
         border-top: 1px solid var(--border-light);
+}
+
+/* 音乐消息样式 */
+
+
+.invite-header{
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: 600;
+        color: var(--user-bubble-bg);
+        margin-bottom: 12px;
+}
+
+.own-message .invite-header {
+        color: var(--char-bubble-bg);
+}
+.playlist-info {
+        margin-bottom: 8px;
+}
+
+.playlist-name {
+        font-weight: 600;
+        color: var(--char-bubble-text);
+        margin-bottom: 4px;
+}
+
+.own-message .playlist-name {
+        color: var(--user-bubble-text);
+}
+
+.playlist-tracks {
+        font-size: 12px;
+        color: var(--text-secondary);
+}
+
+.invite-message {
+        color: var(--char-bubble-text);
+        margin-bottom: 12px;
+}
+
+.own-message .invite-message {
+        color: var(--user-bubble-text);
+}
+
+.invite-actions {
+        display: flex;
+        gap: 8px;
+}
+
+.accept-btn,
+.decline-btn {
+        padding: 8px 16px;
+        border: none;
+        border-radius: 20px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+}
+
+.accept-btn {
+        background: var(--accent-primary);
+        color: var(--accent-text);
+}
+
+.accept-btn:hover {
+        background: var(--accent-darker);
+        transform: translateY(-1px);
+}
+
+.decline-btn {
+        background-color: var(--bg-secondary);
+        color: var(--text-primary);
+}
+
+.invite-status {
+        font-size: 14px;
+        font-weight: 500;
+        padding: 8px 0;
+}
+
+.invite-status.accepted {
+        color: var(--accent-primary);
+}
+
+.invite-status.declined {
+        color: var(--text-secondary);
+}
+
+.listen-together-accept {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 16px;
+        border-radius: 12px;
+        font-weight: 500;
+        margin: 8px 0;
+}
+
+.accept-icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+}
+
+.music-card {
+        border-radius: 12px;
+        padding: 16px;
+        margin: 8px 0;
+}
+
+.music-card-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: 600;
+        margin-bottom: 12px;
+}
+
+.song-info {
+        margin-bottom: 8px;
+}
+
+.song-name {
+        font-weight: 600;
+        margin-bottom: 4px;
+}
+
+.song-artist {
+        font-size: 14px;
+        margin-bottom: 2px;
+}
+
+.song-album {
+        font-size: 12px;
+        color: var(--text-secondary);
+}
+
+.music-card-message {
+        color: var(--text-primary);
+        margin-bottom: 12px;
+}
+
+ .play-song-btn {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 16px;
+        background: var(--user-bubble-bg);
+        color: var(--user-bubble-text);
+        border: none;
+        border-radius: 20px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+}
+
+/* 系统消息样式 */
+.message-item.system-message {
+        justify-content: center;
+        align-items: center;
+}
+
+.system-message-content {
+        background: var(--app-bg);
+        color: white;
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        padding: 8px 16px;
+        border-radius: 999px;
+        font-size: 12px;
+        text-align: center;
+        border: 1px solid var(--app-border);
+}
+
+.system-message {
+        text-align: center;
+        color: var(--text-secondary);
+        opacity: 0.7;
+        font-size: 12px;
+        margin: 8px 0;
+        font-style: italic;
+}
+
+.own-message .play-song-btn {
+        background: var(--char-bubble-bg);
+        color: var(--char-bubble-text);
+}
+
+.play-song-btn:hover {
+        transform: translateY(-1px);
 }
 </style>

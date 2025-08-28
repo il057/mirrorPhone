@@ -47,7 +47,7 @@ const handleFileChange = (event) => {
 
 const handleUrl = () => {
         if (!urlInput.value.trim().startsWith('http')) {
-                showToast("Please enter a valid URL.",  "error" );
+                showToast("请输入有效的URL地址",  "error" );
                 return;
         }
         props.onSelect({ type: 'url', value: urlInput.value });

@@ -151,6 +151,10 @@
                         <div class="track-info">
                                 <div class="track-title">{{ currentTrack.name }}</div>
                                 <div class="track-artist">{{ getArtistNames(currentTrack.artists) }}</div>
+                                <!-- 一起听状态显示 -->
+                                <div v-if="globalListenTogetherText" class="listen-together-info">
+                                        {{ globalListenTogetherText }}
+                                </div>
                                 <div class="controls">
                                         <button @click.stop="previousTrack" class="control-btn">
                                                 <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12"
@@ -203,6 +207,8 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import spotifyService from '../../services/spotifyService.js';
+import * as listenTogetherService from '../../services/listenTogetherService.js';
+import { formatDuration } from '../../utils/datetime.js';
 
 const router = useRouter();
 
@@ -216,6 +222,9 @@ const isShuffleOn = ref(false);
 const isVinylMode = ref(false); // 黑胶唱片模式
 const isInitializing = ref(false); // 初始化状态
 
+// 一起听会话状态
+const globalListenTogetherInfo = ref(null);
+
 // 自动刷新定时器
 let refreshInterval = null;
 
@@ -223,6 +232,12 @@ let refreshInterval = null;
 const progressPercent = computed(() => {
         if (duration.value === 0) return 0;
         return (position.value / duration.value) * 100;
+});
+
+// 全局一起听状态显示文本
+const globalListenTogetherText = computed(() => {
+        if (!globalListenTogetherInfo.value) return '';
+        return `和${globalListenTogetherInfo.value.partner}一起听了${formatDuration(globalListenTogetherInfo.value.totalDuration)}`;
 });
 
 // 方法
@@ -412,6 +427,26 @@ const checkLoginStatus = () => {
         isLoggedIn.value = spotifyService.isLoggedIn();
 };
 
+// 更新一起听信息
+const updateListenTogetherInfo = async () => {
+        try {
+                const sessionInfo = await listenTogetherService.getCurrentListenTogetherSessionInfo();
+                if (sessionInfo) {
+                        const totalDuration = await listenTogetherService.getTotalListenTogetherDurationWithCurrent(sessionInfo.actorId);
+                        globalListenTogetherInfo.value = {
+                                partner: sessionInfo.partner,
+                                partnerId: sessionInfo.actorId,
+                                totalDuration
+                        };
+                } else {
+                        globalListenTogetherInfo.value = null;
+                }
+        } catch (error) {
+                console.error('获取一起听信息失败:', error);
+                globalListenTogetherInfo.value = null;
+        }
+};
+
 // 生命周期
 onMounted(async () => {
         checkLoginStatus();
@@ -424,10 +459,12 @@ onMounted(async () => {
         
         if (isLoggedIn.value) {
                 await updatePlaybackState();
-                // 每5秒更新一次状态
-                refreshInterval = setInterval(() => {
-                        updatePlaybackState();
-                }, 5000);
+                await updateListenTogetherInfo();
+                // 每60秒更新一次状态
+                refreshInterval = setInterval(async () => {
+                        await updatePlaybackState();
+                        await updateListenTogetherInfo();
+                }, 60000);
         }
 });
 
@@ -625,6 +662,17 @@ onUnmounted(() => {
         overflow: hidden;
         text-overflow: ellipsis;
         line-height: 1.2;
+}
+
+.listen-together-info {
+        font-size: 11px;
+        color: var(--accent-primary, #1DB954);
+        margin-bottom: 6px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        line-height: 1.2;
+        font-weight: 500;
 }
 
 /* 控制按钮 */

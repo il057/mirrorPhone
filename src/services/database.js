@@ -26,6 +26,7 @@ db.version(1).stores({
          * currentAvatar: 当前使用的头像URL
          * chatBackground: 聊天背景URL
          * worldbookGroupIds: 关联的世界书分组ID数组
+         * listenTogetherTotalDuration: 一起听歌总时长（毫秒）
          */
         actors: `
         &id,
@@ -41,7 +42,8 @@ db.version(1).stores({
         *worldbookGroupIds,
         currentAvatar,
         chatBackground,
-        isHidden
+        isHidden,
+        listenTogetherTotalDuration
         `,
 
         /**
@@ -147,6 +149,23 @@ db.version(1).stores({
         globalAlbum: '++id, url, description',
 
         /**
+         * 表：listenTogetherSessions (一起听会话)
+         * 存储一起听音乐的会话状态
+         * &id: 主键，通常使用 actorId 作为ID
+         * actorId: 参与一起听的角色ID
+         * isActive: 是否正在进行一起听
+         * startTime: 本次会话开始时间
+         * lastUpdateTime: 最后更新时间
+         */
+        listenTogetherSessions: `
+        &id,
+        actorId,
+        isActive,
+        startTime,
+        lastUpdateTime
+        `,
+
+        /**
          * 表：widgetSettings (小组件设置)
          * 存储各个小组件的个性化设置
          * &id: 小组件实例ID
@@ -171,7 +190,6 @@ db.version(1).stores({
         favorites: '++id, eventId, eventType, authorId, authorName, content, createTime, [authorId+eventType]'
         // 你未来可以增加更多的表，例如 'gallery', 'musicPlaylists' 等。
 });
-
 export async function initializeDefaultFonts() {
         const defaultFonts = [
                 // 默认字体的 family 留空，以便代码回退到系统字体

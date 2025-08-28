@@ -137,7 +137,6 @@ const handleCancel = () => {
         gap: 10px;
         padding: 15px 20px;
         border-top: 1px solid var(--border-color);
-        background-color: var(--bg-secondary);
 }
 
 .modal-btn {

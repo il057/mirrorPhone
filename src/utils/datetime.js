@@ -2,6 +2,23 @@
  * Calculates age based on a birthdate string (YYYY-MM-DD).
  * @param {string} birthdateString
  * @returns {number | null}
+ *//**
+ * 格式化时长为时分显示
+ * @param {number} duration - 时长（毫秒）
+ * @returns {string} 格式化的时长字符串 (HH:MM)
+ */
+export function formatDuration(duration) {
+        const totalMinutes = Math.floor(duration / (1000 * 60));
+        const hours = Math.floor(totalMinutes / 60);
+        const minutes = totalMinutes % 60;
+        
+        return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+}
+
+/**
+ * Calculates age based on a birthdate string (YYYY-MM-DD).
+ * @param {string} birthdateString
+ * @returns {number | null}
  */
 export function calculateAge(birthdateString) {
         if (!birthdateString) return null;

@@ -22,6 +22,12 @@ export const getPersonalSettings = async () => {
                         },
                         offlineSimulation: {
                                 enabled: false
+                        },
+                        voiceMessage: {
+                                autoShowText: true // 默认自动显示语音内容
+                        },
+                        musicSharing: {
+                                autoAcceptListenTogether: false // 默认关闭自动接受一起听邀请
                         }
                 };
                 
@@ -38,6 +44,12 @@ export const getPersonalSettings = async () => {
                         },
                         offlineSimulation: {
                                 enabled: false
+                        },
+                        voiceMessage: {
+                                autoShowText: true
+                        },
+                        musicSharing: {
+                                autoAcceptListenTogether: false
                         }
                 };
         }
@@ -107,4 +119,24 @@ export const getRandomMessageDelay = (messageLength) => {
         const randomFactor = 1 + (Math.random() - 0.5) * variation;
         
         return Math.max(500, Math.min(5000, baseDelay * randomFactor)); // 最小0.5秒，最大5秒
+};
+
+/**
+ * 根据文本长度计算模拟语音时长
+ * @param {string} text 文本内容
+ * @returns {number} 语音时长（毫秒）
+ */
+export const calculateVoiceDuration = (text) => {
+        if (!text) return 1000; // 默认1秒
+        
+        const textLength = text.length;
+        // 假设平均每个字符需要150毫秒的语音时间
+        const baseTime = textLength * 150;
+        
+        // 添加一些随机变化，使其更自然（±20%）
+        const variation = 0.2;
+        const randomFactor = 1 + (Math.random() - 0.5) * variation;
+        
+        // 最小2秒，最大30秒
+        return Math.max(2000, Math.min(30000, baseTime * randomFactor));
 };
