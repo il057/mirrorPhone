@@ -360,11 +360,17 @@ const goToProfile = (actorId) => {
 .contact-info {
         display: flex;
         flex-direction: column;
+        overflow: hidden;
+        /* 防止内容溢出flex容器 */
+        min-width: 0;
 }
 
 .contact-name {
         font-weight: 600;
-}
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        }
 
 .contact-signature {
         display: flex;
@@ -372,6 +378,9 @@ const goToProfile = (actorId) => {
         gap: 6px;
         font-size: 14px;
         color: var(--text-secondary);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
 }
 
 .status-dot {

@@ -173,27 +173,24 @@ const groupNames = computed(() => {
 
 // 返回上一页
 const goBack = () => {
-        const fromPage = router.currentRoute.value.query.from;
-        const fromEdit = fromPage === 'edit';
-        
-        if (fromPage === 'contacts') {
-                router.push('/chat/contacts');
-        } else if (fromPage === 'messages') {
-                router.push('/chat/messages');
-        } else if (fromEdit) {
-                // 从edit页面来的，返回到联系人页面
-                router.push('/chat/contacts');
-        } else {
-                // 使用路由历史记录进行智能判断
-                const historyLength = window.history.length;
-                
-                // 如果历史记录长度大于1，尝试返回上一页
-                if (historyLength > 1) {
-                        router.back();
-                } else {
-                        // 没有历史记录时，返回到联系人页面
+        // 优先从 sessionStorage 获取最初的来源页面
+        const originalFrom = sessionStorage.getItem(`profile_${actorId.value}_from`);
+
+        if (originalFrom && originalFrom !== 'profile' && originalFrom !== 'edit') {
+                if (originalFrom === 'contacts') {
                         router.push('/chat/contacts');
+                } else if (originalFrom === 'messages') {
+                        router.push('/chat/messages');
+                } else if (originalFrom === 'chatroom') {
+                        // 如果从聊天室来，返回到对应的聊天室
+                        router.push(`/chatroom/${actorId.value}`);
+                } else {
+                        // 其他未知的来源，默认返回消息
+                        router.push('/chat/messages');
                 }
+        } else {
+                // 如果没有找到来源信息，提供一个安全的默认行为
+                router.push('/chat/messages');
         }
 };
 

@@ -155,6 +155,7 @@ const defaultSvg = `
         justify-content: center;
         z-index: 1000;
         padding: 20px;
+        width: auto;
 }
 
 .modal-container {

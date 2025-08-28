@@ -1,7 +1,9 @@
 <template>
         <div class="page-container">
-                <AppHeader :title="isTyping ? '正在输入中…' : (actor?.name || '聊天')" :override-back-action="goBack">
-                        <template #subtitle>
+                <AppHeader 
+                        :title="multiSelectMode ? `已选择 ${selectedMessages.size} 条消息` : (isTyping ? '正在输入中…' : (actor?.name || '聊天'))" 
+                        :override-back-action="multiSelectMode ? exitMultiSelectMode : goBack">
+                        <template #subtitle v-if="!multiSelectMode">
                                 <div class="status-indicator" v-if="actor">
                                         <div class="status-dot" :style="{ 
                                                         backgroundColor: actor?.status?.color || '#4CAF50',
@@ -11,8 +13,36 @@
                                         <span class="status-text">{{ actor?.status?.text || '在线' }}</span>
                                 </div>
                         </template>
+                        <template #left v-if="multiSelectMode">
+                                <div class="multi-select-actions">
+                                        <button class="multi-select-btn delete-btn" @click="deleteSelectedMessages" :disabled="selectedMessages.size === 0">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                                        <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z"/>
+                                                        <path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z"/>
+                                                </svg>
+                                                <span>删除</span>
+                                        </button>
+                                        <button class="multi-select-btn favorite-btn" @click="favoriteSelectedMessages" :disabled="selectedMessages.size === 0">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                                        <path d="m8 2.748-.717-.737C5.6.281 2.514.878 1.4 3.053c-.523 1.023-.641 2.5.314 4.385.92 1.815 2.834 3.989 6.286 6.357 3.452-2.368 5.365-4.542 6.286-6.357.955-1.886.838-3.362.314-4.385C13.486.878 10.4.28 8.717 2.01zM8 15C-7.333 4.868 3.279-3.04 7.824 1.143q.09.083.176.171a3 3 0 0 1 .176-.17C12.72-3.042 23.333 4.867 8 15"/>
+                                                </svg>
+                                                <span>收藏</span>
+                                        </button>
+                                        <button class="multi-select-btn forward-btn" @click="forwardSelectedMessages" :disabled="selectedMessages.size === 0">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                                        <path d="M1.5 1.5A.5.5 0 0 1 2 1h4.5a.5.5 0 0 1 0 1h-4v4a.5.5 0 0 1-1 0zm13 0a.5.5 0 0 1 .5.5v4a.5.5 0 0 1-1 0V2h-4a.5.5 0 0 1 0-1h4.5zM2 14.5a.5.5 0 0 1-.5-.5V10a.5.5 0 0 1 1 0v4h4a.5.5 0 0 1 0 1H2zm12 0h-4a.5.5 0 0 1 0-1h4v-4a.5.5 0 0 1 1 0v4a.5.5 0 0 1-.5.5z"/>
+                                                </svg>
+                                                <span>转发</span>
+                                        </button>
+                                </div>
+                        </template>
                         <template #right>
-                                <button class="header-action-button" @click="goToProfile">
+                                <button v-if="multiSelectMode" class="header-action-button" @click="exitMultiSelectMode">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
+                                                <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0M5.354 4.646a.5.5 0 1 0-.708.708L7.293 8l-2.647 2.646a.5.5 0 0 0 .708.708L8 8.707l2.646 2.647a.5.5 0 0 0 .708-.708L8.707 8l2.647-2.646a.5.5 0 0 0-.708-.708L8 7.293z"/>
+                                        </svg>
+                                </button>
+                                <button v-else class="header-action-button" @click="goToProfile">
                                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
                                                 stroke-width="1.5" stroke="currentColor" width="24" height="24">
                                                 <path stroke-linecap="round" stroke-linejoin="round"
@@ -40,9 +70,17 @@
                                 <div v-for="message in displayedMessages" :key="message.id" class="message-item"
                                         :class="{ 
                                                 'own-message': message.actorId === userActorId,
-                                                'system-message': message.actorId === 'system' && message.content.isVisible
+                                                'system-message': message.actorId === 'system' && message.content.isVisible,
+                                                'multi-select-mode': multiSelectMode,
+                                                'selected': selectedMessages.has(message.id || message.timestamp)
                                         }"
-                                        v-show="!(message.actorId === 'system' && !message.content.isVisible)">
+                                        v-show="!(message.actorId === 'system' && !message.content.isVisible)"
+                                        @click="multiSelectMode ? toggleMessageSelection(message) : null">
+                                        
+                                        <!-- 多选模式复选框 -->
+                                        <div v-if="multiSelectMode" class="message-checkbox" @click.stop="toggleMessageSelection(message)">
+                                                <input type="checkbox" :checked="selectedMessages.has(message.id || message.timestamp)" @change="toggleMessageSelection(message)">
+                                        </div>
                                         
                                         <!-- 系统消息 - 居中显示 -->
                                         <div v-if="message.actorId === 'system' && message.content.isVisible" 
@@ -53,8 +91,11 @@
                                         <!-- 普通消息 -->
                                         <template v-else-if="message.actorId !== 'system'">
                                                 <!-- 对方头像 -->
-                                                <div class="message-avatar" v-if="message.actorId !== userActorId">
-                                                        <img v-if="actor?.avatar" :src="actor.avatar" :alt="actor.name">
+                                                <div class="message-avatar" v-if="message.actorId !== userActorId"
+                                                     @click="handleAvatarClick"
+                                                     @touchstart="handleAvatarTouchStart"
+                                                     @touchend="handleAvatarTouchEnd">
+                                                        <img v-if="getActorAvatar(actor)" :src="getActorAvatar(actor)" :alt="actor?.name">
                                                         <span v-else class="avatar-initial">{{ actor?.name?.[0] || '#' }}</span>
                                                 </div>
 
@@ -65,15 +106,32 @@
                                                         <span v-else class="avatar-initial">{{
                                                                 getInitial(currentUserPersona?.name || 'User') }}</span>
                                                 </div>
-                                        <div class="message-content">
-                                                <!-- 文字消息 -->
-                                                <div v-if="!message.content.type || message.content.type === 'text'"
-                                                        class="message-bubble">
-                                                        <p>{{ message.content.content }}</p>
-                                                        <div v-if="message.content.action" class="message-action">
-                                                                <em>*{{ message.content.action }}*</em>
-                                                        </div>
-                                                </div>
+                                        								<div class="message-content"
+									@contextmenu.prevent="handleMessageRightClick($event, message)"
+									@touchstart="handleMessageTouchStart($event, message)"
+									@touchend="handleMessageTouchEnd"
+									@touchmove="handleMessageTouchMove"
+									style="user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent;">
+									<!-- 文字消息 -->
+									<div v-if="!message.content.type || message.content.type === 'text'"
+										class="message-bubble">
+										<!-- 引用消息显示 -->
+										<div v-if="message.content.quotedMessage" class="quoted-message-in-bubble">
+											<div class="quoted-message-bar"></div>
+											<div class="quoted-message-info">
+												<span class="quoted-message-author-name">
+													{{ message.content.quotedMessage.actorId === userActorId ? '你' : (actor?.name || '对方') }}
+												</span>
+												<div class="quoted-message-content-text">
+													{{ getQuotedMessageText(message.content.quotedMessage) }}
+												</div>
+											</div>
+										</div>
+										<p>{{ message.content.content }}</p>
+										<div v-if="message.content.action" class="message-action">
+											<em>*{{ message.content.action }}*</em>
+										</div>
+									</div>
 
                                                 <!-- 表情包消息 -->
                                                 <div v-else-if="message.content.type === 'sticker'"
@@ -99,7 +157,9 @@
 
                                                 <!-- 支付消息 -->
                                                 <div v-else-if="message.content.type === 'payment'"
-                                                        class="payment-message">
+                                                        class="payment-message"
+                                                        :class="{ 'clickable': message.actorId !== userActorId && !message.content.status }"
+                                                        @click="message.actorId !== userActorId && !message.content.status ? handlePaymentClick(message) : null">
                                                         <div class="payment-header">
                                                                 <span class="payment-type">
                                                                         {{ message.content.subtype === 'transfer' ? '转账'
@@ -114,6 +174,31 @@
                                                         <div v-if="message.content.message" class="payment-note">
                                                                 {{ message.content.message }}
                                                         </div>
+                                                        
+                                                        <!-- 支付状态显示 -->
+                                                        <div v-if="message.content.status" class="payment-status">
+                                                                <div v-if="message.content.status === 'accepted'" class="status-accepted">
+                                                                        ✓ 已接受
+                                                                </div>
+                                                                <div v-else-if="message.content.status === 'rejected'" class="status-rejected">
+                                                                        ✗ 已拒绝
+                                                                </div>
+                                                        </div>
+                                                        
+                                                        <!-- 未处理的支付消息提示 -->
+                                                        <div v-else-if="message.actorId !== userActorId" class="payment-pending">
+                                                                点击处理
+                                                        </div>
+                                                </div>
+
+                                                <!-- 拍一拍消息 -->
+                                                <div v-else-if="message.content.type === 'pat'" class="pat-message message-bubble">
+                                                        <p>
+                                                                {{ message.actorId === userActorId ? 
+                                                                   `你拍了拍${message.content.target}` : 
+                                                                   `${actor?.name || '对方'}拍了拍你` }}
+                                                                <span v-if="message.content.suffix" class="pat-suffix">，{{ message.content.suffix }}</span>
+                                                        </p>
                                                 </div>
 
                                                 <!-- 语音消息 -->
@@ -188,6 +273,12 @@
                                                         <!-- 不可见的系统消息不显示 -->
                                                 </div>
 
+                                                <!-- 转发消息 -->
+                                                <ForwardedMessage v-else-if="message.content.type === 'forwarded_message'"
+                                                        :fromCharName="message.content.fromCharName"
+                                                        :userPersonaName="message.content.userPersonaName"
+                                                        :messages="message.content.messages" />
+
                                                 <!-- 音乐卡片消息 -->
                                                 <div v-else-if="message.content.type === 'music-card'"
                                                         class="music-card message-bubble">
@@ -228,6 +319,43 @@
                                                         </button>
                                                 </div>
 
+                                                								<!-- 通话消息 -->
+								<div v-else-if="message.content.type === 'call'"
+									class="call-message message-bubble">
+									<div class="call-header">
+										<svg xmlns="http://www.w3.org/2000/svg" width="16"
+											height="16" fill="currentColor"
+											:class="message.content.callType === 'video' ? 'bi bi-camera-video' : 'bi bi-telephone'"
+											viewBox="0 0 16 16">
+											<path v-if="message.content.callType === 'video'"
+												d="M0 5a2 2 0 0 1 2-2h7.5a2 2 0 0 1 1.983 1.738l3.11-1.382A1 1 0 0 1 16 4.269v7.462a1 1 0 0 1-1.406.913l-3.111-1.382A2 2 0 0 1 9.5 13H2a2 2 0 0 1-2-2zm11.5 5.175 3.5 1.556V4.269l-3.5 1.556zM2 4a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h7.5a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1z" />
+											<path v-else
+												d="M1.885.511a1.745 1.745 0 0 1 2.61.163L6.29 2.98c.329.423.445.974.315 1.494l-.547 2.19a.68.68 0 0 0 .178.643l2.457 2.457a.68.68 0 0 0 .644.178l2.189-.547a1.75 1.75 0 0 1 1.494.315l2.306 1.794c.829.645.905 1.87.163 2.611l-1.034 1.034c-.74.74-1.846 1.065-2.877.702a18.6 18.6 0 0 1-7.01-4.42 18.6 18.6 0 0 1-4.42-7.009c-.362-1.03-.037-2.137.703-2.877z" />
+										</svg>
+										<span>{{ message.content.callType === 'video' ? '视频通话' : '语音通话' }}</span>
+									</div>
+									<div class="call-message-content">{{ message.content.message }}</div>
+									<div class="call-actions" v-if="message.actorId !== userActorId">
+										<button class="accept-call-btn" 
+											@click="handleCallAccept(message)">
+											接听
+										</button>
+										<button class="decline-call-btn"
+											@click="handleCallDecline(message)">
+											拒绝
+										</button>
+									</div>
+								</div>
+
+								<!-- 拍一拍消息 -->
+								<div v-else-if="message.content.type === 'pat'"
+									class="pat-message message-bubble">
+									<div class="pat-content">
+										<span class="pat-icon">👋</span>
+										<span class="pat-text">{{ message.content.message }}</span>
+									</div>
+								</div>
+
                                                 <div class="message-time">
                                                         {{ formatTimestamp(message.timestamp, true) }}
                                                 </div>
@@ -238,7 +366,7 @@
                                 <!-- AI正在输入的消息（包含思考和打字状态） -->
                                 <div v-if="isTyping || isGenerating" class="message-item">
                                         <div class="message-avatar">
-                                                <img v-if="actor?.avatar" :src="actor.avatar" :alt="actor.name">
+                                                <img v-if="getActorAvatar(actor)" :src="getActorAvatar(actor)" :alt="actor?.name">
                                                 <span v-else class="avatar-initial">{{ actor?.name?.[0] || '#' }}</span>
                                         </div>
                                         <div class="message-content">
@@ -263,6 +391,25 @@
 
                 <!-- 输入区域 -->
                 <div class="input-area" :class="{ 'keyboard-visible': isKeyboardVisible }" v-if="actor">
+                        <!-- 引用消息显示 -->
+                        <div v-if="quotedMessage" class="quoted-message-display">
+                                <div class="quoted-message-content">
+                                        <div class="quoted-message-header">
+                                                <span class="quoted-message-author">
+                                                        {{ quotedMessage.actorId === userActorId ? '你' : (actor?.name || '对方') }}
+                                                </span>
+                                                <button class="quoted-message-close" @click="quotedMessage = null">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                                                <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0M5.354 4.646a.5.5 0 1 0-.708.708L7.293 8l-2.647 2.646a.5.5 0 0 0 .708.708L8 8.707l2.646 2.647a.5.5 0 0 0 .708-.708L8.707 8l2.647-2.646a.5.5 0 0 0-.708-.708L8 7.293z"/>
+                                                        </svg>
+                                                </button>
+                                        </div>
+                                        <div class="quoted-message-text">
+                                                {{ getQuotedMessageText(quotedMessage) }}
+                                        </div>
+                                </div>
+                        </div>
+                        
                         <div class="input-container" @click.stop>
                                 <!-- 功能按钮行 -->
                                 <div class="function-buttons">
@@ -386,7 +533,37 @@
 
                 <!-- 歌曲搜索模态框 -->
                 <SongSearchModal v-if="showSongSearch" @select="onSongSelected" @cancel="showSongSearch = false" />
-        </div>
+                
+                				<!-- 支付详情模态框 -->
+				<PaymentDetailModal v-if="showPaymentDetail" 
+					:payment-data="currentPaymentData"
+					@accept="handlePaymentAccept"
+					@reject="handlePaymentReject" 
+					@close="showPaymentDetail = false" />
+				
+				<!-- 消息右键菜单 -->
+				<MessageContextMenu 
+					:visible="contextMenu.visible"
+					:x="contextMenu.x"
+					:y="contextMenu.y"
+					:message="contextMenu.message"
+					:is-own-message="contextMenu.message?.actorId === userActorId"
+					@hide="hideContextMenu"
+					@quote="handleQuoteMessage"
+					@favorite="handleFavoriteMessage"
+					@edit="handleEditMessage"
+					@multiSelect="handleMultiSelectMessage"
+					@delete="handleDeleteMessage" />
+					
+				<!-- 转发模态框 -->
+				<ForwardModal 
+					:visible="isForwardModalVisible"
+					:messages="forwardSelectedMessagesList"
+					:currentCharName="actor?.name || ''"
+					:currentCharId="actorId"
+					@close="handleForwardModalClose"
+					@forward="handleForwardConfirm" />
+		</div>
 </template>
 
 <script setup>
@@ -402,6 +579,10 @@ import VoiceBubble from '../components/ui/VoiceBubble.vue';
 import ChatMusicPlayer from '../components/ui/ChatMusicPlayer.vue';
 import PlaylistPickerModal from '../components/ui/PlaylistPickerModal.vue';
 import SongSearchModal from '../components/ui/SongSearchModal.vue';
+import PaymentDetailModal from '../components/ui/PaymentDetailModal.vue';
+import MessageContextMenu from '../components/ui/MessageContextMenu.vue';
+import ForwardModal from '../components/ui/ForwardModal.vue';
+import ForwardedMessage from '../components/ui/ForwardedMessage.vue';
 import { formatTimestamp, formatDuration } from '../utils/datetime.js';
 import { generateAIReply } from '../services/aiChatAPIService.js';
 import { getUserPersonaForGroup, getUserPersonaForUngrouped, getDefaultUserPersona } from '../services/userPersonaService.js';
@@ -409,9 +590,11 @@ import { USER_ACTOR_ID } from '../services/database.js';
 import { getPersonalSettings, getTypingDelayConfig, getRandomMessageDelay, calculateVoiceDuration } from '../services/personalSettingsService.js';
 import { getActorBubbleStyle, applyBubbleStyles } from '../services/bubbleStyleService.js';
 import { applyActorTheme, toggleActorTheme, restoreOriginalTheme, getActorThemeChoice } from '../services/themeService.js';
-import { showActionChoiceModal, showPaymentModal, showUploadChoiceModal, promptForInput, showToast } from '../services/uiService.js';
+import { showActionChoiceModal, showPaymentModal, showUploadChoiceModal, promptForInput, showToast, showConfirmModal } from '../services/uiService.js';
+import { addToFavorites, toggleFavorite as toggleFavoriteService } from '../services/favoritesService.js';
 import spotifyService from '../services/spotifyService.js';
 import * as listenTogetherService from '../services/listenTogetherService.js';
+import { setCurrentChatRoom, clearCurrentChatRoom, isCurrentChatRoom } from '../services/currentStateService.js';
 
 const route = useRoute();
 const router = useRouter();
@@ -459,6 +642,17 @@ const isUsingUserBubbleTheme = ref(getActorThemeChoice(actorId.value));
 const chatMusicPlayer = ref(null);
 const showPlaylistPicker = ref(false);
 const showSongSearch = ref(false);
+
+// 支付详情模态框状态
+const showPaymentDetail = ref(false);
+const currentPaymentData = ref(null);
+const currentPaymentMessageId = ref(null);
+
+// 拍一拍相关状态
+const lastAvatarClickTime = ref(0);
+const avatarClickCount = ref(0);
+const avatarTouchStartTime = ref(0);
+const avatarTouchTimeout = ref(null);
 
 // 一起听状态 - 从数据库读取
 const listenTogetherSession = useObservable(
@@ -559,7 +753,12 @@ const allMessages = useObservable(
         liveQuery(async () => {
                 const allEvents = await db.events
                         .where('contextId').equals(actorId.value)
-                        .and(event => event.type === 'privateMessage')
+                        .and(event => {
+                                // 只显示私聊消息，并且过滤掉不可见的系统消息
+                                return event.type === 'privateMessage' && 
+                                       !(event.content?.isVisible === false || 
+                                         event.content?.type === 'system' && event.content?.isVisible === false);
+                        })
                         .toArray();
                 return allEvents.sort((a, b) => a.timestamp - b.timestamp);
         }),
@@ -685,11 +884,19 @@ const toggleStickerPanel = (event) => {
         }
 };
 
-// 点击消息区域时关闭表情面板
+// 点击消息区域时关闭表情面板和右键菜单
 const handleContentClick = () => {
-        if (showStickerPanel.value) {
-                showStickerPanel.value = false;
-        }
+	if (showStickerPanel.value) {
+		showStickerPanel.value = false;
+	}
+	if (contextMenu.value.visible) {
+		hideContextMenu();
+	}
+	// 如果是多选模式且没有点击消息，退出多选模式
+	if (multiSelectMode.value) {
+		// 这里可以选择是否在点击空白区域时退出多选模式
+		// exitMultiSelectMode();
+	}
 };
 
 // 输入框获得焦点时关闭表情面板
@@ -732,10 +939,7 @@ const sendSticker = async (sticker) => {
                 // 关闭表情包面板
                 showStickerPanel.value = false;
                 
-                // 自动生成AI回复
-                setTimeout(() => {
-                        generateReply();
-                }, 500);
+                // 注意：不再自动生成AI回复，只有用户点击生成回复按钮时才会触发
         } catch (error) {
                 console.error('发送表情包失败:', error);
         }
@@ -882,10 +1086,7 @@ const sendVoiceMessage = async (text) => {
                 await updateConversation(message);
                 showToast('语音消息发送成功', 'success');
                 
-                // 自动生成AI回复
-                setTimeout(() => {
-                        generateReply();
-                }, 500);
+                // 注意：不再自动生成AI回复，只有用户点击生成回复按钮时才会触发
         } catch (error) {
                 console.error('发送语音消息失败:', error);
                 showToast('发送失败', 'error');
@@ -935,6 +1136,75 @@ const sendPaymentMessage = async (paymentData) => {
         }
 };
 
+// 处理支付消息点击
+const handlePaymentClick = (message) => {
+        currentPaymentData.value = message.content;
+        currentPaymentMessageId.value = message.id;
+        showPaymentDetail.value = true;
+};
+
+// 接受支付
+const handlePaymentAccept = async () => {
+        try {
+                // 更新原始支付消息的状态
+                const messageToUpdate = allMessages.value.find(msg => msg.id === currentPaymentMessageId.value);
+                if (messageToUpdate) {
+                        await db.events.update(messageToUpdate.id, {
+                                'content.status': 'accepted'
+                        });
+                }
+                
+                // 发送用户可见的系统消息
+                const systemMessage = currentPaymentData.value.subtype === 'transfer' 
+                        ? '转账已接受' 
+                        : '代付已接受';
+                await sendSystemMessage(systemMessage, true, 'payment-accept');
+                
+                // 发送用户不可见的系统消息，告知AI
+                const aiSystemMessage = currentPaymentData.value.subtype === 'transfer'
+                        ? `用户接受了转账，金额：¥${currentPaymentData.value.amount}`
+                        : `用户接受了代付，金额：¥${currentPaymentData.value.amount}，商品：${currentPaymentData.value.productInfo || '无'}`;
+                await sendSystemMessage(aiSystemMessage, false, 'user-action-payment-accept');
+                
+                showToast(`${currentPaymentData.value.subtype === 'transfer' ? '转账' : '代付'}已接受`, 'success');
+                
+        } catch (error) {
+                console.error('接受支付失败:', error);
+                showToast('操作失败', 'error');
+        }
+};
+
+// 拒绝支付
+const handlePaymentReject = async () => {
+        try {
+                // 更新原始支付消息的状态
+                const messageToUpdate = allMessages.value.find(msg => msg.id === currentPaymentMessageId.value);
+                if (messageToUpdate) {
+                        await db.events.update(messageToUpdate.id, {
+                                'content.status': 'rejected'
+                        });
+                }
+                
+                // 发送用户可见的系统消息
+                const systemMessage = currentPaymentData.value.subtype === 'transfer' 
+                        ? '转账已拒绝' 
+                        : '代付已拒绝';
+                await sendSystemMessage(systemMessage, true, 'payment-reject');
+                
+                // 发送用户不可见的系统消息，告知AI
+                const aiSystemMessage = currentPaymentData.value.subtype === 'transfer'
+                        ? `用户拒绝了转账，金额：¥${currentPaymentData.value.amount}`
+                        : `用户拒绝了代付，金额：¥${currentPaymentData.value.amount}，商品：${currentPaymentData.value.productInfo || '无'}`;
+                await sendSystemMessage(aiSystemMessage, false, 'user-action-payment-reject');
+                
+                showToast(`${currentPaymentData.value.subtype === 'transfer' ? '转账' : '代付'}已拒绝`, 'info');
+                
+        } catch (error) {
+                console.error('拒绝支付失败:', error);
+                showToast('操作失败', 'error');
+        }
+};
+
 // 处理通话
 const handleCall = async () => {
         const actions = [
@@ -944,7 +1214,33 @@ const handleCall = async () => {
         
         const choice = await showActionChoiceModal('通话选项', actions);
         if (choice) {
-                showToast(`${choice === 'voice' ? '语音' : '视频'}通话功能暂未实现`, 'info');
+                await sendCallMessage(choice);
+        }
+};
+
+// 发送通话消息
+const sendCallMessage = async (callType) => {
+        const message = {
+                timestamp: Date.now(),
+                actorId: USER_ACTOR_ID,
+                contextId: actorId.value,
+                type: 'privateMessage',
+                content: {
+                        type: 'call',
+                        callType: callType,
+                        message: `发起了${callType === 'voice' ? '语音' : '视频'}通话邀请`
+                }
+        };
+
+        try {
+                await db.events.add(message);
+                await updateConversation(message);
+                showToast(`${callType === 'voice' ? '语音' : '视频'}通话邀请已发送`, 'success');
+                
+                // 注意：不再自动生成AI回复，只有用户点击生成回复按钮时才会触发
+        } catch (error) {
+                console.error('发送通话消息失败:', error);
+                showToast('发送失败', 'error');
         }
 };
 
@@ -1113,6 +1409,10 @@ const acceptListenTogetherInvite = async (inviteTimestamp, playlist = null) => {
                 const systemMessage = `开始一起听音乐`;
                 await sendSystemMessage(systemMessage);
                 
+                // 发送用户不可见的系统消息，告知AI
+                const aiSystemMessage = `用户接受了一起听音乐邀请，歌单：${playlist?.name || '未知歌单'}`;
+                await sendSystemMessage(aiSystemMessage, false, 'user-action-listen-together-accept');
+                
                 // 如果有播放列表信息，开始播放并发送音乐消息
                 if (playlist && playlist.uri) {
                         try {
@@ -1252,10 +1552,7 @@ const sendSongCard = async (song) => {
                 
                 showToast('音乐卡片已发送', 'success');
                 
-                // AI可能会回复
-                setTimeout(() => {
-                        generateReply();
-                }, 1000);
+                // 注意：不再自动生成AI回复，只有用户点击生成回复按钮时才会触发
                 
         } catch (error) {
                 console.error('发送音乐卡片失败:', error);
@@ -1275,12 +1572,11 @@ const declineListenTogetherInvite = async (inviteTimestamp) => {
                 }
                 
                 // 发送系统消息
-                await listenTogetherService.sendSystemMessage(
-                        actorId.value,
-                        '已拒绝一起听邀请',
-                        true,
-                        'listen-together-decline'
-                );
+                await sendSystemMessage('已拒绝一起听邀请', true, 'listen-together-decline');
+                
+                // 发送用户不可见的系统消息，告知AI
+                const playlistName = inviteMessage?.content?.playlist?.name || '未知歌单';
+                await sendSystemMessage(`用户拒绝了一起听音乐邀请，歌单：${playlistName}`, false, 'user-action-listen-together-decline');
                 
                 showToast('已拒绝邀请', 'info');
                 
@@ -1288,6 +1584,42 @@ const declineListenTogetherInvite = async (inviteTimestamp) => {
                 console.error('拒绝一起听邀请失败:', error);
                 showToast('操作失败', 'error');
         }
+};
+
+// 接受通话
+const handleCallAccept = async (message) => {
+	try {
+		const callType = message.content.callType === 'video' ? '视频通话' : '语音通话';
+		
+		// 发送用户可见的系统消息
+		await sendSystemMessage(`已接听${callType}`, true, 'call-accept');
+		
+		// 发送用户不可见的系统消息，告知AI
+		await sendSystemMessage(`用户接听了${callType}`, false, 'user-action-call-accept');
+		
+		showToast('通话功能暂未实现', 'info');
+	} catch (error) {
+		console.error('接听通话失败:', error);
+		showToast('操作失败', 'error');
+	}
+};
+
+// 拒绝通话
+const handleCallDecline = async (message) => {
+	try {
+		const callType = message.content.callType === 'video' ? '视频通话' : '语音通话';
+		
+		// 发送用户可见的系统消息
+		await sendSystemMessage(`已拒绝${callType}`, true, 'call-decline');
+		
+		// 发送用户不可见的系统消息，告知AI
+		await sendSystemMessage(`用户拒绝了${callType}`, false, 'user-action-call-decline');
+		
+		showToast(`已拒绝${callType}`, 'info');
+	} catch (error) {
+		console.error('拒绝通话失败:', error);
+		showToast('操作失败', 'error');
+	}
 };
 
 // 播放单曲
@@ -1381,10 +1713,11 @@ const stopTrackingMusic = () => {
         }
 };
 
-
 // 发送消息
 const sendMessage = async () => {
         if (!newMessage.value.trim()) return;
+
+        const messageContent = newMessage.value.trim();
 
         const message = {
                 timestamp: Date.now(),
@@ -1392,7 +1725,20 @@ const sendMessage = async () => {
                 contextId: actorId.value,
                 type: 'privateMessage',
                 content: {
-                        content: newMessage.value.trim()
+                        type: 'text',
+                        content: messageContent,
+                        // 只使用手动引用
+                        ...(quotedMessage.value && {
+                                quotedMessage: {
+                                        id: quotedMessage.value.id || quotedMessage.value.timestamp,
+                                        timestamp: quotedMessage.value.timestamp,
+                                        actorId: quotedMessage.value.actorId,
+                                        content: {
+                                                type: quotedMessage.value.content?.type || 'text',
+                                                content: quotedMessage.value.content?.content || quotedMessage.value.content?.text || ''
+                                        }
+                                }
+                        })
                 }
         };
 
@@ -1404,258 +1750,187 @@ const sendMessage = async () => {
                 await updateConversation(message);
                 
                 newMessage.value = '';
+                quotedMessage.value = null; // 清除引用消息
                 adjustTextareaHeight();
 
-                // 自动生成AI回复（延迟一秒让用户看到自己的消息先出现）
-                setTimeout(() => {
-                        generateReply();
-                }, 500);
+                // 注意：不再自动生成AI回复，只有用户点击生成回复按钮时才会触发
         } catch (error) {
                 console.error('发送消息失败:', error);
         }
 };
 
-// 模拟AI回复函数 - 根据设置使用打字特效或随机延迟
+// AI回复生成函数
 const generateReply = async () => {
-        if (isGenerating.value) return;
-        
-        isGenerating.value = true;
-        
-        try {
-                // 模拟思考时间
-                await new Promise(resolve => setTimeout(resolve, 800));
-                
-                // 模拟AI回复内容（多条消息）
-                const mockReplies = [
-                        {
-                                content: "你好呀！很高兴见到你！"
-                        },
-                        {
-                                content: "今天天气真不错，心情也变得很棒呢~"
-                        },
-                        {
-                                content: "有什么想聊的吗？我很乐意陪你聊天！"
-                        }
-                ];
+	if (isGenerating.value) return;
+	
+	isGenerating.value = true;
+	
+	try {
+		// 获取当前角色信息
+		const currentActor = await db.actors.get(actorId.value);
+		if (!currentActor) {
+			throw new Error('角色信息不存在');
+		}
 
-                // 根据设置决定使用打字模拟还是随机延迟
-                if (personalSettings.value.typingSimulation.enabled) {
-                        // 使用拼音打字模拟
-                        for (let i = 0; i < mockReplies.length; i++) {
-                                const reply = mockReplies[i];
-                                
-                                // 开始打字状态（会自动隐藏思考状态）
-                                isTyping.value = true;
-                                
-                                // 显示拼音打字特效
-                                await simulatePinyinTyping(reply.content);
-                                
-                                // 保存完整消息到数据库
-                                const messageEvent = {
-                                        timestamp: Date.now(),
-                                        actorId: actorId.value,
-                                        contextId: actorId.value,
-                                        type: 'privateMessage',
-                                        content: {
-                                                content: reply.content
-                                        }
-                                };
+		// 获取有效的用户人格ID
+		const effectiveUserId = await getEffectiveUserId(currentActor);
+		
+		// 获取用户消息内容
+		const userMessageContent = getLastUserMessageContent(effectiveUserId);
+		
+		// 检查最后一条用户消息是否包含引用
+		const lastUserMessage = displayedMessages.value
+			.filter(msg => msg.actorId === USER_ACTOR_ID || msg.actorId === effectiveUserId)
+			.pop();
+			
+		let finalUserMessage = userMessageContent;
+		if (lastUserMessage && lastUserMessage.content.quotedMessage) {
+			// 构建包含引用信息的消息
+			finalUserMessage = JSON.stringify({
+				content: userMessageContent,
+				quotedMessage: lastUserMessage.content.quotedMessage
+			});
+		}
 
-                                await db.events.add(messageEvent);
-                                await updateConversation(messageEvent);
-                                
-                                // 消息间保持输入状态，只清空当前打字内容，不改变isTyping状态
-                                if (i < mockReplies.length - 1) {
-                                        typingMessage.value = '';
-                                        // 保持isTyping为true，确保header持续显示"正在输入中"
-                                        await new Promise(resolve => setTimeout(resolve, Math.random() * 1000 + 500));
-                                }
-                        }
-                } else {
-                        // 使用随机延迟，不显示打字过程
-                        for (let i = 0; i < mockReplies.length; i++) {
-                                const reply = mockReplies[i];
-                                
-                                // 计算随机延迟时间
-                                const delay = getRandomMessageDelay(reply.content.length);
-                                await new Promise(resolve => setTimeout(resolve, delay));
-                                
-                                // 直接保存完整消息到数据库
-                                const messageEvent = {
-                                        timestamp: Date.now(),
-                                        actorId: actorId.value,
-                                        contextId: actorId.value,
-                                        type: 'privateMessage',
-                                        content: {
-                                                content: reply.content
-                                        }
-                                };
+		console.log('生成回复 - 用户消息:', userMessageContent, '有效用户ID:', effectiveUserId);
 
-                                await db.events.add(messageEvent);
-                                await updateConversation(messageEvent);
-                                
-                                // 消息间添加额外的随机间隔
-                                if (i < mockReplies.length - 1) {
-                                        const betweenDelay = Math.random() * 1000 + 500; // 0.5-1.5秒随机间隔
-                                        await new Promise(resolve => setTimeout(resolve, betweenDelay));
-                                }
-                        }
-                }
-                
-        } catch (error) {
-                console.error('生成回复失败:', error);
-                
-                // 开始打字状态显示错误消息
-                isTyping.value = true;
-                
-                // 添加错误消息到聊天记录
-                const errorText = `抱歉，出现了错误：${error.message}`;
-                await simulatePinyinTyping(errorText);
-                
-                const errorMessage = {
-                        timestamp: Date.now(),
-                        actorId: actorId.value,
-                        contextId: actorId.value,
-                        type: 'privateMessage',
-                        content: {
-                                content: errorText
-                        }
-                };
+		// 调用AI服务生成回复
+		const aiResult = await generateAIReply(
+			actorId.value, 
+			effectiveUserId, 
+			finalUserMessage
+		);
 
-                await db.events.add(errorMessage);
-                await updateConversation(errorMessage);
-        } finally {
-                isGenerating.value = false;
-                isTyping.value = false;
-                typingMessage.value = '';
-        }
+		// 验证AI回复结果
+		if (!validateAIResult(aiResult)) {
+			return;
+		}
+
+		if (aiResult.success && aiResult.events?.length > 0) {
+			// 处理AI生成的事件
+			await processAIEvents(aiResult.events);
+			
+			// 记录关系变化（如果有）
+			if (aiResult.relationship) {
+				console.log('AI回复包含关系变化:', aiResult.relationship);
+			}
+		} else if (aiResult.error) {
+			showToast(aiResult.error, 'error');
+		}
+		
+	} catch (error) {
+		console.error('生成回复失败:', error);
+		showToast(getErrorMessage(error), 'error');
+	} finally {
+		isGenerating.value = false;
+		isTyping.value = false;
+		typingMessage.value = '';
+	}
 };
 
-/* 
-// 真实AI回复函数 - 取消注释以恢复真实AI功能
-const generateReply = async () => {
-        if (isGenerating.value) return;
-        
-        isGenerating.value = true;
-        
-        try {
-                // 获取最后一条用户消息
-                const lastUserMessage = displayedMessages.value
-                        .filter(msg => msg.actorId === USER_ACTOR_ID)
-                        .pop();
-                
-                if (!lastUserMessage) {
-                        console.warn('没有找到用户消息');
-                        return;
-                }
-
-                // 获取当前上下文对应的用户人格ID
-                let effectiveUserId = USER_ACTOR_ID;
-                if (currentUserPersona.value && currentUserPersona.value.id) {
-                        effectiveUserId = currentUserPersona.value.id;
-                        console.log('使用用户人格:', currentUserPersona.value.name, '(ID:', effectiveUserId, ')');
-                } else {
-                        console.log('使用默认用户ID:', effectiveUserId);
-                }
-
-                // 调用AI服务生成回复
-                const aiResult = await generateAIReply(
-                        actorId.value, 
-                        effectiveUserId, 
-                        lastUserMessage.content.content
-                );
-
-                if (aiResult.success && aiResult.messages) {
-                        // 处理AI返回的多条消息，为每条消息添加打字特效
-                        for (let i = 0; i < aiResult.messages.length; i++) {
-                                const aiMessage = aiResult.messages[i];
-                                
-                                // 开始打字状态
-                                isTyping.value = true;
-                                
-                                // 显示拼音打字特效
-                                await simulatePinyinTyping(aiMessage.content);
-                                
-                                const messageEvent = {
-                                        timestamp: Date.now(),
-                                        actorId: actorId.value,
-                                        contextId: actorId.value,
-                                        type: 'privateMessage',
-                                        content: {
-                                                content: aiMessage.content,
-                                                action: aiMessage.action
-                                        }
-                                };
-
-                                await db.events.add(messageEvent);
-                                await updateConversation(messageEvent);
-                                
-                                // 消息间保持输入状态，只清空当前打字内容
-                                if (i < aiResult.messages.length - 1) {
-                                        typingMessage.value = '';
-                                        // 保持isTyping为true，确保header持续显示"正在输入中"
-                                        await new Promise(resolve => setTimeout(resolve, Math.random() * 1000 + 500));
-                                }
-                        }
-
-                        // 如果有关系变化，显示提示
-                        if (aiResult.relationship && aiResult.relationship.scoreChange !== 0) {
-                                console.log(`好感度变化: ${aiResult.relationship.scoreChange > 0 ? '+' : ''}${aiResult.relationship.scoreChange}`);
-                        }
-
-                        // 如果保存了新记忆，显示提示
-                        if (aiResult.memory && aiResult.memory.shouldSave) {
-                                console.log('AI保存了新的记忆');
-                        }
-                } else {
-                        // AI调用失败，显示错误消息
-                        isTyping.value = true;
-                        await simulatePinyinTyping(aiResult.error || '抱歉，我现在无法回复。');
-                        
-                        const errorMessage = {
-                                timestamp: Date.now(),
-                                actorId: actorId.value,
-                                contextId: actorId.value,
-                                type: 'privateMessage',
-                                content: {
-                                        content: aiResult.error || '抱歉，我现在无法回复。'
-                                }
-                        };
-
-                        await db.events.add(errorMessage);
-                        await updateConversation(errorMessage);
-                }
-                
-        } catch (error) {
-                console.error('生成回复失败:', error);
-                
-                // 添加错误消息到聊天记录
-                isTyping.value = true;
-                const errorText = `抱歉，出现了错误：${error.message}`;
-                await simulatePinyinTyping(errorText);
-                
-                const errorMessage = {
-                        timestamp: Date.now(),
-                        actorId: actorId.value,
-                        contextId: actorId.value,
-                        type: 'privateMessage',
-                        content: {
-                                content: errorText
-                        }
-                };
-
-                await db.events.add(errorMessage);
-                await updateConversation(errorMessage);
-        } finally {
-                isGenerating.value = false;
-                isTyping.value = false;
-                typingMessage.value = '';
-        }
+// 验证AI回复结果
+const validateAIResult = (aiResult) => {
+	if (!aiResult) {
+		showToast('AI回复结果为空', 'error');
+		return false;
+	}
+	
+	if (!aiResult.success) {
+		const errorMsg = aiResult.error || '未知错误';
+		showToast(errorMsg, 'error');
+		return false;
+	}
+	
+	if (!aiResult.events || aiResult.events.length === 0) {
+		showToast('AI没有生成有效的回复', 'warning');
+		return false;
+	}
+	
+	return true;
 };
-*/
+
+// 获取有效的用户人格ID
+const getEffectiveUserId = async (actor) => {
+	if (actor.groupIds?.length > 0) {
+		const groupPersona = await getUserPersonaForGroup(actor.groupIds[0]);
+		if (groupPersona) {
+			console.log('使用分组用户人格:', groupPersona.name);
+			return groupPersona.id;
+		}
+	}
+	
+	const defaultPersona = await getDefaultUserPersona();
+	if (defaultPersona && defaultPersona.id !== USER_ACTOR_ID) {
+		console.log('使用默认用户人格:', defaultPersona.name);
+		return defaultPersona.id;
+	}
+	
+	return USER_ACTOR_ID;
+};
+
+// 获取最后一条用户消息内容
+const getLastUserMessageContent = (effectiveUserId) => {
+	const lastUserMessage = displayedMessages.value
+		.filter(msg => msg.actorId === USER_ACTOR_ID || msg.actorId === effectiveUserId)
+		.pop();
+		
+	return lastUserMessage ? 
+		(lastUserMessage.content.content || lastUserMessage.content.text || '继续聊天') : 
+		'开始对话';
+};
+
+// 处理AI生成的事件
+const processAIEvents = async (events) => {
+	for (let i = 0; i < events.length; i++) {
+		const event = events[i];
+		
+		// 只对text类型的消息使用打字特效
+		if (event.content.type === 'text' && personalSettings.value.typingSimulation.enabled) {
+			isTyping.value = true;
+			// 重置打字状态，防止显示上一条消息的内容
+			typingMessage.value = '';
+			currentTypingIndex.value = 0;
+			await simulatePinyinTyping(event.content.content);
+		} else if (personalSettings.value.typingSimulation.enabled) {
+			// 其他类型消息添加随机延迟
+			const delay = Math.random() * 1000 + 500;
+			await new Promise(resolve => setTimeout(resolve, delay));
+		}
+		
+		// 保存消息到数据库
+		await db.events.add(event);
+		
+		// 每条AI消息都单独更新会话，确保未读计数正确
+		await updateConversation(event);
+		
+		// 消息间添加间隔，但在最后一条消息后不需要延迟
+		if (i < events.length - 1) {
+			// 确保打字状态已清除
+			isTyping.value = false;
+			typingMessage.value = '';
+			
+			const betweenDelay = Math.random() * 1000 + 500;
+			await new Promise(resolve => setTimeout(resolve, betweenDelay));
+		}
+	}
+	
+	// 最终清除打字状态
+	isTyping.value = false;
+	typingMessage.value = '';
+};
+
+// 获取错误消息
+const getErrorMessage = (error) => {
+	if (error.message.includes('API配置')) return '请先在设置中配置AI API';
+	if (error.message.includes('网络') || error.message.includes('HTTP')) return '网络连接异常，请检查网络设置';
+	if (error.message.includes('JSON') || error.message.includes('解析')) return 'AI回复格式异常，请重试';
+	if (error.message.includes('API密钥')) return 'API密钥无效，请检查设置';
+	return '生成回复失败';
+};
 
 // 模拟拼音打字特效
 const simulatePinyinTyping = async (fullMessage) => {
+        // 确保打字状态初始化正确
         isTyping.value = true;
         typingMessage.value = '';
         currentTypingIndex.value = 0;
@@ -1708,7 +1983,7 @@ const simulatePinyinTyping = async (fullMessage) => {
         // 打字完成后使用配置的句子停顿时间
         await new Promise(resolve => setTimeout(resolve, delayConfig.sentencePauseDelay));
         
-        // 不在这里清除打字状态，由外部调用者控制
+        // 注意：不在这里清除打字状态，由调用者控制
 };
 
 // 生成模拟拼音输入步骤（使用pinyin-pro库）
@@ -1760,22 +2035,100 @@ const generateGenericPinyin = (char) => {
 };
 
 // 更新conversation表
-const updateConversation = async (message) => {
-        // 忽略系统消息，不更新会话列表
-        if (message.actorId !== "system") {
-                const conversation = {
-                        id: actorId.value,
-                        lastEventTimestamp: message.timestamp,
-                        lastEventContent: message.content,
-                        unreadCount: message.actorId === USER_ACTOR_ID ? 0 : 1, // 如果是用户发送则重置未读数
-                        summaryState: null
-                };
-                await db.conversations.put(conversation);
-        }
+const updateConversation = async (message, contextId = null) => {
+	// 忽略系统消息和不可见消息，不更新会话列表
+	if (message.actorId === "system" || 
+	    message.content?.type === 'system' || 
+	    message.content?.isVisible === false ||
+	    message.type === 'system') {
+		return; // 直接返回，不更新conversations表
+	}
+	
+	// 将特殊消息内容转化为文字描述
+	const textContent = convertMessageToText(message.content);
+	
+	// 使用传入的contextId或者消息中的contextId或者当前actorId
+	const conversationId = contextId || message.contextId || actorId.value;
+	
+	// 计算未读数量
+	let unreadCount = 0;
+	if (message.actorId !== USER_ACTOR_ID) {
+		// 只有非用户消息才可能增加未读数
+		
+		// 检查用户是否当前在该聊天室
+		if (!isCurrentChatRoom(conversationId)) {
+			// 用户不在当前聊天室，需要增加未读数
+			// 获取现有的会话记录
+			const existingConversation = await db.conversations.get(conversationId);
+			unreadCount = (existingConversation?.unreadCount || 0) + 1;
+		} else {
+			// 用户在当前聊天室，未读数保持为0
+			unreadCount = 0;
+		}
+	}
+	
+	const conversation = {
+		id: conversationId,
+		lastEventTimestamp: message.timestamp,
+		lastEventContent: {
+			...message.content,
+			textSummary: textContent // 添加文字摘要
+		},
+		unreadCount: unreadCount,
+		summaryState: null
+	};
+	await db.conversations.put(conversation);
+};
+
+// 将消息内容转化为文字描述
+const convertMessageToText = (content) => {
+	if (!content) return '';
+	
+	switch (content.type) {
+		case 'text':
+			return content.content || '';
+		case 'sticker':
+			return `[表情包: ${content.name || '表情'}]`;
+		case 'image':
+			if (content.subtype === 'text') {
+				return `[图片描述: ${content.description || '图片'}]`;
+			}
+			return `[图片: ${content.fileName || '图片'}]`;
+		case 'voice':
+			return `[语音消息: ${content.text || '语音'}]`;
+		case 'payment':
+			const paymentType = content.subtype === 'transfer' ? '转账' : '代付';
+			const amount = content.amount || 0;
+			const note = content.message || content.note || '';
+			const product = content.productInfo ? ` (${content.productInfo})` : '';
+			return `[${paymentType}: ¥${amount}${product} - ${note}]`;
+		case 'listen-together-invite':
+			const playlist = content.playlist || {};
+			return `[一起听邀请: ${playlist.name || '歌单'}]`;
+		case 'music-card':
+			const song = content.song || {};
+			const artists = song.artists ? song.artists.map(a => a.name).join('、') : '未知歌手';
+			return `[音乐分享: ${song.name || '歌曲'} - ${artists}]`;
+		case 'call':
+			const callType = content.callType === 'voice' ? '语音' : '视频';
+			return `[${callType}通话邀请]`;
+		case 'pat':
+			return `[拍一拍: ${content.message || '拍了拍'}]`;
+		case 'forwarded_message':
+			const fromCharName = content.fromCharName || '某人';
+			const userPersonaName = content.userPersonaName || '用户';
+			const messageCount = content.messageCount || 0;
+			return `[转发消息: ${fromCharName}和${userPersonaName}的 ${messageCount} 条消息]`;
+		default:
+			return content.content || content.text || '[消息]';
+	}
 };
 
 // 返回上一页
 const goBack = () => {
+        // 手动清除当前聊天室状态（防止路由导航时onUnmounted没有及时触发）
+        clearCurrentChatRoom();
+        
         // 智能返回：优先返回到消息列表
         const referrer = document.referrer;
         const currentPath = router.currentRoute.value.path;
@@ -1794,6 +2147,120 @@ const goToProfile = () => {
         router.push(`/profile/${actorId.value}`);
 };
 
+// 拍一拍功能
+const handleAvatarClick = () => {
+        const now = Date.now();
+        const timeDiff = now - lastAvatarClickTime.value;
+        
+        // 如果两次点击间隔小于500ms，认为是双击
+        if (timeDiff < 500 && avatarClickCount.value === 1) {
+                handlePatUser();
+        } else {
+                avatarClickCount.value = 1;
+        }
+        
+        lastAvatarClickTime.value = now;
+        
+        // 500ms后重置点击计数
+        setTimeout(() => {
+                avatarClickCount.value = 0;
+        }, 500);
+};
+
+// 移动端触摸事件处理
+const handleAvatarTouchStart = (event) => {
+        event.preventDefault();
+        avatarTouchStartTime.value = Date.now();
+        
+        // 清除之前的超时
+        if (avatarTouchTimeout.value) {
+                clearTimeout(avatarTouchTimeout.value);
+        }
+        
+        // 设置长按检测
+        avatarTouchTimeout.value = setTimeout(() => {
+                // 长按500ms触发拍一拍
+                handlePatUser();
+        }, 500);
+};
+
+const handleAvatarTouchEnd = (event) => {
+        event.preventDefault();
+        
+        // 清除长按检测
+        if (avatarTouchTimeout.value) {
+                clearTimeout(avatarTouchTimeout.value);
+                avatarTouchTimeout.value = null;
+        }
+        
+        const touchDuration = Date.now() - avatarTouchStartTime.value;
+        
+        // 如果是短触摸（少于500ms），按双击逻辑处理
+        if (touchDuration < 500) {
+                handleAvatarClick();
+        }
+};
+
+// 处理拍一拍
+const handlePatUser = async () => {
+        try {
+                const suffix = await promptForInput('拍一拍', '请输入后缀（可选）', '', true);
+                if (suffix !== null) { // 用户点击了确认（包括空字符串）
+                        await sendPatMessage(suffix || '');
+                        // 触发屏幕震动动画
+                        triggerShakeAnimation();
+                }
+        } catch (error) {
+                if (error !== 'cancel') {
+                        console.error('发送拍一拍失败:', error);
+                        showToast('发送失败', 'error');
+                }
+        }
+};
+
+// 触发屏幕震动动画
+const triggerShakeAnimation = () => {
+        // 触发设备震动
+        if (navigator.vibrate) {
+                navigator.vibrate([50, 50, 50]);
+        }
+        
+        // 触发屏幕震动动画
+        const container = document.querySelector('.page-container');
+        if (container) {
+                container.classList.add('shake-animation');
+                setTimeout(() => {
+                        container.classList.remove('shake-animation');
+                }, 600);
+        }
+};
+
+// 发送拍一拍消息（系统消息）
+const sendPatMessage = async (suffix) => {
+        try {
+                const patMessage = {
+                        timestamp: Date.now(),
+                        actorId: 'system',
+                        contextId: actorId.value,
+                        type: 'privateMessage',
+                        content: {
+                                type: 'system',
+                                content: `你拍了拍${actor.value?.name || '对方'}${suffix ? `，${suffix}` : ''}`,
+                                isVisible: true,
+                                systemType: 'pat'
+                        }
+                };
+
+                await db.events.add(patMessage);
+                await updateConversation(patMessage);
+                
+                showToast(`你拍了拍${actor.value?.name || '对方'}${suffix ? `，${suffix}` : ''}`, 'success');
+        } catch (error) {
+                console.error('发送拍一拍消息失败:', error);
+                showToast('发送失败', 'error');
+        }
+};
+
 // 发送系统消息到聊天室
 const sendSystemMessage = async (content, isVisible = true, type = 'system') => {
         try {
@@ -1810,17 +2277,6 @@ const sendSystemMessage = async (content, isVisible = true, type = 'system') => 
                 };
                 
                 await db.events.add(message);
-                
-                // 更新对话记录
-                const conversation = {
-                        id: actorId.value,
-                        lastEventTimestamp: message.timestamp,
-                        lastEventContent: message.content,
-                        unreadCount: 0, // 系统消息不计入未读数
-                        summaryState: null
-                };
-                
-                await db.conversations.put(conversation);
                 
                 return message;
         } catch (error) {
@@ -1882,8 +2338,550 @@ const ensurePlayerAvailable = async () => {
 
 // 生成首字母头像（参考 MeView 的逻辑）
 const getInitial = (name) => {
-        if (!name) return 'U';
-        return name.charAt(0).toUpperCase();
+	if (!name) return 'U';
+	return name.charAt(0).toUpperCase();
+};
+
+// 获取角色头像（优先使用currentAvatar，然后是avatar）
+const getActorAvatar = (actor) => {
+	if (!actor) return null;
+	// 优先使用currentAvatar（自定义头像）
+	if (actor.currentAvatar) {
+		return actor.currentAvatar;
+	}
+	// 其次使用默认avatar
+	if (actor.avatar) {
+		return actor.avatar;
+	}
+	return null;
+};
+
+// 获取引用消息的文本内容
+const getQuotedMessageText = (message) => {
+	if (!message || !message.content) return '';
+	
+	const content = message.content;
+	switch (content.type) {
+		case 'text':
+			return content.content || '';
+		case 'sticker':
+			return `[表情包: ${content.name || '表情'}]`;
+		case 'image':
+			if (content.subtype === 'text') {
+				return `[图片描述: ${content.description || '图片'}]`;
+			}
+			return `[图片: ${content.fileName || '图片'}]`;
+		case 'voice':
+			return `[语音消息: ${content.text || '语音'}]`;
+		case 'payment':
+			const paymentType = content.subtype === 'transfer' ? '转账' : '代付';
+			return `[${paymentType}: ¥${content.amount || 0}]`;
+		case 'music-card':
+			const song = content.song || {};
+			return `[音乐分享: ${song.name || '歌曲'}]`;
+		case 'call':
+			const callType = content.callType === 'voice' ? '语音' : '视频';
+			return `[${callType}通话邀请]`;
+		case 'pat':
+			return `[拍一拍: ${content.message || '拍了拍'}]`;
+		case 'system':
+			return content.content || '[系统消息]';
+		default:
+			return content.content || content.text || '[消息]';
+	}
+};
+
+// 获取消息文本内容（用于收藏）
+const getMessageText = (content) => {
+	if (!content) return '';
+	
+	switch (content.type) {
+		case 'text':
+			return content.content || '';
+		case 'sticker':
+			return `[表情包: ${content.name || '表情'}]`;
+		case 'image':
+			if (content.subtype === 'text') {
+				return `[图片描述: ${content.description || '图片'}]`;
+			}
+			return `[图片: ${content.fileName || '图片'}]`;
+		case 'voice':
+			return `[语音消息: ${content.text || '语音'}]`;
+		case 'payment':
+			const paymentType = content.subtype === 'transfer' ? '转账' : '代付';
+			const amount = content.amount || 0;
+			const note = content.message || content.note || '';
+			const product = content.productInfo ? ` (${content.productInfo})` : '';
+			return `[${paymentType}: ¥${amount}${product} - ${note}]`;
+		case 'listen-together-invite':
+			const playlist = content.playlist || {};
+			return `[一起听邀请: ${playlist.name || '歌单'}]`;
+		case 'music-card':
+			const song = content.song || {};
+			const artists = song.artists ? song.artists.map(a => a.name).join('、') : '未知歌手';
+			return `[音乐分享: ${song.name || '歌曲'} - ${artists}]`;
+		case 'call':
+			const callType = content.callType === 'voice' ? '语音' : '视频';
+			return `[${callType}通话邀请]`;
+		case 'pat':
+			return `[拍一拍: ${content.message || '拍了拍'}]`;
+		default:
+			return content.content || content.text || '[消息]';
+	}
+};
+
+// 获取作者名称
+const getAuthorName = async (message) => {
+	if (message.actorId === USER_ACTOR_ID) {
+		return currentUserPersona.value?.name || 'User';
+	} else if (message.actorId === 'system') {
+		return '系统';
+	} else {
+		try {
+			const author = await db.actors.get(message.actorId);
+			return author?.name || message.actorId;
+		} catch (e) {
+			return message.actorId;
+		}
+	}
+};
+
+// 右键菜单相关状态
+const contextMenu = ref({
+	visible: false,
+	x: 0,
+	y: 0,
+	message: null
+});
+
+// 长按相关状态
+const longPressTimer = ref(null);
+const longPressStartTime = ref(0);
+const isLongPressing = ref(false);
+const longPressActive = ref(false); // 标记长按是否已激活
+
+// 多选模式相关状态
+const multiSelectMode = ref(false);
+const selectedMessages = ref(new Set());
+
+// 转发相关状态
+const isForwardModalVisible = ref(false);
+const forwardSelectedMessagesList = computed(() => {
+        return displayedMessages.value.filter(msg => 
+                selectedMessages.value.has(msg.id || msg.timestamp)
+        );
+});
+
+// 引用消息相关状态
+const quotedMessage = ref(null);
+
+
+
+// 右键菜单处理函数
+const showContextMenu = (event, message) => {
+	event.preventDefault();
+	event.stopPropagation();
+	
+	contextMenu.value = {
+		visible: true,
+		x: event.clientX || event.touches?.[0]?.clientX || 0,
+		y: event.clientY || event.touches?.[0]?.clientY || 0,
+		message: message
+	};
+};
+
+const hideContextMenu = () => {
+	contextMenu.value.visible = false;
+	contextMenu.value.message = null;
+};
+
+// 消息右键处理（PC端）
+const handleMessageRightClick = (event, message) => {
+	showContextMenu(event, message);
+};
+
+// 消息长按处理（移动端）
+const handleMessageTouchStart = (event, message) => {
+	// 如果是多选模式，直接处理选择逻辑
+	if (multiSelectMode.value) {
+		toggleMessageSelection(message);
+		return;
+	}
+	
+	longPressStartTime.value = Date.now();
+	isLongPressing.value = false;
+	longPressActive.value = false;
+	
+	longPressTimer.value = setTimeout(() => {
+		if (!isLongPressing.value && !longPressActive.value) {
+			isLongPressing.value = true;
+			longPressActive.value = true;
+			showContextMenu(event, message);
+			// 触发震动反馈（如果支持）
+			if (navigator.vibrate) {
+				navigator.vibrate(50);
+			}
+		}
+	}, 500); // 500ms长按触发
+};
+
+const handleMessageTouchEnd = (event) => {
+	if (longPressTimer.value) {
+		clearTimeout(longPressTimer.value);
+		longPressTimer.value = null;
+	}
+	
+	// 如果长按已激活，不要立即重置状态
+	if (longPressActive.value) {
+		// 延迟重置状态，给菜单显示留出时间
+		setTimeout(() => {
+			isLongPressing.value = false;
+			longPressActive.value = false;
+		}, 100);
+		
+		event.preventDefault();
+		event.stopPropagation();
+		return;
+	}
+	
+	isLongPressing.value = false;
+	longPressActive.value = false;
+};
+
+const handleMessageTouchMove = (event) => {
+	// 触摸移动超过10px时取消长按
+	const touch = event.touches[0];
+	const startTouch = event.target.getBoundingClientRect();
+	const moveDistance = Math.sqrt(
+		Math.pow(touch.clientX - startTouch.left, 2) + 
+		Math.pow(touch.clientY - startTouch.top, 2)
+	);
+	
+	if (moveDistance > 10) {
+		if (longPressTimer.value) {
+			clearTimeout(longPressTimer.value);
+			longPressTimer.value = null;
+		}
+		isLongPressing.value = false;
+		longPressActive.value = false;
+	}
+};
+
+// 菜单操作处理
+const handleQuoteMessage = (message) => {
+	quotedMessage.value = message;
+	// 聚焦到输入框
+	if (messageInput.value) {
+		messageInput.value.focus();
+	}
+	hideContextMenu();
+	showToast('已引用消息', 'success');
+};
+
+const handleFavoriteMessage = async (message) => {
+	try {
+		const favoriteParams = {
+			eventId: message.id || message.timestamp,
+			eventType: 'message',
+			authorId: message.actorId,
+			authorName: await getAuthorName(message),
+			content: {
+				text: getMessageText(message.content),
+				type: message.content?.type || 'text',
+				timestamp: message.timestamp
+			}
+		};
+
+		const newFavoriteStatus = await toggleFavoriteService(favoriteParams);
+		showToast(newFavoriteStatus ? '已收藏' : '已取消收藏', 'success');
+	} catch (error) {
+		console.error('收藏失败:', error);
+		showToast('收藏失败', 'error');
+	}
+};
+
+const handleEditMessage = async (message) => {
+	try {
+		// 只支持编辑text类型的消息
+		if (!message.content || message.content.type !== 'text') {
+			showToast('只能编辑文本消息', 'warning');
+			return;
+		}
+		
+		const newContent = await promptForInput(
+			'编辑消息',
+			'请输入新的消息内容',
+			true, // isTextarea
+			false, // isOptional
+			message.content.content // initialValue
+		);
+		
+		if (newContent && newContent !== message.content.content) {
+			await db.events.update(message.id, {
+				'content.content': newContent
+			});
+			showToast('消息已更新', 'success');
+		}
+	} catch (error) {
+		if (error !== 'cancel') {
+			console.error('编辑消息失败:', error);
+			showToast('编辑失败', 'error');
+		}
+	}
+};
+
+const handleMultiSelectMessage = (message) => {
+	// 进入多选模式
+	multiSelectMode.value = true;
+	selectedMessages.value.clear();
+	selectedMessages.value.add(message.id || message.timestamp);
+	hideContextMenu();
+};
+
+const handleDeleteMessage = async (message) => {
+	try {
+		const confirmed = await showConfirmModal(
+			'确认删除',
+			'确定要删除这条消息吗？此操作无法撤销。'
+		);
+		
+		if (confirmed) {
+			await db.events.delete(message.id);
+			showToast('消息已删除', 'success');
+		}
+	} catch (error) {
+		console.error('删除消息失败:', error);
+		showToast('删除失败', 'error');
+	}
+};
+
+// 多选模式相关函数
+const toggleMessageSelection = (message) => {
+	const messageKey = message.id || message.timestamp;
+	if (selectedMessages.value.has(messageKey)) {
+		selectedMessages.value.delete(messageKey);
+	} else {
+		selectedMessages.value.add(messageKey);
+	}
+};
+
+const exitMultiSelectMode = () => {
+	multiSelectMode.value = false;
+	selectedMessages.value.clear();
+};
+
+const deleteSelectedMessages = async () => {
+	try {
+		const count = selectedMessages.value.size;
+		if (count === 0) {
+			showToast('请先选择要删除的消息', 'warning');
+			return;
+		}
+		
+		const confirmed = await showConfirmModal(
+			'批量删除',
+			`确定要删除选中的 ${count} 条消息吗？此操作无法撤销。`
+		);
+		
+		if (confirmed) {
+			const messageIds = Array.from(selectedMessages.value);
+			let successCount = 0;
+			let failCount = 0;
+			
+			for (const id of messageIds) {
+				try {
+					await db.events.delete(id);
+					successCount++;
+				} catch (error) {
+					console.error(`删除消息 ${id} 失败:`, error);
+					failCount++;
+				}
+			}
+			
+			if (successCount > 0) {
+				showToast(`已删除 ${successCount} 条消息${failCount > 0 ? `，${failCount} 条删除失败` : ''}`, successCount === count ? 'success' : 'warning');
+			} else {
+				showToast('删除失败', 'error');
+			}
+			
+			exitMultiSelectMode();
+		}
+	} catch (error) {
+		console.error('批量删除失败:', error);
+		showToast('批量删除失败', 'error');
+	}
+};
+
+const favoriteSelectedMessages = async () => {
+	try {
+		const count = selectedMessages.value.size;
+		if (count === 0) {
+			showToast('请先选择要收藏的消息', 'warning');
+			return;
+		}
+		
+		const messageIds = Array.from(selectedMessages.value);
+		const messages = [];
+		
+		// 收集所有选中的消息
+		for (const messageId of messageIds) {
+			const message = displayedMessages.value.find(msg => msg.id === messageId || msg.timestamp === messageId);
+			if (message) {
+				messages.push(message);
+			}
+		}
+		
+		if (messages.length === 0) {
+			showToast('未找到选中的消息', 'error');
+			return;
+		}
+		
+		// 按时间排序
+		messages.sort((a, b) => a.timestamp - b.timestamp);
+		
+		// 获取角色名称用于显示
+		const characterName = actor.value?.name || '角色';
+		
+		// 简化批量收藏数据结构，支持手风琴展示
+		const messageDetails = [];
+		for (const msg of messages) {
+			const authorName = await getAuthorName(msg);
+			const text = getMessageText(msg.content);
+			messageDetails.push({
+				author: authorName,
+				content: text,
+				timestamp: msg.timestamp
+			});
+		}
+		
+		// 创建批量收藏记录
+		const batchFavoriteParams = {
+			eventId: `batch_${Date.now()}`, // 使用唯一ID
+			eventType: 'message_batch',
+			authorId: actorId.value, // 使用角色ID而不是'batch'
+			authorName: characterName, // 使用角色名称
+			content: {
+				text: `批量收藏了 ${messages.length} 条消息`,
+				type: 'batch',
+				messageCount: messages.length,
+				messages: messageDetails, // 详细消息列表，用于手风琴展示
+				firstMessageTime: messages[0]?.timestamp,
+				lastMessageTime: messages[messages.length - 1]?.timestamp
+			},
+			// 使用最后一条消息的时间作为收藏时间
+			timestamp: messages[messages.length - 1]?.timestamp || Date.now()
+		};
+
+		await toggleFavoriteService(batchFavoriteParams);
+		showToast(`已批量收藏 ${messages.length} 条消息`, 'success');
+		
+		exitMultiSelectMode();
+	} catch (error) {
+		console.error('批量收藏失败:', error);
+		showToast('批量收藏失败', 'error');
+	}
+};
+
+const forwardSelectedMessages = () => {
+        if (selectedMessages.value.size === 0) {
+                showToast('请先选择要转发的消息', 'warning');
+                return;
+        }
+        
+        // 显示转发模态框
+        isForwardModalVisible.value = true;
+};
+
+// 处理转发模态框关闭
+const handleForwardModalClose = () => {
+        isForwardModalVisible.value = false;
+};
+
+// 处理转发确认
+const handleForwardConfirm = async (forwardData) => {
+        try {
+                // 构建转发消息的内容
+                const selectedMessagesList = forwardSelectedMessagesList.value;
+                const messagesForForward = selectedMessagesList.map(msg => ({
+                        author: getAuthorName(msg),
+                        content: getMessageContent(msg),
+                        timestamp: msg.timestamp
+                }));
+                
+                // 发送转发消息
+                await sendForwardedMessage(forwardData.targetCharacter, messagesForForward, forwardData.currentCharName, forwardData.userPersonaName);
+                
+                // 成功后关闭模态框并退出多选模式
+                isForwardModalVisible.value = false;
+                exitMultiSelectMode();
+                
+                showToast(`已转发 ${selectedMessagesList.length} 条消息给 ${forwardData.targetCharacter.name}`, 'success');
+                
+        } catch (error) {
+                console.error('转发消息失败:', error);
+                showToast('转发消息失败', 'error');
+        }
+};
+
+// 发送转发消息
+const sendForwardedMessage = async (targetCharacter, messages, fromCharName, userPersonaName) => {
+        // 导航到目标角色的聊天页面
+        router.push(`/chat/${targetCharacter.id}`);
+        
+        // 等待页面切换完成
+        await nextTick();
+        
+        // 构建转发消息
+        const forwardMessage = {
+                timestamp: Date.now(),
+                actorId: USER_ACTOR_ID,
+                contextId: targetCharacter.id,
+                type: 'privateMessage',
+                content: {
+                        type: 'forwarded_message',
+                        fromCharName: fromCharName,
+                        fromCharId: actorId.value,
+                        userPersonaName: userPersonaName,
+                        messages: messages,
+                        messageCount: messages.length
+                }
+        };
+        
+        // 保存转发消息到目标对话
+        await db.events.add(forwardMessage);
+        
+        // 更新目标对话
+        await updateConversation(forwardMessage, targetCharacter.id);
+};
+
+// 获取消息内容的辅助函数
+const getMessageContent = (message) => {
+        if (message.content?.type === 'text') {
+                return message.content.content || message.content.text || '[消息]';
+        } else if (message.content?.type === 'voice' || message.content?.type === 'voice_message') {
+                return `[语音消息: ${message.content.text || '语音'}]`;
+        } else if (message.content?.type === 'sticker') {
+                return `[表情包: ${message.content.name || '表情'}]`;
+        } else if (message.content?.type === 'image') {
+                return message.content.subtype === 'text' ? 
+                        `[文字图片: ${message.content.description}]` : 
+                        '[图片]';
+        } else if (message.content?.type === 'payment') {
+                const paymentType = message.content.subtype === 'transfer' ? '转账' : '代付';
+                return `[${paymentType}: ¥${message.content.amount || 0}]`;
+        } else if (message.content?.type === 'music-card') {
+                const song = message.content.song || {};
+                return `[音乐分享: ${song.name || '歌曲'}]`;
+        } else if (message.content?.type === 'call') {
+                const callType = message.content.callType === 'voice' ? '语音' : '视频';
+                return `[${callType}通话邀请]`;
+        } else if (message.content?.type === 'pat') {
+                return `[拍一拍: ${message.content.message || '拍了拍'}]`;
+        } else if (message.content?.type === 'system') {
+                return message.content.content || '[系统消息]';
+        } else {
+                return message.content?.content || message.content?.text || '[消息]';
+        }
 };
 
 
@@ -1919,115 +2917,145 @@ watch(() => personalSettings.value, async (newSettings) => {
 
 // 初始化默认状态
 onMounted(async () => {
-        // 加载个人设置
-        try {
-                const settings = await getPersonalSettings();
-                personalSettings.value = settings;
-                console.log('ChatRoom: Loaded personal settings:', settings);
-        } catch (error) {
-                console.error('ChatRoom: Failed to load personal settings:', error);
-        }
-        
-        // 确保有默认用户人格
-        const defaultPersona = await getDefaultUserPersona();
-        if (!defaultPersona) {
-                // 如果没有默认人格，创建一个
-                const defaultUserPersona = {
-                        id: 'user_default',
-                        name: 'User',
-                        realName: '',
-                        aliases: [],
-                        gender: '',
-                        birthday: '',
-                        persona: '',
-                        avatar: '',
-                        groupIds: [],
-                        isDefault: true,
-                        type: 'user',
-                        avatarLibrary: []
-                };
-                await db.actors.put(defaultUserPersona);
-                console.log('ChatRoom: Created default user persona');
-        }
+	// 设置当前聊天室状态
+	setCurrentChatRoom(actorId.value);
+	console.log('进入聊天室:', actorId.value);
+	
+	// 清除未读消息数（进入聊天室时立即清除）
+	try {
+		await clearUnreadMessages();
+	} catch (error) {
+		console.error('清除未读消息失败:', error);
+	}
+	
+	// 加载个人设置
+	try {
+		const settings = await getPersonalSettings();
+		personalSettings.value = settings;
+		console.log('ChatRoom: Loaded personal settings:', settings);
+	} catch (error) {
+		console.error('ChatRoom: Failed to load personal settings:', error);
+	}
+	
+	// 确保有默认用户人格
+	const defaultPersona = await getDefaultUserPersona();
+	if (!defaultPersona) {
+		// 如果没有默认人格，创建一个
+		const defaultUserPersona = {
+			id: 'user_default',
+			name: 'User',
+			realName: '',
+			aliases: [],
+			gender: '',
+			birthday: '',
+			persona: '',
+			avatar: '',
+			groupIds: [],
+			isDefault: true,
+			type: 'user',
+			avatarLibrary: []
+		};
+		await db.actors.put(defaultUserPersona);
+		console.log('ChatRoom: Created default user persona');
+	}
 
-        if (actor.value && !actor.value.status) {
-                await db.actors.update(actorId.value, {
-                        status: {
-                                color: '#4CAF50',
-                                text: '在线'
-                        }
-                });
-        }
-        
-        // 等待消息加载完成后初始化
-        await nextTick();
-        
-        // 初始显示最新的30条消息
-        messageOffset.value = 0;
-        
-        setTimeout(() => {
-                scrollToBottom();
-        }, 100);
-        
-        // 加载表情包数据
-        loadStickers();
-        
-        // 加载并应用气泡样式作为主题
-        if (actor.value) {
-                try {
-                        const bubbleStyle = await applyActorTheme(actor.value.id, isUsingUserBubbleTheme.value);
-                        currentBubbleStyle.value = bubbleStyle;
-                        
-                        // 应用聊天背景
-                        const messagesContainerEl = document.querySelector('.messages-container');
-                        if (messagesContainerEl && actor.value.chatBackground) {
-                                messagesContainerEl.style.backgroundImage = `url('${actor.value.chatBackground}')`;
-                                messagesContainerEl.style.backgroundSize = 'cover';
-                                messagesContainerEl.style.backgroundPosition = 'center';
-                                messagesContainerEl.style.backgroundRepeat = 'no-repeat';
-                                messagesContainerEl.style.backgroundAttachment = 'fixed';
-                        } else if (messagesContainerEl) {
-                                // 清除背景图
-                                messagesContainerEl.style.backgroundImage = 'none';
-                        }
-                } catch (error) {
-                        console.error('Failed to load bubble style:', error);
-                }
-        }
-        
-        // 监听窗口大小变化
-        const handleResize = () => {
-                // 确保内容适应新的窗口大小
-                nextTick(() => scrollToBottom());
-        };
-        
-        // 监听页面可见性变化，当用户返回时刷新设置
-        const handleVisibilityChange = () => {
-                if (!document.hidden) {
-                        // 页面变为可见时刷新设置
-                        refreshPersonalSettings();
-                }
-        };
-        
-        window.addEventListener('resize', handleResize);
-        document.addEventListener('visibilitychange', handleVisibilityChange);
-        
-        // 检查是否有进行中的一起听歌会话
-        const activeSession = await listenTogetherService.getCurrentListenTogetherSession(route.params.actorId);
-        if (activeSession) {
-                console.log('发现进行中的一起听歌会话，开始音乐跟踪');
-                startTrackingMusic();
-        }
-        
-        // 清理事件监听器
-        return () => {
-                window.removeEventListener('resize', handleResize);
-                document.removeEventListener('visibilitychange', handleVisibilityChange);
-        };
+	if (actor.value && !actor.value.status) {
+		await db.actors.update(actorId.value, {
+			status: {
+				color: '#4CAF50',
+				text: '在线'
+			}
+		});
+	}
+	
+	// 等待消息加载完成后初始化
+	await nextTick();
+	
+	// 初始显示最新的30条消息
+	messageOffset.value = 0;
+	
+	setTimeout(() => {
+		scrollToBottom();
+	}, 100);
+	
+	// 加载表情包数据
+	loadStickers();
+	
+	// 加载并应用气泡样式作为主题
+	if (actor.value) {
+		try {
+			const bubbleStyle = await applyActorTheme(actor.value.id, isUsingUserBubbleTheme.value);
+			currentBubbleStyle.value = bubbleStyle;
+			
+			// 应用聊天背景
+			const messagesContainerEl = document.querySelector('.messages-container');
+			if (messagesContainerEl && actor.value.chatBackground) {
+				messagesContainerEl.style.backgroundImage = `url('${actor.value.chatBackground}')`;
+				messagesContainerEl.style.backgroundSize = 'cover';
+				messagesContainerEl.style.backgroundPosition = 'center';
+				messagesContainerEl.style.backgroundRepeat = 'no-repeat';
+				messagesContainerEl.style.backgroundAttachment = 'fixed';
+			} else if (messagesContainerEl) {
+				// 清除背景图
+				messagesContainerEl.style.backgroundImage = 'none';
+			}
+		} catch (error) {
+			console.error('Failed to load bubble style:', error);
+		}
+	}
+	
+	// 监听窗口大小变化
+	const handleResize = () => {
+		// 确保内容适应新的窗口大小
+		nextTick(() => scrollToBottom());
+	};
+	
+	// 监听页面可见性变化，当用户返回时刷新设置
+	const handleVisibilityChange = () => {
+		if (!document.hidden) {
+			// 页面变为可见时刷新设置
+			refreshPersonalSettings();
+		}
+	};
+	
+	window.addEventListener('resize', handleResize);
+	document.addEventListener('visibilitychange', handleVisibilityChange);
+	
+	// 检查是否有进行中的一起听歌会话
+	const activeSession = await listenTogetherService.getCurrentListenTogetherSession(route.params.actorId);
+	if (activeSession) {
+		console.log('发现进行中的一起听歌会话，开始音乐跟踪');
+		startTrackingMusic();
+	}
+	
+	// 清理事件监听器
+	return () => {
+		window.removeEventListener('resize', handleResize);
+		document.removeEventListener('visibilitychange', handleVisibilityChange);
+	};
 });
+
+// 清除未读消息数
+const clearUnreadMessages = async () => {
+	try {
+		const conversation = await db.conversations.get(actorId.value);
+		if (conversation && conversation.unreadCount > 0) {
+			await db.conversations.update(actorId.value, {
+				unreadCount: 0
+			});
+			console.log('已清除未读消息数:', conversation.unreadCount);
+		}
+	} catch (error) {
+		console.error('清除未读消息失败:', error);
+	}
+};
 
 // 组件卸载时恢复原始主题
 onUnmounted(() => {
+        // 清除当前聊天室状态
+        clearCurrentChatRoom();
+        console.log('离开聊天室:', actorId.value);
+        
         restoreOriginalTheme();
         // 停止音乐跟踪
         stopTrackingMusic();
@@ -2152,6 +3180,12 @@ onUnmounted(() => {
         display: flex;
         flex-direction: column;
         gap: 4px;
+        user-select: none;
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        -webkit-touch-callout: none;
+        -webkit-tap-highlight-color: transparent;
 }
 
 .own-message .message-content {
@@ -2502,6 +3536,16 @@ onUnmounted(() => {
         min-width: 180px;
         text-align: center;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        transition: all 0.2s;
+}
+
+.payment-message.clickable {
+        cursor: pointer;
+}
+
+.payment-message.clickable:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
 }
 
 .payment-header {
@@ -2534,6 +3578,57 @@ onUnmounted(() => {
         opacity: 0.8;
         font-style: italic;
         text-align: left;
+}
+
+.payment-status {
+        margin-top: 12px;
+        padding-top: 8px;
+        border-top: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.status-accepted {
+        color: #4CAF50;
+        font-weight: 600;
+        font-size: 12px;
+}
+
+.status-rejected {
+        color: #FF5722;
+        font-weight: 600;
+        font-size: 12px;
+}
+
+.payment-pending {
+        margin-top: 12px;
+        padding-top: 8px;
+        border-top: 1px solid rgba(255, 255, 255, 0.2);
+        font-size: 12px;
+        opacity: 0.8;
+        font-style: italic;
+}
+
+/* 拍一拍消息样式 */
+.pat-message {
+        background: linear-gradient(135deg, #FFE082, #FFAB91) !important;
+        color: #5D4037 !important;
+        font-style: italic;
+        text-align: center;
+        border-radius: 20px !important;
+        padding: 12px 16px !important;
+        margin: 8px 0 !important;
+        box-shadow: 0 2px 8px rgba(255, 171, 145, 0.3);
+        animation: patBounce 0.6s ease-out;
+}
+
+.pat-suffix {
+        color: #FF7043;
+        font-weight: 600;
+}
+
+@keyframes patBounce {
+        0% { transform: scale(0.8); opacity: 0; }
+        50% { transform: scale(1.1); }
+        100% { transform: scale(1); opacity: 1; }
 }
 
 /* 面板切换动画 */
@@ -2796,5 +3891,317 @@ onUnmounted(() => {
 
 .play-song-btn:hover {
         transform: translateY(-1px);
+}
+
+/* 通话消息样式 */
+.call-message {
+	background: linear-gradient(135deg, var(--accent-primary), var(--accent-darker));
+	color: var(--text-inverse);
+	padding: 16px;
+	border-radius: 16px;
+	min-width: 200px;
+	text-align: center;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* 拍一拍消息样式 */
+.pat-message {
+	background: linear-gradient(135deg, #FFE4B5, #FFD700);
+	color: #8B4513;
+	padding: 12px 16px;
+	border-radius: 16px;
+	text-align: center;
+	box-shadow: 0 2px 8px rgba(255, 215, 0, 0.3);
+	animation: pat-shake 0.5s ease-in-out;
+}
+
+.pat-content {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+}
+
+.pat-icon {
+	font-size: 18px;
+	animation: pat-wave 0.6s ease-in-out;
+}
+
+.pat-text {
+	font-weight: 500;
+	font-size: 14px;
+}
+
+@keyframes pat-shake {
+	0%, 100% { transform: translateX(0); }
+	10%, 30%, 50%, 70%, 90% { transform: translateX(-2px); }
+	20%, 40%, 60%, 80% { transform: translateX(2px); }
+}
+
+@keyframes pat-wave {
+	0%, 100% { transform: rotate(0deg); }
+	25% { transform: rotate(-10deg); }
+	75% { transform: rotate(10deg); }
+}
+
+.call-header {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        margin-bottom: 8px;
+        font-weight: 600;
+        font-size: 14px;
+}
+
+.call-message-content {
+        margin-bottom: 12px;
+        font-size: 14px;
+        opacity: 0.9;
+}
+
+.call-actions {
+        display: flex;
+        gap: 8px;
+        justify-content: center;
+}
+
+.accept-call-btn,
+.decline-call-btn {
+        padding: 8px 16px;
+        border: none;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+}
+
+.accept-call-btn {
+        background-color: rgba(76, 175, 80, 0.9);
+        color: white;
+}
+
+.accept-call-btn:hover {
+        background-color: rgba(76, 175, 80, 1);
+        transform: scale(1.05);
+}
+
+.decline-call-btn {
+        background-color: rgba(244, 67, 54, 0.9);
+        color: white;
+}
+
+.decline-call-btn:hover {
+        background-color: rgba(244, 67, 54, 1);
+        transform: scale(1.05);
+}
+
+/* 多选模式样式 */
+.message-item.multi-select-mode {
+	padding-left: 50px;
+	position: relative;
+}
+
+.message-item.selected {
+	background-color: var(--accent-bg, rgba(var(--accent-primary-rgb, 59, 130, 246), 0.1));
+	border-radius: 8px;
+	margin: 2px 0;
+}
+
+.message-checkbox {
+	position: absolute;
+	left: 10px;
+	top: 50%;
+	transform: translateY(-50%);
+	z-index: 10;
+}
+
+.message-checkbox input[type="checkbox"] {
+	width: 18px;
+	height: 18px;
+	accent-color: var(--accent-primary);
+	cursor: pointer;
+}
+
+.header-action-button:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
+/* 震动动画 */
+@keyframes shake {
+	0%, 100% { transform: translateX(0); }
+	10%, 30%, 50%, 70%, 90% { transform: translateX(-3px); }
+	20%, 40%, 60%, 80% { transform: translateX(3px); }
+}
+
+.shake-animation {
+	animation: shake 0.6s ease-in-out;
+}
+
+/* 多选操作按钮样式 */
+.multi-select-actions {
+	display: flex;
+	gap: 8px;
+	align-items: center;
+}
+
+.multi-select-btn {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	padding: 6px 12px;
+	border: none;
+	border-radius: 16px;
+	font-size: 12px;
+	font-weight: 500;
+	cursor: pointer;
+	transition: all 0.2s ease;
+	min-width: 60px;
+	justify-content: center;
+}
+
+.multi-select-btn:disabled {
+	opacity: 0.4;
+	cursor: not-allowed;
+}
+
+.multi-select-btn svg {
+	width: 14px;
+	height: 14px;
+}
+
+.multi-select-btn span {
+	font-size: 11px;
+}
+
+.delete-btn {
+	background-color: rgba(255, 59, 48, 0.1);
+	color: #ff3b30;
+}
+
+.delete-btn:hover:not(:disabled) {
+	background-color: rgba(255, 59, 48, 0.2);
+}
+
+.favorite-btn {
+	background-color: rgba(255, 149, 0, 0.1);
+	color: #ff9500;
+}
+
+.favorite-btn:hover:not(:disabled) {
+	background-color: rgba(255, 149, 0, 0.2);
+}
+
+.forward-btn {
+	background-color: rgba(0, 122, 255, 0.1);
+	color: #007aff;
+}
+
+.forward-btn:hover:not(:disabled) {
+	background-color: rgba(0, 122, 255, 0.2);
+}
+
+/* 引用消息样式 */
+.quoted-message-display {
+	background-color: var(--bg-secondary);
+	border-top: 1px solid var(--border-color);
+	padding: 12px 15px 8px;
+	margin: 0 -15px 0 -15px;
+}
+
+.quoted-message-content {
+	background-color: var(--bg-card);
+	border-left: 3px solid var(--accent-primary);
+	border-radius: 6px;
+	padding: 8px 12px;
+	position: relative;
+}
+
+.quoted-message-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 4px;
+}
+
+.quoted-message-author {
+	font-size: 12px;
+	font-weight: 600;
+	color: var(--accent-primary);
+}
+
+.quoted-message-close {
+	background: none;
+	border: none;
+	color: var(--text-secondary);
+	cursor: pointer;
+	padding: 2px;
+	border-radius: 50%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.quoted-message-close:hover {
+	color: var(--text-primary);
+	background-color: var(--bg-secondary);
+}
+
+.quoted-message-text {
+	font-size: 13px;
+	color: var(--text-secondary);
+	line-height: 1.3;
+	max-height: 40px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	line-clamp: 2;
+	-webkit-box-orient: vertical;
+}
+
+/* 消息气泡内的引用样式 */
+.quoted-message-in-bubble {
+	display: flex;
+	gap: 8px;
+	margin-bottom: 8px;
+	padding: 8px;
+	background-color: rgba(var(--bg-secondary-rgb, 128, 128, 128), 0.3);
+	border-radius: 6px;
+}
+
+.quoted-message-bar {
+	width: 3px;
+	background-color: var(--accent-primary);
+	border-radius: 1px;
+	flex-shrink: 0;
+}
+
+.quoted-message-info {
+	flex: 1;
+	min-width: 0;
+}
+
+.quoted-message-author-name {
+	font-size: 11px;
+	font-weight: 600;
+	color: var(--accent-primary);
+	display: block;
+	margin-bottom: 2px;
+}
+
+.quoted-message-content-text {
+	font-size: 12px;
+	color: var(--text-secondary);
+	line-height: 1.2;
+	max-height: 32px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	line-clamp: 2;
+	-webkit-box-orient: vertical;
 }
 </style>

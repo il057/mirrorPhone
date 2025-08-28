@@ -9,7 +9,8 @@
                 <ul v-if="conversations" class="conversation-list">
                         <li v-for="convo in conversations" :key="convo.id" class="conversation-item">
                                 <div class="avatar" @click="goToProfile(convo.id)">
-                                        <img v-if="convo.actor?.currentAvatar" :src="convo.actor.currentAvatar" :alt="convo.actor.name" class="avatar-image">
+                                        <img v-if="convo.actor?.currentAvatar" :src="convo.actor.currentAvatar"
+                                                :alt="convo.actor.name" class="avatar-image">
                                         <span v-else class="avatar-initial">{{ convo.actor?.name[0] }}</span>
                                 </div>
                                 <div class="convo-details" @click="goToChat(convo.id)">
@@ -20,7 +21,7 @@
                                         </div>
                                         <div class="convo-body">
                                                 <p class="convo-last-message">{{ convo.lastEventContent.content
-                                                        }}</p>
+                                                }}</p>
                                                 <span v-if="convo.unreadCount > 0" class="unread-badge">{{
                                                         convo.unreadCount }}</span>
                                         </div>
@@ -66,7 +67,6 @@ const goToChat = (actorId) => {
 </script>
 
 <style scoped>
-
 .messages-view-container {
         height: 100%;
         padding-top: var(--header-height);
@@ -76,79 +76,93 @@ const goToChat = (actorId) => {
 }
 
 .page-content {
-   padding-top: var(--header-height);
+        padding-top: var(--header-height);
 }
 
 .conversation-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
+        list-style: none;
+        padding: 0;
+        margin: 0;
 }
+
 .conversation-item {
-    display: flex;
-    align-items: center;
-    padding: 12px 15px;
-    border-bottom: 1px solid var(--border-color);
-    cursor: pointer;
+        display: flex;
+        align-items: center;
+        padding: 12px 15px;
+        border-bottom: 1px solid var(--border-color);
+        cursor: pointer;
 }
+
 .conversation-item:hover {
-    background-color: var(--bg-secondary);
+        background-color: var(--bg-secondary);
 }
 
 .conversation-item .avatar {
-    cursor: pointer;
-    transition: opacity 0.2s;
+        cursor: pointer;
+        transition: opacity 0.2s;
 }
 
 .conversation-item .avatar:hover {
-    opacity: 0.8;
+        opacity: 0.8;
 }
 
 .convo-details {
-    flex-grow: 1;
-    overflow: hidden;
-    cursor: pointer;
-    
+        flex-grow: 1;
+        overflow: hidden;
+        cursor: pointer;
+        min-width: 0;
 }
 
 .convo-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 4px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 4px;
 }
+
 .convo-name {
-    font-weight: 600;
+        font-weight: 600;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        flex-shrink: 1;
 }
+
 .convo-timestamp {
-    font-size: 12px;
-    color: var(--text-secondary);
+        font-size: 12px;
+        color: var(--text-secondary);
+        flex-shrink: 0;
+        margin-left: 8px;
 }
+
 .convo-body {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
 }
+
 .convo-last-message {
-    font-size: 14px;
-    color: var(--text-secondary);
-    margin: 0;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+        font-size: 14px;
+        color: var(--text-secondary);
+        margin: 0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
 }
+
 .unread-badge {
-    background-color: #f44336;
-    color: white;
-    font-size: 12px;
-    padding: 2px 6px;
-    border-radius: 10px;
-    min-width: 20px;
-    text-align: center;
+        background-color: #f44336;
+        color: white;
+        font-size: 12px;
+        padding: 2px 6px;
+        border-radius: 10px;
+        min-width: 20px;
+        text-align: center;
 }
+
 .empty-state {
-    text-align: center;
-    margin-top: 50px;
-    color: var(--text-secondary);
+        text-align: center;
+        margin-top: 50px;
+        color: var(--text-secondary);
 }
 </style>

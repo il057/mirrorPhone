@@ -834,6 +834,7 @@ const fetchVoices = async () => {
 
 // 加载数据
 onMounted(async () => {
+        ttsProfiles.value = await db.ttsProfiles.toArray();
         if (isNew.value) {
                 actor.value = {
                         name: '',
@@ -860,8 +861,6 @@ onMounted(async () => {
                 };
         } else {
                 const data = await db.actors.get(actorId.value);
-                // 加载 TTS 预设方案
-                ttsProfiles.value = await db.ttsProfiles.toArray();
                 if (data) {
                         actor.value = { ...data };
                         if (!Array.isArray(actor.value.groupIds)) {
@@ -875,7 +874,9 @@ onMounted(async () => {
                         }
                         // 加载聊天背景
                         chatBackground.value = actor.value.chatBackground || '';
-                        
+                        if (actor.value.ttsProfileId) {
+                                await fetchVoices();
+                        }
                         
                         // 确保上下文记忆设置存在
                         if (!actor.value.contextMemorySettings) {

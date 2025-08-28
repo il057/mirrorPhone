@@ -80,6 +80,16 @@ export function showConfirm(title, message) {
 }
 
 /**
+ * 显示一个确认对话框（别名函数，为了兼容性）
+ * @param {string} title - 模态框的标题。
+ * @param {string} message - 要向用户确认的信息。
+ * @returns {Promise<boolean>} - 用户点击确认返回 true，取消返回 false。
+ */
+export function showConfirmModal(title, message) {
+        return showConfirm(title, message);
+}
+
+/**
  * 显示一个通用的、可自定义的输入框菜单。
  * @param {string} title - 菜单标题
  * @param {string} placeholder - 输入框的提示文字

@@ -7,35 +7,70 @@ import db from './database.js';
 
 /**
  * 添加收藏
- * @param {Object} params - 收藏参数
- * @param {number} params.eventId - 事件ID
- * @param {string} params.eventType - 事件类型
- * @param {string} params.authorId - 作者ID
- * @param {string} params.authorName - 作者名称
- * @param {Object} params.content - 内容快照
+ * @param {Object} messageOrParams - 消息对象或收藏参数
  * @returns {Promise<number>} 收藏ID
  */
-export async function addToFavorites({ eventId, eventType, authorId, authorName, content }) {
+export async function addToFavorites(messageOrParams) {
         try {
+                let favoriteData;
+                
+                // 判断是消息对象还是参数对象
+                if (messageOrParams.id && messageOrParams.timestamp && messageOrParams.actorId) {
+                        // 消息对象
+                        const message = messageOrParams;
+                        
+                        // 获取作者信息
+                        let authorName = '未知用户';
+                        if (message.actorId === '__USER__') {
+                                authorName = '你';
+                        } else if (message.actorId === 'system') {
+                                authorName = '系统';
+                        } else {
+                                // 从数据库获取角色名称
+                                try {
+                                        const actor = await db.actors.get(message.actorId);
+                                        authorName = actor?.name || message.actorId;
+                                } catch (e) {
+                                        authorName = message.actorId;
+                                }
+                        }
+                        
+                        favoriteData = {
+                                eventId: message.id || message.timestamp, // 使用timestamp作为备用ID
+                                eventType: 'message',
+                                authorId: message.actorId,
+                                authorName: authorName,
+                                content: {
+                                        text: getMessageText(message.content),
+                                        type: message.content?.type || 'text',
+                                        originalContent: message.content
+                                },
+                                createTime: Date.now()
+                        };
+                } else {
+                        // 参数对象
+                        const { eventId, eventType, authorId, authorName, content, timestamp } = messageOrParams;
+                        favoriteData = {
+                                eventId,
+                                eventType,
+                                authorId,
+                                authorName,
+                                content,
+                                createTime: timestamp || Date.now() // 使用传入的timestamp或当前时间
+                        };
+                }
+                
                 // 检查是否已经收藏
                 const existing = await db.favorites
                         .where('eventId')
-                        .equals(eventId)
+                        .equals(favoriteData.eventId)
                         .first();
                 
                 if (existing) {
                         throw new Error('已经收藏过了');
                 }
 
-                const favoriteId = await db.favorites.add({
-                        eventId,
-                        eventType,
-                        authorId,
-                        authorName,
-                        content,
-                        createTime: Date.now()
-                });
-
+                const favoriteId = await db.favorites.add(favoriteData);
                 return favoriteId;
         } catch (error) {
                 console.error('添加收藏失败:', error);
@@ -44,16 +79,66 @@ export async function addToFavorites({ eventId, eventType, authorId, authorName,
 }
 
 /**
+ * 从消息内容中提取文本
+ * @param {Object} content - 消息内容
+ * @returns {string} 文本内容
+ */
+function getMessageText(content) {
+        if (!content) return '';
+        
+        switch (content.type) {
+                case 'text':
+                        return content.content || '';
+                case 'sticker':
+                        return `[表情包: ${content.name || '表情'}]`;
+                case 'image':
+                        if (content.subtype === 'text') {
+                                return `[图片描述: ${content.description || '图片'}]`;
+                        }
+                        return `[图片: ${content.fileName || '图片'}]`;
+                case 'voice':
+                        return `[语音消息: ${content.text || '语音'}]`;
+                case 'payment':
+                        const paymentType = content.subtype === 'transfer' ? '转账' : '代付';
+                        return `[${paymentType}: ¥${content.amount || 0}]`;
+                case 'music-card':
+                        const song = content.song || {};
+                        return `[音乐分享: ${song.name || '歌曲'}]`;
+                case 'call':
+                        const callType = content.callType === 'voice' ? '语音' : '视频';
+                        return `[${callType}通话邀请]`;
+                case 'pat':
+                        return `[拍一拍: ${content.message || '拍了拍'}]`;
+                case 'system':
+                        return content.content || '[系统消息]';
+                default:
+                        return content.content || content.text || '[消息]';
+        }
+}
+
+/**
  * 移除收藏
  * @param {number} eventId - 事件ID
+ * @param {string} eventType - 事件类型（可选，用于特殊处理）
  * @returns {Promise<void>}
  */
-export async function removeFromFavorites(eventId) {
+export async function removeFromFavorites(eventId, eventType = null) {
         try {
-                await db.favorites
-                        .where('eventId')
-                        .equals(eventId)
-                        .delete();
+                // 对于批量收藏（type为batch），直接删除该条收藏记录
+                // 不删除原本的event消息
+                if (eventType === 'message_batch') {
+                        await db.favorites
+                                .where('eventId')
+                                .equals(eventId)
+                                .and(item => item.eventType === 'message_batch')
+                                .delete();
+                        console.log('已删除批量收藏记录，原消息保持不变');
+                } else {
+                        await db.favorites
+                                .where('eventId')
+                                .equals(eventId)
+                                .delete();
+                }
         } catch (error) {
                 console.error('移除收藏失败:', error);
                 throw error;
@@ -195,6 +280,26 @@ export async function deleteFavoritesByAuthor(authorId) {
                 console.log(`已删除作者 ${authorId} 的所有收藏`);
         } catch (error) {
                 console.error('删除作者收藏失败:', error);
+                throw error;
+        }
+}
+
+/**
+ * 批量删除收藏
+ * @param {Array<string>} eventIds - 事件ID数组
+ * @returns {Promise<number>} 删除的数量
+ */
+export async function removeBatchFromFavorites(eventIds) {
+        try {
+                const deleteCount = await db.favorites
+                        .where('eventId')
+                        .anyOf(eventIds)
+                        .delete();
+                
+                console.log(`批量删除了 ${deleteCount} 条收藏`);
+                return deleteCount;
+        } catch (error) {
+                console.error('批量删除收藏失败:', error);
                 throw error;
         }
 }

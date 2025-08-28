@@ -413,6 +413,7 @@ input:focus, textarea:focus, select:focus {
         color: var(--accent-primary);
         overflow: hidden;
         /* Ensure images inside don't break the border-radius */
+        flex-shrink: 0;
 }
 
 .avatar img {

@@ -86,7 +86,7 @@ const getActiveSessionsSafely = async () => {
                 // 首先尝试使用索引查询
                 return await db.listenTogetherSessions.where('isActive').equals(true).toArray();
         } catch (indexError) {
-                console.warn('索引查询失败，使用全表扫描:', indexError);
+                //console.warn('索引查询失败，使用全表扫描:', indexError);
                 // 如果索引查询失败，使用全表扫描
                 try {
                         const allSessions = await db.listenTogetherSessions.toArray();

@@ -34,49 +34,97 @@
 
                         <div v-else class="favorites-list">
                                 <div v-for="favorite in favorites" :key="favorite.id" class="favorite-item">
-                                        <!-- 作者信息行 -->
-                                        <div class="favorite-header">
-                                                <div class="author-info">
-                                                        <div class="author-avatar avatar">
-                                                                <img v-if="getAuthorAvatar(favorite)"
-                                                                        :src="getAuthorAvatar(favorite)"
-                                                                        :alt="favorite.authorName">
-                                                                <span v-else class="avatar-initial">{{
-                                                                        getInitial(favorite.authorName) }}</span>
+                                        <!-- 批量收藏 - 使用手风琴样式 -->
+                                        <template v-if="favorite.eventType === 'message_batch'">
+                                                <div class="batch-favorite-header">
+                                                        <div class="author-info">
+                                                                <div class="author-avatar avatar">
+                                                                        <img v-if="getAuthorAvatar(favorite)"
+                                                                                :src="getAuthorAvatar(favorite)"
+                                                                                :alt="favorite.authorName">
+                                                                        <span v-else class="avatar-initial">{{
+                                                                                getInitial(favorite.authorName) }}</span>
+                                                                </div>
+                                                                <div class="author-details">
+                                                                        <h4 class="author-name">{{ favorite.authorName }}</h4>
+                                                                        <p class="favorite-time">{{
+                                                                                formatTimestamp(favorite.createTime) }}</p>
+                                                                </div>
                                                         </div>
-                                                        <div class="author-details">
-                                                                <h4 class="author-name">{{ favorite.authorName }}</h4>
-                                                                <p class="favorite-time">{{
-                                                                        formatTimestamp(favorite.timestamp ||
-                                                                        favorite.createTime) }}</p>
+                                                        <div class="favorite-actions">
+                                                                <button class="action-btn favorite-btn favorited"
+                                                                        @click="removeFavorite(favorite)">
+                                                                        <svg xmlns="http://www.w3.org/2000/svg" width="18"
+                                                                                height="18" fill="currentColor"
+                                                                                class="bi bi-bookmark-star-fill"
+                                                                                viewBox="0 0 16 16">
+                                                                                <path fill-rule="evenodd"
+                                                                                        d="M2 15.5V2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v13.5a.5.5 0 0 1-.74.439L8 13.069l-5.26 2.87A.5.5 0 0 1 2 15.5M8.16 4.1a.178.178 0 0 0-.32 0l-.634 1.285a.18.18 0 0 1-.134.098l-1.42.206a.178.178 0 0 0-.098.303L6.58 6.993c.042.041.061.1.051.158L6.39 8.565a.178.178 0 0 0 .258.187l1.27-.668a.18.18 0 0 1 .165 0l1.27.668a.178.178 0 0 0 .257-.187L9.368 7.15a.18.18 0 0 1 .05-.158l1.028-1.001a.178.178 0 0 0-.098-.303l-1.42-.206a.18.18 0 0 1-.134-.098z" />
+                                                                        </svg>
+                                                                </button>
                                                         </div>
                                                 </div>
-                                                <div class="favorite-actions">
-                                                        <button class="action-btn favorite-btn favorited"
-                                                                @click="removeFavorite(favorite)">
-                                                                <svg xmlns="http://www.w3.org/2000/svg" width="18"
-                                                                        height="18" fill="currentColor"
-                                                                        class="bi bi-bookmark-star-fill"
-                                                                        viewBox="0 0 16 16">
-                                                                        <path fill-rule="evenodd"
-                                                                                d="M2 15.5V2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v13.5a.5.5 0 0 1-.74.439L8 13.069l-5.26 2.87A.5.5 0 0 1 2 15.5M8.16 4.1a.178.178 0 0 0-.32 0l-.634 1.285a.18.18 0 0 1-.134.098l-1.42.206a.178.178 0 0 0-.098.303L6.58 6.993c.042.041.061.1.051.158L6.39 8.565a.178.178 0 0 0 .258.187l1.27-.668a.18.18 0 0 1 .165 0l1.27.668a.178.178 0 0 0 .257-.187L9.368 7.15a.18.18 0 0 1 .05-.158l1.028-1.001a.178.178 0 0 0-.098-.303l-1.42-.206a.18.18 0 0 1-.134-.098z" />
-                                                                </svg>
-                                                        </button>
+                                                
+                                                <!-- 手风琴内容 -->
+                                                <AccordionItem :title="`批量收藏了 ${favorite.content.messageCount} 条消息`" 
+                                                               :default-expanded="false">
+                                                        <div class="batch-messages">
+                                                                <div v-for="(msg, index) in favorite.content.messages" 
+                                                                     :key="index" class="batch-message-item">
+                                                                        <div class="message-author">{{ msg.author }}:</div>
+                                                                        <div class="message-content">{{ msg.content }}</div>
+                                                                        <div class="message-time">{{ formatTimestamp(msg.timestamp) }}</div>
+                                                                </div>
+                                                        </div>
+                                                </AccordionItem>
+                                        </template>
+                                        
+                                        <!-- 普通收藏 - 原有样式 -->
+                                        <template v-else>
+                                                <!-- 作者信息行 -->
+                                                <div class="favorite-header">
+                                                        <div class="author-info">
+                                                                <div class="author-avatar avatar">
+                                                                        <img v-if="getAuthorAvatar(favorite)"
+                                                                                :src="getAuthorAvatar(favorite)"
+                                                                                :alt="favorite.authorName">
+                                                                        <span v-else class="avatar-initial">{{
+                                                                                getInitial(favorite.authorName) }}</span>
+                                                                </div>
+                                                                <div class="author-details">
+                                                                        <h4 class="author-name">{{ favorite.authorName }}</h4>
+                                                                        <p class="favorite-time">{{
+                                                                                formatTimestamp(favorite.timestamp ||
+                                                                                favorite.createTime) }}</p>
+                                                                </div>
+                                                        </div>
+                                                        <div class="favorite-actions">
+                                                                <button class="action-btn favorite-btn favorited"
+                                                                        @click="removeFavorite(favorite)">
+                                                                        <svg xmlns="http://www.w3.org/2000/svg" width="18"
+                                                                                height="18" fill="currentColor"
+                                                                                class="bi bi-bookmark-star-fill"
+                                                                                viewBox="0 0 16 16">
+                                                                                <path fill-rule="evenodd"
+                                                                                        d="M2 15.5V2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v13.5a.5.5 0 0 1-.74.439L8 13.069l-5.26 2.87A.5.5 0 0 1 2 15.5M8.16 4.1a.178.178 0 0 0-.32 0l-.634 1.285a.18.18 0 0 1-.134.098l-1.42.206a.178.178 0 0 0-.098.303L6.58 6.993c.042.041.061.1.051.158L6.39 8.565a.178.178 0 0 0 .258.187l1.27-.668a.18.18 0 0 1 .165 0l1.27.668a.178.178 0 0 0 .257-.187L9.368 7.15a.18.18 0 0 1 .05-.158l1.028-1.001a.178.178 0 0 0-.098-.303l-1.42-.206a.18.18 0 0 1-.134-.098z" />
+                                                                        </svg>
+                                                                </button>
+                                                        </div>
                                                 </div>
-                                        </div>
 
-                                        <!-- 收藏内容 -->
-                                        <div class="favorite-content">
-                                                <p v-if="favorite.content.text" class="content-text">{{
-                                                        favorite.content.text }}</p>
+                                                <!-- 收藏内容 -->
+                                                <div class="favorite-content">
+                                                        <p v-if="favorite.content.text" class="content-text">{{
+                                                                favorite.content.text }}</p>
 
-                                                <div v-if="favorite.content.images && favorite.content.images.length > 0"
-                                                        class="content-images">
-                                                        <img v-for="(image, index) in favorite.content.images"
-                                                                :key="index" :src="image" :alt="`图片 ${index + 1}`"
-                                                                class="content-image">
+                                                        <div v-if="favorite.content.images && favorite.content.images.length > 0"
+                                                                class="content-images">
+                                                                <img v-for="(image, index) in favorite.content.images"
+                                                                        :key="index" :src="image" :alt="`图片 ${index + 1}`"
+                                                                        class="content-image">
+                                                        </div>
                                                 </div>
-                                        </div>
+                                        </template>
                                 </div>
                         </div>
                 </main>
@@ -88,6 +136,7 @@ import { ref, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import AppHeader from '../components/layout/Header.vue';
 import MainDropdown from '../components/ui/MainDropdown.vue';
+import AccordionItem from '../components/ui/AccordionItem.vue';
 import { getFavorites, deleteFavoritesByAuthor, removeFromFavorites } from '../services/favoritesService.js';
 import { formatTimestamp } from '../utils/datetime.js';
 import db from '../services/database.js';
@@ -121,9 +170,15 @@ const getInitial = (name) => {
 // 移除收藏
 const removeFavorite = async (favorite) => {
         try {
-                await removeFromFavorites(favorite.eventId);
+                // 传递事件类型以正确处理批量收藏的删除
+                await removeFromFavorites(favorite.eventId, favorite.eventType);
                 await loadFavorites();
-                console.log('已取消收藏');
+                
+                if (favorite.eventType === 'message_batch') {
+                        console.log('已取消批量收藏，原消息保持不变');
+                } else {
+                        console.log('已取消收藏');
+                }
         } catch (error) {
                 console.error('取消收藏失败:', error);
         }
@@ -155,6 +210,7 @@ const typeFilterOptions = computed(() => [
         { label: '全部类型', value: '' },
         { label: '动态', value: 'post' },
         { label: '消息', value: 'message' },
+        { label: '批量收藏', value: 'message_batch' },
         { label: '回复', value: 'reply' }
 ]);
 
@@ -410,5 +466,83 @@ onMounted(async () => {
 
 .back-button:hover {
         color: var(--accent-primary);
+}
+
+/* 批量收藏样式 */
+.batch-favorite-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 20px;
+        border-bottom: 1px solid var(--border-color);
+}
+
+.batch-messages {
+        padding: 10px 0;
+}
+
+.batch-message-item {
+        padding: 12px 0;
+        border-bottom: 1px solid var(--border-secondary);
+}
+
+.batch-message-item:last-child {
+        border-bottom: none;
+}
+
+.message-author {
+        font-weight: 600;
+        color: var(--accent-primary);
+        font-size: 14px;
+        margin-bottom: 4px;
+}
+
+.message-content {
+        color: var(--text-primary);
+        line-height: 1.4;
+        margin-bottom: 4px;
+        word-break: break-word;
+}
+
+.message-time {
+        font-size: 11px;
+        color: var(--text-secondary);
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+        .filters-section {
+                flex-direction: column;
+                gap: 15px;
+        }
+        
+        .filter-group {
+                width: 100%;
+        }
+        
+        .filter-dropdown {
+                width: 100%;
+        }
+        
+        .author-info {
+                gap: 8px;
+        }
+        
+        .author-avatar {
+                width: 35px;
+                height: 35px;
+        }
+        
+        .author-name {
+                font-size: 14px;
+        }
+        
+        .favorite-time {
+                font-size: 11px;
+        }
+        
+        .batch-favorite-header {
+                padding: 15px;
+        }
 }
 </style>

@@ -12,7 +12,13 @@ const mockActors = [
                 isGroup: 0, 
                 groupIds: [], 
                 specialCare: 1,
-                status: { color: '#4CAF50', text: '在线' }
+                status: { color: '#4CAF50', text: '在线' },
+                avatarLibrary: [
+                        { url: 'https://picsum.photos/200/200?random=1', description: '商务正装头像' },
+                        { url: 'https://picsum.photos/200/200?random=2', description: '休闲微笑头像' },
+                        { url: 'https://picsum.photos/200/200?random=3', description: '严肃思考头像' }
+                ],
+                currentAvatar: 'https://picsum.photos/200/200?random=1'
         },
         { 
                 id: 'char_alex', 
@@ -24,7 +30,12 @@ const mockActors = [
                 isGroup: 0, 
                 groupIds: ['group_friends'], 
                 specialCare: 0,
-                status: { color: '#FF9800', text: '离开' }
+                status: { color: '#FF9800', text: '离开' },
+                avatarLibrary: [
+                        { url: 'https://picsum.photos/200/200?random=4', description: '阳光帅气头像' },
+                        { url: 'https://picsum.photos/200/200?random=5', description: '运动活力头像' }
+                ],
+                currentAvatar: 'https://picsum.photos/200/200?random=4'
         },
         { 
                 id: 'char_zhao', 
@@ -36,7 +47,12 @@ const mockActors = [
                 isGroup: 0, 
                 groupIds: ['group_family'], 
                 specialCare: 0,
-                status: { color: '#F44336', text: '忙碌' }
+                status: { color: '#F44336', text: '忙碌' },
+                avatarLibrary: [
+                        { url: 'https://picsum.photos/200/200?random=6', description: '憨厚笑容头像' },
+                        { url: 'https://picsum.photos/200/200?random=7', description: '严肃表情头像' }
+                ],
+                currentAvatar: 'https://picsum.photos/200/200?random=6'
         },
         { 
                 id: 'char_qian', 
@@ -48,7 +64,12 @@ const mockActors = [
                 isGroup: 0, 
                 groupIds: ['group_friends'], 
                 specialCare: 0,
-                status: { color: '#4CAF50', text: '在线' }
+                avatarLibrary: [
+                        { url: 'https://picsum.photos/200/200?random=8', description: '甜美微笑头像' },
+                        { url: 'https://picsum.photos/200/200?random=9', description: '优雅气质头像' },
+                        { url: 'https://picsum.photos/200/200?random=10', description: '可爱俏皮头像' }
+                ],
+                currentAvatar: 'https://picsum.photos/200/200?random=8'
         },
         // Sun Yi 既是特别关心，也在家人分组
         { 
@@ -102,14 +123,6 @@ const mockGroups = [
         { id: 'group_colleagues', name: '同事', order: 4, worldbookIds: [] },
     ];
 
-const mockConversations = [
-        { id: 'char_bill', lastEventTimestamp: Date.now(), lastEventContent: { type: 'text', content: '晚上吃什么？' }, unreadCount: 1 },
-        { id: 'char_sun', lastEventTimestamp: Date.now() - 50000, lastEventContent: { type: 'text', content: '好的，没问题。' }, unreadCount: 0 },
-        { id: 'group_family_chat', lastEventTimestamp: Date.now() - 100000, lastEventContent: { type: 'text', content: '【红包】恭喜发财' }, unreadCount: 5 },
-        { id: 'group_work_chat', lastEventTimestamp: Date.now() - 86400000, lastEventContent: { type: 'text', content: '项目文档已更新，请查收。' }, unreadCount: 0 },
-        { id: 'char_zhao', lastEventTimestamp: Date.now() - 2 * 86400000, lastEventContent: { type: 'text', content: 'OK' }, unreadCount: 2 },
-];
-
 // 添加好感度关系数据
 const mockRelationships = [
         { sourceId: 'char_bill', targetId: USER_ACTOR_ID, type: '朋友', score: 85 },
@@ -120,20 +133,37 @@ const mockRelationships = [
         { sourceId: 'char_li', targetId: USER_ACTOR_ID, type: '同事', score: 55 },
 ];
 
+// 添加表情包数据
+const mockStickers = [
+        { id: 1, name: '开心', url: 'https://picsum.photos/100/100?random=101', order: 1 },
+        { id: 2, name: '难过', url: 'https://picsum.photos/100/100?random=102', order: 2 },
+        { id: 3, name: '生气', url: 'https://picsum.photos/100/100?random=103', order: 3 },
+        { id: 4, name: '惊讶', url: 'https://picsum.photos/100/100?random=104', order: 4 },
+        { id: 5, name: '爱心', url: 'https://picsum.photos/100/100?random=105', order: 5 },
+        { id: 6, name: '点赞', url: 'https://picsum.photos/100/100?random=106', order: 6 },
+        { id: 7, name: '哭泣', url: 'https://picsum.photos/100/100?random=107', order: 7 },
+        { id: 8, name: '笑哭', url: 'https://picsum.photos/100/100?random=108', order: 8 },
+        { id: 9, name: '睡觉', url: 'https://picsum.photos/100/100?random=109', order: 9 },
+        { id: 10, name: '加油', url: 'https://picsum.photos/100/100?random=110', order: 10 },
+];
+
+// 添加全局相册数据
+const mockGlobalAlbum = [
+        { id: 1, url: 'https://picsum.photos/400/600?random=201', description: '美丽的日落海滩' },
+        { id: 2, url: 'https://picsum.photos/400/600?random=202', description: '繁华的都市夜景' },
+        { id: 3, url: 'https://picsum.photos/400/600?random=203', description: '宁静的山林小径' },
+        { id: 4, url: 'https://picsum.photos/400/600?random=204', description: '温馨的咖啡厅角落' },
+        { id: 5, url: 'https://picsum.photos/400/600?random=205', description: '梦幻的星空银河' },
+        { id: 6, url: 'https://picsum.photos/400/600?random=206', description: '清新的春日花园' },
+        { id: 7, url: 'https://picsum.photos/400/600?random=207', description: '古典的欧式建筑' },
+        { id: 8, url: 'https://picsum.photos/400/600?random=208', description: '现代简约办公室' },
+        { id: 9, url: 'https://picsum.photos/400/600?random=209', description: '浪漫的粉色樱花' },
+        { id: 10, url: 'https://picsum.photos/400/600?random=210', description: '神秘的深海世界' }
+];
+
 // 添加一些示例消息事件
 const mockEvents = [
         // 添加更多历史消息以测试懒加载
-        ...Array.from({ length: 50 }, (_, i) => ({
-                timestamp: Date.now() - (50 - i) * 300000, // 每5分钟一条消息
-                actorId: i % 3 === 0 ? USER_ACTOR_ID : 'char_bill',
-                contextId: 'char_bill',
-                type: 'privateMessage',
-                content: { 
-                        content: i % 3 === 0 
-                                ? `这是用户发送的第${Math.floor(i/3) + 1}条消息` 
-                                : `这是AI回复的第${Math.floor(i/3) + 1}条消息，内容是：${['你好！', '最近怎么样？', '工作顺利吗？', '今天天气不错', '有空聊聊吗？'][i % 5]}`
-                }
-        })),
         {
                 timestamp: Date.now() - 3600000, // 1小时前
                 actorId: 'char_bill',
@@ -154,6 +184,155 @@ const mockEvents = [
                 contextId: 'char_bill',
                 type: 'privateMessage',
                 content: { content: '晚上吃什么？' }
+        },
+        
+        // AI发送表情包
+        {
+                timestamp: Date.now() - 1700000,
+                actorId: 'char_bill',
+                contextId: 'char_bill',
+                type: 'privateMessage',
+                content: { 
+                        type: 'sticker',
+                        url: 'https://picsum.photos/100/100?random=105',
+                        name: '爱心'
+                }
+        },
+        
+        // AI发送图片描述
+        {
+                timestamp: Date.now() - 1600000,
+                actorId: 'char_alex',
+                contextId: 'char_alex',
+                type: 'privateMessage',
+                content: { 
+                        type: 'image',
+                        subtype: 'text',
+                        description: '一只可爱的小猫咪正在阳光下懒洋洋地打盹，毛茸茸的身体蜷缩成一个完美的圆球'
+                }
+        },
+        
+        // AI发送语音消息
+        {
+                timestamp: Date.now() - 1500000,
+                actorId: 'char_qian',
+                contextId: 'char_qian',
+                type: 'privateMessage',
+                content: { 
+                        type: 'voice',
+                        text: '今天天气真好，我们一起出去走走吧！',
+                        duration: 3500
+                }
+        },
+        
+        // AI发送转账
+        {
+                timestamp: Date.now() - 1400000,
+                actorId: 'char_zhao',
+                contextId: 'char_zhao',
+                type: 'privateMessage',
+                content: { 
+                        type: 'payment',
+                        subtype: 'transfer',
+                        amount: 88.88,
+                        message: '请你喝咖啡'
+                        // 注意：没有status字段，表示未处理
+                }
+        },
+        
+        // AI发送一起听邀请
+        {
+                timestamp: Date.now() - 1300000,
+                actorId: 'char_sun',
+                contextId: 'char_sun',
+                type: 'privateMessage',
+                content: { 
+                        type: 'listen-together-invite',
+                        playlist: {
+                                id: 'playlist_1',
+                                name: '温柔的夜晚',
+                                tracks: 25
+                        },
+                        status: 'pending',
+                        message: '想和你一起听这个歌单，很适合现在的心情'
+                }
+        },
+        
+        // AI发送音乐卡片
+        {
+                timestamp: Date.now() - 1200000,
+                actorId: 'char_alex',
+                contextId: 'char_alex',
+                type: 'privateMessage',
+                content: { 
+                        type: 'music-card',
+                        song: {
+                                id: 'song_1',
+                                name: '夜空中最亮的星',
+                                artists: [{ id: 'artist_1', name: '逃跑计划' }],
+                                album: {
+                                        id: 'album_1',
+                                        name: '夜空中最亮的星'
+                                },
+                                duration_ms: 240000
+                        },
+                        message: '这首歌很适合现在的心情，分享给你'
+                }
+        },
+        
+        // AI发起通话
+        {
+                timestamp: Date.now() - 1100000,
+                actorId: 'char_bill',
+                contextId: 'char_bill',
+                type: 'privateMessage',
+                content: { 
+                        type: 'call',
+                        callType: 'voice',
+                        message: '有个重要的事情想和你聊聊'
+                }
+        },
+        
+        // 用户发送表情包回复
+        {
+                timestamp: Date.now() - 1000000,
+                actorId: USER_ACTOR_ID,
+                contextId: 'char_bill',
+                type: 'privateMessage',
+                content: { 
+                        type: 'sticker',
+                        url: 'https://picsum.photos/100/100?random=106',
+                        name: '点赞'
+                }
+        },
+        
+        // 用户发送语音回复
+        {
+                timestamp: Date.now() - 900000,
+                actorId: USER_ACTOR_ID,
+                contextId: 'char_qian',
+                type: 'privateMessage',
+                content: { 
+                        type: 'voice',
+                        text: '好的，我们下午三点见面吧',
+                        duration: 2800
+                }
+        },
+        
+        // AI发起代付
+        {
+                timestamp: Date.now() - 800000,
+                actorId: 'char_alex',
+                contextId: 'char_alex',
+                type: 'privateMessage',
+                content: { 
+                        type: 'payment',
+                        subtype: 'pay',
+                        amount: 35.5,
+                        message: '帮我付一下外卖费',
+                        productInfo: '麻辣香锅套餐'
+                        // 注意：没有status字段，表示未处理
+                }
         },
         
         // 动态相关事件
@@ -326,12 +505,14 @@ export async function populateMockData() {
                 }
                 console.log('Populating database with mock data...');
 
-                await db.transaction('rw', db.actors, db.groups, db.conversations, db.relationships, db.events, async () => {
+                await db.transaction('rw', db.actors, db.groups, db.conversations, db.relationships, db.events, db.stickers, db.globalAlbum, async () => {
                         await db.actors.bulkPut(mockActors);
                         await db.groups.bulkPut(mockGroups);
                         await db.conversations.bulkPut(mockConversations);
                         await db.relationships.bulkPut(mockRelationships);
                         await db.events.bulkPut(mockEvents);
+                        await db.stickers.bulkPut(mockStickers);
+                        await db.globalAlbum.bulkPut(mockGlobalAlbum);
                 });
 
                 console.log('Mock data populated successfully.');

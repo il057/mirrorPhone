@@ -484,7 +484,6 @@ const startDrag = (event, index) => {
 }
 
 .header-action-button {
-        font-size: 24px;
         background: none;
         border: none;
         color: var(--text-primary);
