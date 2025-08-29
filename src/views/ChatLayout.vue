@@ -25,7 +25,7 @@
                         <router-view />
                 </main>
 
-                <AppFooter :has-notification="hasUnreadMessages" />
+                <AppFooter :has-notification="hasNotification" />
 
                 <HeaderDropdownMenu :is-open="isDropdownOpen" @close="isDropdownOpen = false">
                         <template v-if="route.name === 'chat-messages' || route.name === 'chat-contacts'">
@@ -76,6 +76,24 @@ const conversations = useObservable(
 
 const hasUnreadMessages = computed(() => {
         return conversations.value.some(convo => convo.unreadCount > 0);
+});
+
+const hasNewMoments = useObservable(
+        liveQuery(async () => {
+                // 检查是否有新的动态（用户最后查看时间之后）
+                const settings = await db.globalSettings.get('global');
+                const lastViewedTime = settings?.lastViewedMoments || 0;
+                const recentMoments = await db.events
+                        .where('type').equals('post')
+                        .and(event => event.timestamp > lastViewedTime)
+                        .toArray();
+                return recentMoments.length > 0;
+        }),
+        { initialValue: false }
+);
+
+const hasNotification = computed(() => {
+        return hasUnreadMessages.value || hasNewMoments.value;
 });
 
 

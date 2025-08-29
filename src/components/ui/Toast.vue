@@ -1,17 +1,23 @@
 <template>
-        <div v-if="isMounted" :class="['toast-notification', `toast-${type}`, { 'toast-visible': isVisible }]">
+        <div v-if="isMounted" 
+             :class="['toast-notification', `toast-${type}`, { 'toast-visible': isVisible }]"
+             :style="{ top: finalTopPosition }">
                 {{ message }}
         </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 
 const props = defineProps({
         message: String,
         type: {
                 type: String,
                 default: 'info',
+        },
+        topOffset: {
+                type: Number,
+                default: 20
         },
         onClose: Function,
 });
@@ -20,6 +26,12 @@ const props = defineProps({
 const isMounted = ref(false);
 // isVisible 控制触发动画的 class
 const isVisible = ref(false);
+
+// 计算最终的top位置，考虑安全区域
+const finalTopPosition = computed(() => {
+        const safeAreaTop = 'env(safe-area-inset-top, 0px)';
+        return `calc(${safeAreaTop} + ${props.topOffset}px)`;
+});
 
 onMounted(() => {
         // 1. 先将元素挂载到DOM中 (此时它是透明的)

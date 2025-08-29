@@ -2,7 +2,7 @@
         <div v-if="isOpen" class="modal-overlay" @click="handleOverlayClick">
                 <div class="modal-content" @click.stop>
                         <div class="modal-header">
-                                <h3>{{ isEdit ? '编辑回忆' : '添加回忆' }}</h3>
+                                <h3>{{ getModalTitle() }}</h3>
                                 <button class="close-button" @click="handleClose">
                                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none"
                                                 viewBox="0 0 24 24" stroke="currentColor">
@@ -13,8 +13,8 @@
                         </div>
 
                         <div class="modal-body">
-                                <!-- 回忆类型选择 -->
-                                <div class="form-group">
+                                <!-- 回忆类型选择 (日记模式下隐藏) -->
+                                <div v-if="!isDiaryMode" class="form-group">
                                         <label>回忆类型</label>
                                         <div class="segmented-control">
                                                 <label :class="{ active: formData.type === 'fact' }">
@@ -31,10 +31,14 @@
                                                 <label :class="{ active: formData.type === 'date' }">
                                                         <input type="radio" v-model="formData.type" value="date">
                                                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
-                                                                fill="currentColor" viewBox="0 0 16 16">
-                                                                <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16" />
+                                                                fill="currentColor" class="bi bi-clock-history"
+                                                                viewBox="0 0 16 16">
                                                                 <path
-                                                                        d="M6.271 5.055a.5.5 0 0 1 .52.038L9 6.327a.5.5 0 0 1 0 .866L6.79 8.427a.5.5 0 0 1-.79-.407V5.98a.5.5 0 0 1 .271-.925z" />
+                                                                        d="M8.515 1.019A7 7 0 0 0 8 1V0a8 8 0 0 1 .589.022zm2.004.45a7 7 0 0 0-.985-.299l.219-.976q.576.129 1.126.342zm1.37.71a7 7 0 0 0-.439-.27l.493-.87a8 8 0 0 1 .979.654l-.615.789a7 7 0 0 0-.418-.302zm1.834 1.79a7 7 0 0 0-.653-.796l.724-.69q.406.429.747.91zm.744 1.352a7 7 0 0 0-.214-.468l.893-.45a8 8 0 0 1 .45 1.088l-.95.313a7 7 0 0 0-.179-.483m.53 2.507a7 7 0 0 0-.1-1.025l.985-.17q.1.58.116 1.17zm-.131 1.538q.05-.254.081-.51l.993.123a8 8 0 0 1-.23 1.155l-.964-.267q.069-.247.12-.501m-.952 2.379q.276-.436.486-.908l.914.405q-.24.54-.555 1.038zm-.964 1.205q.183-.183.35-.378l.758.653a8 8 0 0 1-.401.432z" />
+                                                                <path
+                                                                        d="M8 1a7 7 0 1 0 4.95 11.95l.707.707A8.001 8.001 0 1 1 8 0z" />
+                                                                <path
+                                                                        d="M7.5 3a.5.5 0 0 1 .5.5v5.21l3.248 1.856a.5.5 0 0 1-.496.868l-3.5-2A.5.5 0 0 1 7 9V3.5a.5.5 0 0 1 .5-.5" />
                                                         </svg>
                                                         重要日期
                                                 </label>
@@ -51,7 +55,10 @@
                                 <div class="form-group">
                                         <label>{{ getContentLabel() }}</label>
                                         <textarea v-model="formData.content" :placeholder="getContentPlaceholder()"
-                                                class="form-textarea" rows="3" required></textarea>
+                                                class="form-textarea" :rows="isDiaryMode ? 8 : 3" required></textarea>
+                                        <p v-if="isDiaryMode" class="field-description">
+                                                建议150-300字。可使用格式化标记：==重要== ~~遗憾~~ __决心__ ||秘密||
+                                        </p>
                                 </div>
 
                                 <!-- 关键词 -->
@@ -65,11 +72,8 @@
                                 <!-- 相关角色选择 (仅从我的页面进入时显示) -->
                                 <div v-if="showActorSelector" class="form-group">
                                         <label>和谁的回忆</label>
-                                        <MainDropdown 
-                                                v-model="formData.relatedActorId" 
-                                                :options="actorOptions"
-                                                placeholder="请选择角色"
-                                        />
+                                        <MainDropdown v-model="formData.relatedActorId" :options="actorOptions"
+                                                placeholder="请选择角色" />
                                 </div>
                         </div>
 
@@ -109,6 +113,10 @@ const props = defineProps({
                 type: String,
                 default: null
         },
+        mode: {
+                type: String,
+                default: 'memory' // 'memory' 或 'diary'
+        },
         onClose: {
                 type: Function,
                 required: true
@@ -121,7 +129,7 @@ const props = defineProps({
 
 // 表单数据
 const formData = ref({
-        type: 'fact',
+        type: props.mode === 'diary' ? 'diary' : 'fact',
         content: '',
         targetDate: '',
         relatedActorId: props.relatedActorId || ''
@@ -145,8 +153,20 @@ const actorOptions = computed(() => {
 // 是否为编辑模式
 const isEdit = computed(() => props.memory !== null);
 
+// 是否为日记模式
+const isDiaryMode = computed(() => props.mode === 'diary');
+
+// 获取模态框标题
+const getModalTitle = () => {
+        if (isDiaryMode.value) {
+                return isEdit.value ? '编辑日记' : '写日记';
+        } else {
+                return isEdit.value ? '编辑回忆' : '添加回忆';
+        }
+};
+
 // 是否显示角色选择器
-const showActorSelector = computed(() => props.relatedActorId === null);
+const showActorSelector = computed(() => props.relatedActorId === null && !isDiaryMode.value);
 
 // 表单验证
 const isFormValid = computed(() => {
@@ -159,6 +179,10 @@ const isFormValid = computed(() => {
 
 // 获取内容标签文本
 const getContentLabel = () => {
+        if (isDiaryMode.value) {
+                return '日记内容';
+        }
+        
         switch (formData.value.type) {
                 case 'fact':
                         return '回忆内容';
@@ -171,6 +195,10 @@ const getContentLabel = () => {
 
 // 获取内容占位符文本
 const getContentPlaceholder = () => {
+        if (isDiaryMode.value) {
+                return '写下今天发生的事情和你的感受...\n\n💡 提示：你可以使用特殊标记来丰富表达：\n==重要内容== 高亮显示\n~~想要忘记的~~ 删除线\n__默默决心__ 下划线\n||秘密想法|| 隐藏文字';
+        }
+        
         switch (formData.value.type) {
                 case 'fact':
                         return '简要描述这个重要的回忆...';
@@ -221,7 +249,7 @@ const initializeForm = () => {
         } else {
                 // 新建模式
                 formData.value = {
-                        type: 'fact',
+                        type: isDiaryMode.value ? 'diary' : 'fact',
                         content: '',
                         targetDate: '',
                         relatedActorId: props.relatedActorId || ''
@@ -344,7 +372,7 @@ onMounted(() => {
 
 .close-button:hover {
         color: var(--text-primary);
-        background-color: rgba(255, 255, 255, 0.1);
+        background-color: var(--opacity-10);
 }
 
 .modal-body {
@@ -393,12 +421,31 @@ onMounted(() => {
         box-sizing: border-box;
 }
 
+/* iOS Safari 日期输入框修复 */
+.form-input[type="date"] {
+        -webkit-appearance: none;
+        appearance: none;
+        height: 44px; /* 确保与iOS Safari的触摸目标一致 */
+        min-height: 44px;
+        padding: 12px;
+        font-size: 16px; /* 防止iOS Safari自动缩放 */
+}
+
+/* iOS Safari 日期输入框聚焦状态 */
+.form-input[type="date"]:focus {
+        outline: none;
+        border-color: var(--accent-primary);
+        box-shadow: var(--accent-glow-shadow);
+        -webkit-appearance: none;
+        appearance: none;
+}
+
 .form-input:focus,
 .form-textarea:focus,
 .form-select:focus {
         outline: none;
         border-color: var(--accent-primary);
-        box-shadow: 0 0 0 2px rgba(var(--accent-primary-rgb), 0.1);
+        box-shadow: var(--accent-glow-shadow);
 }
 
 .form-textarea {

@@ -118,7 +118,7 @@ const handleCancel = () => {
 
 .album-item.selected {
         border-color: var(--accent-primary);
-        box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.3);
+        box-shadow: var(--accent-glow-shadow);;
 }
 
 .album-image {

@@ -196,7 +196,7 @@ const handleTitleClick = () => {
 }
 
 :deep(.add-post-btn:hover) {
-        background-color: rgba(255, 255, 255, 0.1);
+        background-color: var(--glass-bg-light);
         color: var(--accent-primary);
 }
 
@@ -242,7 +242,7 @@ const handleTitleClick = () => {
 }
 
 :deep(.dropdown-item:hover) {
-        background-color: rgba(255, 255, 255, 0.1);
+        background-color: var(--glass-bg-light);
         color: var(--accent-primary);
 }
 

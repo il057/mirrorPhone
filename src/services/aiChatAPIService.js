@@ -8,11 +8,72 @@ import { calculateVoiceDuration } from './personalSettingsService.js';
 import spotifyService from './spotifyService.js';
 import { showToast } from './uiService.js';
 import { createPost as createMomentPost, likePost as likeMomentPost, commentOnPost as commentOnMomentPost } from './momentsService.js';
+import { formatDateTime } from '../utils/datetime.js';
 import { formatTimestamp } from '../utils/datetime.js';
 import { showLocalNotification } from './notificationService'; 
 import { isCurrentChatRoom } from './currentStateService.js';
 import { getDefaultUserPersona, getEffectiveUserPersonaId } from './userPersonaService.js';
 import * as promptBuilder from './promptBuilder.js';
+
+/**
+ * 获取用户最后离线时间
+ * @returns {Promise<number|null>} 离线时间戳
+ */
+async function getLastOfflineTime() {
+        try {
+                const offlineRecord = await db.globalSettings.get('lastOfflineTime');
+                return offlineRecord ? offlineRecord.value : null;
+        } catch (error) {
+                console.warn('获取离线时间失败:', error);
+                return null;
+        }
+}
+
+/**
+ * 获取用户最后上线时间
+ * @returns {Promise<number|null>} 上线时间戳
+ */
+async function getLastOnlineTime() {
+        try {
+                const onlineRecord = await db.globalSettings.get('lastOnlineTime');
+                return onlineRecord ? onlineRecord.value : null;
+        } catch (error) {
+                console.warn('获取上线时间失败:', error);
+                return null;
+        }
+}
+
+/**
+ * 设置用户离线时间
+ * @param {number} timestamp - 时间戳
+ */
+export async function setOfflineTime(timestamp = Date.now()) {
+        try {
+                await db.globalSettings.put({
+                        id: 'lastOfflineTime',
+                        value: timestamp
+                });
+                console.log('设置离线时间:', formatDateTime(timestamp));
+        } catch (error) {
+                console.error('设置离线时间失败:', error);
+        }
+}
+
+/**
+ * 设置用户上线时间
+ * @param {number} timestamp - 时间戳
+ */
+export async function setOnlineTime(timestamp = Date.now()) {
+        try {
+                await db.globalSettings.put({
+                        id: 'lastOnlineTime',
+                        value: timestamp
+                });
+                console.log('设置上线时间:', formatDateTime(timestamp));
+        } catch (error) {
+                console.error('设置上线时间失败:', error);
+        }
+}
 
 /**
  * 辅助函数：通过URL获取图片并转换为Base64
@@ -68,44 +129,52 @@ export async function callAIAPI(profile, messages, character, context) {
 
         // 根据连接方式配置URL和请求头
         if (profile.connectionType === 'direct') {
-                // Gemini 直连方式
-                apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${profile.model}:generateContent?key=${profile.apiKey}`;
-
-                // Gemini API 使用不同的消息格式，并支持多模态
-                const contents = await Promise.all(messages.map(async (msg) => {
-                        const role = msg.role === 'assistant' ? 'model' : 'user';
-
-                        if (typeof msg.content === 'object' && msg.content.type === 'image') {
-                                // 处理图片消息
-                                const { mimeType, data } = await fetchImageAsBase64(msg.content.image_url);
-                                return {
-                                        role,
-                                        parts: [
-                                                { text: msg.content.text },
-                                                {
-                                                        inline_data: {
-                                                                mime_type: mimeType,
-                                                                data: data
-                                                        }
-                                                }
-                                        ]
-                                };
+            // Gemini 直连方式
+            apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${profile.model}:generateContent?key=${profile.apiKey}`;
+            // 合并所有消息为一个 parts 数组
+            const parts = [];
+            for (const msg of messages) {
+                if (typeof msg.content === 'object' && msg.content.type === 'image') {
+                    if (msg.content.image_url) {
+                        try {
+                            const { mimeType, data } = await fetchImageAsBase64(msg.content.image_url);
+                            if (data) {
+                                parts.push({
+                                    inline_data: {
+                                        mime_type: mimeType,
+                                        data: data
+                                    }
+                                });
+                            }
+                        } catch (e) {
+                            // 图片处理失败则跳过
                         }
-                        // 处理普通文本消息
-                        return {
-                                role,
-                                parts: [{ text: msg.content }]
-                        };
-                }));
-
-                requestBody = {
-                        contents,
-                        generationConfig: {
-                                temperature: 0.9,
-                                candidateCount: 1,
-                                response_mime_type: "application/json"
-                        }
-                };
+                    }
+                    if (msg.content.text && typeof msg.content.text === 'string' && msg.content.text.trim()) {
+                        parts.push({ text: msg.content.text });
+                    }
+                } else if (typeof msg.content === 'string' && msg.content.trim()) {
+                    parts.push({ text: msg.content });
+                } else if (msg.content && typeof msg.content === 'object') {
+                    const str = JSON.stringify(msg.content);
+                    if (str && str !== '{}' && str !== 'null') {
+                        parts.push({ text: str });
+                    }
+                }
+            }
+            requestBody = {
+                contents: [
+                    {
+                        role: 'user',
+                        parts
+                    }
+                ],
+                generationConfig: {
+                    temperature: 0.9,
+                    candidateCount: 1,
+                    response_mime_type: "application/json"
+                }
+            };
         } else {
                 // 反代方式 (兼容OpenAI格式)
                 if (!profile.apiUrl || !profile.apiUrl.trim()) {
@@ -206,7 +275,15 @@ export function extractAndParseJson(content) {
         console.log('extractAndParseJson', content);
         // 清理字符串，移除可能的 BOM 和控制字符
         let cleanContent = content.replace(/[\u0000-\u001F\u007F-\u009F\uFEFF]/g, '').trim();
-        
+        // 替换全角引号为半角
+        cleanContent = cleanContent.replace(/[“”]/g, '"');
+        // 去除 markdown 标记
+        cleanContent = cleanContent.replace(/```json[\s\S]*?```/g, s => s.replace(/```json|```/g, ''));
+        cleanContent = cleanContent.replace(/```[\s\S]*?```/g, s => s.replace(/```/g, ''));
+        // 支持字符串包裹的 JSON
+        if (cleanContent.startsWith('"') && cleanContent.endsWith('"')) {
+            cleanContent = cleanContent.slice(1, -1);
+        }
         // 先尝试直接解析整个内容
         try {
             const directParse = JSON.parse(cleanContent);
@@ -253,6 +330,14 @@ export function extractAndParseJson(content) {
  * @returns {Object} 标准化后的响应对象
  */
 function validateAIResponse(response) {
+    // 离线总结格式兼容
+    if (typeof response.story === 'string' && Array.isArray(response.relationshipChanges)) {
+        return {
+            story: response.story,
+            relationshipChanges: response.relationshipChanges,
+            originalFormat: Object.keys(response)
+        };
+    }
     const normalized = {
         messages: [],
         relationship: null,
@@ -1464,19 +1549,57 @@ export async function triggerBackgroundActivity() {
 
         console.log(`Waking up ${charsToWakeUp.size} characters for background activity...`);
 
-        const apiProfile = await db.apiProfiles.get((await db.globalSettings.get('global')).activeApiProfileId);
+        const activeApiProfileId = (await db.globalSettings.get('global')).activeApiProfileId;
+        console.log(`Active API Profile ID: ${activeApiProfileId}`);
+
+        const apiProfile = await db.apiProfiles.get(activeApiProfileId);
+        console.log(`API Profile found:`, apiProfile ? 'Yes' : 'No');
+
         if (!apiProfile) {
                 console.warn("No active AI API profile found for background activity.");
                 return;
         }
 
+        if (!apiProfile.apiKey) {
+                console.warn("Active AI API profile has no API key.");
+                return;
+        }
+
         for (const char of charsToWakeUp) {
                 const prompt = await promptBuilder.buildBackgroundActivityPrompt(char);
+                console.log(`Background activity prompt for ${char.name}:`, prompt);
                 const messages = [{ role: 'system', content: prompt }, { role: 'user', content: '开始你的后台活动。' }];
                 console.log(`Triggering background activity for ${char.name}...`);
                 try {
                         const aiResponse = await callAIAPI(apiProfile, messages, char, {});
-                        const parsedResponse = JSON.parse(aiResponse.content.replace(/```json\n?|\n?```/g, ''));
+                        console.log(`AI Response for ${char.name}:`, aiResponse.content);
+
+                        // 清理和解析JSON响应
+                        let cleanContent = aiResponse.content.replace(/```json\n?|\n?```/g, '').trim();
+                        console.log(`Cleaned content for ${char.name}:`, cleanContent);
+
+                        let parsedResponse;
+                        try {
+                                parsedResponse = JSON.parse(cleanContent);
+                        } catch (parseError) {
+                                console.error(`JSON parse error for ${char.name}:`, parseError);
+                                console.error('Failed content:', cleanContent);
+                                // 尝试提取JSON部分
+                                const jsonMatch = cleanContent.match(/\{[\s\S]*\}/);
+                                if (jsonMatch) {
+                                        try {
+                                                parsedResponse = JSON.parse(jsonMatch[0]);
+                                                console.log(`Recovered parsed response for ${char.name}:`, parsedResponse);
+                                        } catch (secondError) {
+                                                console.error(`Second parse attempt failed for ${char.name}:`, secondError);
+                                                continue;
+                                        }
+                                } else {
+                                        console.error(`No JSON found in response for ${char.name}`);
+                                        continue;
+                                }
+                        }
+                        console.log(`Parsed response for ${char.name}:`, parsedResponse);
 
                         // 检查是否跳过本次活动
                         if (!parsedResponse.actions && Object.keys(parsedResponse).length === 0) {
@@ -1484,14 +1607,171 @@ export async function triggerBackgroundActivity() {
                                 continue;
                         }
 
+                        // 处理特殊的状态响应格式
+                        if (parsedResponse.status && !parsedResponse.actions) {
+                                console.log(`${char.name} returned status-only response, treating as skip:`, parsedResponse);
+                                continue;
+                        }
+
                         // 处理新的多动作格式
                         if (parsedResponse.actions && Array.isArray(parsedResponse.actions)) {
+                                console.log(`${char.name} has ${parsedResponse.actions.length} actions to process`);
                                 for (const action of parsedResponse.actions) {
+                                        console.log(`Processing action for ${char.name}:`, action);
                                         await processBackgroundAction(char, action);
                                 }
-                        } 
+                        } else {
+                                console.warn(`${char.name} returned unrecognized response format:`, parsedResponse);
+                        }
                 } catch (error) {
                         console.error(`Error during background activity for ${char.name}:`, error);
+                        console.error('Error details:', error.message);
+                        console.error('AI Response content:', error.response?.content || 'No response content');
+                }
+        }
+}
+
+/**
+ * 生成指定分组的离线总结
+ * @param {string} groupId - 分组ID
+ * @param {Object} [options] - 选项
+ * @param {Function} [options.onProgress] - 进度回调函数
+ */
+export async function generateOfflineSummary(groupId, options = {}) {
+        const { onProgress } = options;
+        
+        try {
+                if (onProgress) onProgress('正在获取分组信息...');
+                
+                const group = await db.groups.get(groupId);
+                const members = await db.actors.where('groupIds').equals(groupId).toArray();
+                if (!group || members.length === 0) {
+                        throw new Error('分组或成员信息不存在');
+                }
+
+                if (onProgress) onProgress(`正在分析 ${group.name} 的角色关系...`);
+
+                // 1. 获取用户的离线时间
+                const lastOfflineTime = await getLastOfflineTime();
+                const lastOnlineTime = await getLastOnlineTime();
+                const offlineStartTime = lastOfflineTime || (Date.now() - 24 * 60 * 60 * 1000); // 默认24小时前
+                const currentTime = Date.now();
+
+                // 2. 检查是否需要生成总结
+                const lastSummary = await db.offlineSummaries.where('groupId').equals(groupId).last();
+                if (lastSummary && lastSummary.timestamp > offlineStartTime) {
+                        throw new Error('该分组在此离线期间已有总结');
+                }
+
+                if (onProgress) onProgress('正在构建AI故事生成提示词...');
+
+                // 3. 构建基于角色关系和设定的故事生成提示词
+                const prompt = await promptBuilder.buildOfflineStoryPrompt(group, members, offlineStartTime, currentTime);
+                const messages = [{ role: 'system', content: prompt }, { role: 'user', content: '请生成这段离线时间内发生的故事。' }];
+
+                const settings = await db.globalSettings.get('global');
+                const apiProfile = await db.apiProfiles.get(settings.activeApiProfileId);
+
+                if (onProgress) onProgress('正在请求AI生成离线故事...');
+
+                const aiResponse = await callAIAPI(apiProfile, messages, members[0], {}); // 使用第一个成员作为上下文
+                const parsedResponse = extractAndParseJson(aiResponse.content);
+
+                if (onProgress) onProgress('正在保存故事总结...');
+
+                // 4. 保存总结到数据库
+                const summary = {
+                        timestamp: currentTime,
+                        groupId: groupId,
+                        offlineStartTime: offlineStartTime,
+                        offlineDuration: currentTime - offlineStartTime,
+                        summaryContent: parsedResponse,
+                        relationshipChanges: parsedResponse.relationshipChanges || [],
+                        isDeliveredToAI: 0
+                };
+                const summaryId = await db.offlineSummaries.add(summary);
+
+                if (onProgress) onProgress('正在更新角色关系...');
+
+                // 5. 更新角色间关系
+                if (parsedResponse.relationshipChanges && parsedResponse.relationshipChanges.length > 0) {
+                        await updateCharacterRelationships(parsedResponse.relationshipChanges);
+                }
+
+                console.log(`Generated offline story for group ${group.name}, summary ID: ${summaryId}`);
+                return summaryId;
+
+        } catch (error) {
+                console.error(`Failed to generate offline summary for group ${groupId}:`, error);
+                throw error;
+        }
+}
+
+/**
+ * 更新角色间关系
+ * @param {Array} relationshipChanges - 关系变化数组
+ */
+async function updateCharacterRelationships(relationshipChanges) {
+        for (const change of relationshipChanges) {
+                try {
+                        const { sourceId, targetId, scoreChange, typeChange, newTags, removeTags } = change;
+                        
+                        // 查找现有关系
+                        let relationship = await db.relationships
+                                .where('[sourceId+targetId]').equals([sourceId, targetId])
+                                .first();
+
+                        if (!relationship) {
+                                // 创建新关系，默认为陌生人关系
+                                relationship = {
+                                        sourceId: sourceId,
+                                        targetId: targetId,
+                                        type: typeChange || '陌生人',
+                                        score: (scoreChange || 0), // 初始好感度为0
+                                        tags: []
+                                };
+                        } else {
+                                // 更新现有关系
+                                if (scoreChange) {
+                                        relationship.score = Math.max(0, Math.min(1000, (relationship.score || 0) + scoreChange));
+                                }
+                                if (typeChange) {
+                                        relationship.type = typeChange;
+                                }
+                        }
+
+                        // 处理标签变化
+                        if (relationship.tags && removeTags && removeTags.length > 0) {
+                                relationship.tags = relationship.tags.filter(tag => !removeTags.includes(tag.name));
+                        }
+
+                        if (newTags && newTags.length > 0) {
+                                if (!relationship.tags) relationship.tags = [];
+                                
+                                for (const newTag of newTags) {
+                                        // 检查是否已存在相同名称的标签
+                                        const existingTagIndex = relationship.tags.findIndex(tag => tag.name === newTag.name);
+                                        if (existingTagIndex !== -1) {
+                                                // 更新现有标签的强度
+                                                relationship.tags[existingTagIndex].strength = newTag.strength;
+                                        } else {
+                                                // 添加新标签
+                                                relationship.tags.push(newTag);
+                                        }
+                                }
+                        }
+
+                        // 保存或更新关系
+                        if (relationship.id) {
+                                await db.relationships.put(relationship);
+                        } else {
+                                await db.relationships.add(relationship);
+                        }
+
+                        console.log(`Updated relationship: ${sourceId} → ${targetId}`, change);
+
+                } catch (error) {
+                        console.error('Failed to update character relationship:', error, change);
                 }
         }
 }
@@ -1611,6 +1891,24 @@ export async function generateAIReply(characterId, userId, userMessage) {
             }
         }
 
+        // 标记离线总结为已交付给此角色
+        try {
+            const character = await db.actors.get(characterId);
+            if (character?.groupIds && character.groupIds.length > 0) {
+                const undeliveredSummaries = await db.offlineSummaries
+                    .where('groupId').anyOf(character.groupIds)
+                    .and(summary => summary.isDeliveredToAI === 0)
+                    .toArray();
+
+                for (const summary of undeliveredSummaries) {
+                    await db.offlineSummaries.update(summary.id, { isDeliveredToAI: 1 });
+                    console.log(`Marked offline summary ${summary.id} as delivered to ${characterId}`);
+                }
+            }
+        } catch (error) {
+            console.error('标记离线总结为已交付失败:', error);
+        }
+
         return {
             success: true,
             messages: parsedResponse.messages,
@@ -1652,8 +1950,11 @@ export async function generateAIReply(characterId, userId, userMessage) {
  */
 async function processBackgroundAction(character, action) {
     try {
+        console.log(`Processing background action for ${character.name}:`, action);
+
         switch (action.type) {
             case 'sendMessage':
+                console.log(`${character.name} sending message:`, action.message);
                 const messageEvent = await processAIMessage(action.message, character.id);
                 if (messageEvent) {
                     await db.events.add(messageEvent);
@@ -1670,10 +1971,13 @@ async function processBackgroundAction(character, action) {
                         showLocalNotification(character.name, notificationBody, `/chatroom/${character.id}`);
                     }
                     console.log(`${character.name} sent a background message: ${action.message.content?.substring(0, 50)}...`);
+                } else {
+                    console.warn(`${character.name} failed to process message:`, action.message);
                 }
                 break;
 
             case 'createPost':
+                console.log(`${character.name} creating post:`, action.post);
                 const postEvent = {
                     type: 'post',
                     contextId: `post_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -1690,6 +1994,7 @@ async function processBackgroundAction(character, action) {
                 break;
 
             case 'updateStatus':
+                console.log(`${character.name} updating status:`, action.status);
                 const currentActor = await db.actors.get(character.id);
                 if (currentActor) {
                     await db.actors.update(character.id, {
@@ -1702,33 +2007,55 @@ async function processBackgroundAction(character, action) {
                         }
                     });
                     console.log(`${character.name} updated status: ${action.status.text}`);
+                } else {
+                    console.warn(`${character.name} not found in database for status update`);
                 }
                 break;
 
             case 'likePost':
                 if (action.postId) {
+                    console.log(`${character.name} liking post:`, action.postId);
                     try {
+                        // 验证动态是否存在
+                        const post = await db.events
+                            .where('contextId').equals(action.postId)
+                            .and(event => event.type === 'post')
+                            .first();
+                        console.log(`Post found for like:`, post ? 'Yes' : 'No', post);
+                        
                         await likeMomentPost(character.id, action.postId);
                         console.log(`${character.name} liked post ${action.postId}`);
                     } catch (error) {
                         console.error(`Failed to like post ${action.postId}:`, error);
                     }
+                } else {
+                    console.warn(`${character.name} missing postId for like action`);
                 }
                 break;
 
             case 'commentPost':
                 if (action.postId && action.comment) {
+                    console.log(`${character.name} commenting on post:`, action.postId, action.comment);
                     try {
+                        // 验证动态是否存在
+                        const post = await db.events
+                            .where('contextId').equals(action.postId)
+                            .and(event => event.type === 'post')
+                            .first();
+                        console.log(`Post found for comment:`, post ? 'Yes' : 'No', post);
+                        
                         await commentOnMomentPost(character.id, action.postId, action.comment);
                         console.log(`${character.name} commented on post ${action.postId}: ${action.comment.substring(0, 30)}...`);
                     } catch (error) {
                         console.error(`Failed to comment on post ${action.postId}:`, error);
                     }
+                } else {
+                    console.warn(`${character.name} missing postId or comment for comment action`);
                 }
                 break;
 
             default:
-                console.warn(`Unknown background action type: ${action.type}`);
+                console.warn(`Unknown background action type for ${character.name}: ${action.type}`, action);
         }
     } catch (error) {
         console.error(`Error processing background action ${action.type} for ${character.name}:`, error);

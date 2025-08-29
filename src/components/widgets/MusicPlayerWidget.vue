@@ -535,7 +535,7 @@ onUnmounted(() => {
 
 .album-art:hover {
         transform: scale(1.05);
-        border-color: rgba(255, 255, 255, 0.2);
+        border-color: var(--opacity-20);
 }
 
 .album-art img {
@@ -547,7 +547,7 @@ onUnmounted(() => {
 
 .album-art svg {
         opacity: 0.7;
-        color: rgba(255, 255, 255, 0.8);
+        color: var(--opacity-80);
 }
 
 .album-placeholder {
@@ -556,7 +556,7 @@ onUnmounted(() => {
         justify-content: center;
         width: 100%;
         height: 100%;
-        color: rgba(255, 255, 255, 0.6);
+        color: var(--opacity-60);
 }
 
 /* 黑胶唱片样式 */
@@ -596,8 +596,8 @@ onUnmounted(() => {
         /* 关键：移除这里的光泽渐变，只保留凹槽纹理 */
         background-image:
                 repeating-radial-gradient(circle at center,
-                        rgba(255, 255, 255, 0.03) 0,
-                        rgba(255, 255, 255, 0.03) 1px,
+                        var(--opacity-05) 0,
+                        var(--opacity-05) 1px,
                         transparent 1px,
                         transparent 2.5px);
 }
@@ -658,7 +658,7 @@ onUnmounted(() => {
 .track-title {
         font-size: 14px;
         font-weight: 600;
-        color: rgba(255, 255, 255, 0.95);
+        color: var(--opacity-95);
         margin-bottom: 2px;
         white-space: nowrap;
         overflow: hidden;
@@ -668,7 +668,7 @@ onUnmounted(() => {
 
 .track-artist {
         font-size: 12px;
-        color: rgba(255, 255, 255, 0.7);
+        color: var(--opacity-70);
         margin-bottom: 8px;
         white-space: nowrap;
         overflow: hidden;
@@ -708,8 +708,8 @@ onUnmounted(() => {
         height: 28px;
         border: none;
         border-radius: 50%;
-        background: rgba(255, 255, 255, 0.15);
-        color: rgba(255, 255, 255, 0.9);
+        background: var(--opacity-15);
+        color: var(--opacity-90);
         display: flex;
         align-items: center;
         justify-content: center;
@@ -727,7 +727,7 @@ onUnmounted(() => {
 
 .control-btn:hover,
 .play-btn:hover {
-        background: rgba(255, 255, 255, 0.25);
+        background: var(--opacity-25);
         transform: scale(1.05);
 }
 
@@ -754,7 +754,7 @@ onUnmounted(() => {
 .progress-bar {
         width: 100%;
         height: 4px;
-        background: rgba(255, 255, 255, 0.2);
+        background: var(--opacity-20);
         border-radius: 2px;
         cursor: pointer;
         position: relative;
@@ -793,11 +793,11 @@ onUnmounted(() => {
 }
 
 .empty-player .track-title {
-        color: rgba(255, 255, 255, 0.8);
+        color: var(--opacity-80);
 }
 
 .empty-player .album-art {
-        background: rgba(255, 255, 255, 0.05);
+        background: var(--opacity-05);
 }
 
 /* 响应式调整 */

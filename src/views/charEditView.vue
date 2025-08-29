@@ -1184,6 +1184,17 @@ onUnmounted(() => {
         transition: all 0.2s ease;
 }
 
+/* iOS Safari 日期输入框修复 */
+.form-group input[type="date"] {
+        -webkit-appearance: none;
+        appearance: none;
+        height: 44px; /* 确保与iOS Safari的触摸目标一致 */
+        min-height: 44px;
+        padding: 8px 12px;
+        font-size: 16px; /* 防止iOS Safari自动缩放 */
+        text-align: left; /* 日期输入框通常左对齐更合适 */
+}
+
 .form-group input::placeholder,
 .form-group textarea::placeholder {
         color: var(--text-secondary);
@@ -1202,7 +1213,7 @@ onUnmounted(() => {
 .form-group textarea:focus {
         outline: none;
         border-color: var(--accent-primary);
-        box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
+        box-shadow: var(--accent-glow-shadow);
 }
 
 /* 部分样式 */
@@ -1414,7 +1425,7 @@ onUnmounted(() => {
 .memory-input:focus {
         outline: none;
         border-color: var(--accent-primary);
-        box-shadow: 0 0 0 2px var(--accent-primary)20;
+        box-shadow: var(--accent-glow-shadow);
 }
 
 /* 响应式设计 */
@@ -1618,7 +1629,7 @@ onUnmounted(() => {
 }
 
 .preset-item.active {
-        box-shadow: 0 0 0 1px var(--accent-primary);
+        box-shadow: var(--accent-glow-shadow);
 }
 
 .add-preset {

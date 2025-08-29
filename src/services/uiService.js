@@ -1,6 +1,7 @@
 import { createApp } from 'vue';
 import db from './database';
 import Toast from '../components/ui/Toast.vue';
+import PersistentToast from '../components/ui/PersistentToast.vue';
 import ConfirmModal from '../components/ui/ConfirmModal.vue';
 import PromptModal from '../components/ui/PromptModal.vue';
 import UploadChoiceModal from '../components/ui/UploadChoiceModal.vue';
@@ -11,6 +12,11 @@ import WorldbookEditModal from '../components/ui/WorldbookEditModal.vue';
 import UserPersonaModal from '../components/ui/UserPersonaModal.vue';
 import ActionChoiceModal from '../components/ui/ActionChoiceModal.vue';
 import PaymentModal from '../components/ui/PaymentModal.vue';
+
+// 跟踪活跃的Toast
+let activeToasts = [];
+let persistentToasts = new Map(); // 持久化Toast的映射，key为ID
+const TOAST_HEIGHT = 60; // 每个Toast大约的高度(包括间隔)
 
 // 确保有一个容器来挂载这些动态组件
 function getModalsContainer() {
@@ -33,16 +39,145 @@ export function showToast(message, type = 'info') {
         const toastWrapper = document.createElement('div');
         container.appendChild(toastWrapper);
 
+        // 计算当前Toast的垂直偏移量
+        const topOffset = 20 + (activeToasts.length * TOAST_HEIGHT);
+        
+        // 创建Toast实例对象
+        const toastInstance = {
+                wrapper: toastWrapper,
+                app: null,
+                removed: false
+        };
+
+        // 添加到活跃列表
+        activeToasts.push(toastInstance);
+
         const toastApp = createApp(Toast, {
                 message,
                 type,
+                topOffset: topOffset,
                 onClose: () => {
+                        if (toastInstance.removed) return;
+                        
+                        // 标记为已移除
+                        toastInstance.removed = true;
+                        
+                        // 从活跃列表中移除
+                        const index = activeToasts.indexOf(toastInstance);
+                        if (index > -1) {
+                                activeToasts.splice(index, 1);
+                        }
+                        
                         toastApp.unmount();
-                        container.removeChild(toastWrapper);
+                        if (container.contains(toastWrapper)) {
+                                container.removeChild(toastWrapper);
+                        }
                 }
         });
 
+        toastInstance.app = toastApp;
         toastApp.mount(toastWrapper);
+}
+
+/**
+ * 显示持久化Toast，可以动态更新内容
+ * @param {string} id - Toast的唯一标识符
+ * @param {string} message - 要显示的消息内容
+ * @param {'success' | 'error' | 'info' | 'warning' | 'loading'} [type='loading'] - Toast类型
+ * @param {boolean} [showSpinner=true] - 是否显示加载动画
+ * @param {boolean} [showCloseButton=false] - 是否显示关闭按钮
+ * @returns {Object} Toast控制对象，包含update和close方法
+ */
+export function showPersistentToast(id, message, type = 'loading', showSpinner = true, showCloseButton = false) {
+        const container = getModalsContainer();
+        
+        // 如果已存在相同ID的Toast，先移除
+        if (persistentToasts.has(id)) {
+                closePersistentToast(id);
+        }
+        
+        const toastWrapper = document.createElement('div');
+        container.appendChild(toastWrapper);
+
+        // 计算当前Toast的垂直偏移量 (包括普通Toast和持久化Toast)
+        const totalToasts = activeToasts.length + persistentToasts.size;
+        const topOffset = 20 + (totalToasts * TOAST_HEIGHT);
+        
+        let currentMessage = message;
+        
+        const toastApp = createApp(PersistentToast, {
+                message: currentMessage,
+                type,
+                topOffset: topOffset,
+                persistent: true,
+                showSpinner,
+                showCloseButton,
+                onClose: () => {
+                        closePersistentToast(id);
+                },
+                onUpdate: (newMessage) => {
+                        currentMessage = newMessage;
+                }
+        });
+
+        const toastInstance = {
+                wrapper: toastWrapper,
+                app: toastApp,
+                id: id
+        };
+
+        // 保存到持久化Toast映射
+        persistentToasts.set(id, toastInstance);
+        
+        toastApp.mount(toastWrapper);
+        
+        // 返回控制对象
+        return {
+                update: (newMessage, newType) => {
+                        updatePersistentToast(id, newMessage, newType);
+                },
+                close: () => {
+                        closePersistentToast(id);
+                }
+        };
+}
+
+/**
+ * 更新持久化Toast的内容
+ * @param {string} id - Toast的ID
+ * @param {string} message - 新的消息内容
+ * @param {string} [type] - 新的类型 (可选)
+ */
+export function updatePersistentToast(id, message, type) {
+        const toastInstance = persistentToasts.get(id);
+        if (toastInstance && toastInstance.app._instance) {
+                const props = toastInstance.app._instance.props;
+                props.message = message;
+                if (type) {
+                        props.type = type;
+                }
+        }
+}
+
+/**
+ * 关闭持久化Toast
+ * @param {string} id - Toast的ID
+ */
+export function closePersistentToast(id) {
+        const toastInstance = persistentToasts.get(id);
+        if (toastInstance) {
+                persistentToasts.delete(id);
+                
+                try {
+                        toastInstance.app.unmount();
+                        const container = getModalsContainer();
+                        if (container.contains(toastInstance.wrapper)) {
+                                container.removeChild(toastInstance.wrapper);
+                        }
+                } catch (error) {
+                        console.error('关闭持久化Toast失败:', error);
+                }
+        }
 }
 
 /**
@@ -257,34 +392,14 @@ export function showWorldbookEditModal(worldbook = null) {
 }
 
 /**
- * 显示用户人格预设管理模态框
+ * 显示用户人格预设管理模态框（已转换为页面）
  * @returns {Promise<void>}
  */
 export function showUserPersonaModal() {
         return new Promise((resolve) => {
-                const container = getModalsContainer();
-                const modalWrapper = document.createElement('div');
-                container.appendChild(modalWrapper);
-
-                const cleanup = () => {
-                        modalApp.unmount();
-                        if (container.contains(modalWrapper)) {
-                                container.removeChild(modalWrapper);
-                        }
-                };
-
-                const modalApp = createApp(UserPersonaModal, {
-                        onClose: () => {
-                                cleanup();
-                                resolve();
-                        },
-                        onPersonaChanged: (persona) => {
-                                // 可以在这里处理人格变更事件
-                                console.log('Default persona changed:', persona);
-                        }
-                });
-
-                modalApp.mount(modalWrapper);
+                // 重定向到人格管理页面
+                window.location.href = '/user-persona';
+                resolve();
         });
 }
 

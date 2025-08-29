@@ -176,19 +176,19 @@ onMounted(async () => {
         align-items: center;
         gap: 8px;
         cursor: pointer;
-        color: rgba(255, 255, 255, 0.7);
+        color: var(--opacity-70);
         transition: all 0.3s ease;
 }
 
 .select-char-area:hover {
-        color: rgba(255, 255, 255, 0.9);
+        color: var(--opacity-90);
         transform: scale(1.05);
 }
 
 .dashed-circle {
         width: v-bind('avatarSize');
         height: v-bind('avatarSize');
-        border: 2px dashed rgba(255, 255, 255, 0.5);
+        border: 2px dashed var(--opacity-50);
         border-radius: 50%;
         display: flex;
         align-items: center;
@@ -197,8 +197,8 @@ onMounted(async () => {
 }
 
 .select-char-area:hover .dashed-circle {
-        border-color: rgba(255, 255, 255, 0.8);
-        background: rgba(255, 255, 255, 0.1);
+        border-color: var(--opacity-80);
+        background: var(--opacity-10);
 }
 
 .plus-icon {
@@ -229,12 +229,12 @@ onMounted(async () => {
         overflow: hidden;
         cursor: pointer;
         transition: all 0.3s ease;
-        border: 2px solid rgba(255, 255, 255, 0.3);
+        border: 2px solid var(--opacity-30);
 }
 
 .char-avatar:hover {
         transform: scale(1.1);
-        border-color: rgba(255, 255, 255, 0.6);
+        border-color: var(--opacity-60);
 }
 
 .avatar-img {
@@ -286,7 +286,7 @@ onMounted(async () => {
 
 .mood-text {
         font-size: calc(v-bind('fontSize') * 0.75);
-        color: rgba(255, 255, 255, 0.7);
+        color: var(--opacity-70);
         font-style: italic;
 }
 

@@ -4,7 +4,12 @@
  */
 
 import { getActorBubbleStyle } from './bubbleStyleService.js';
-import { adjustColorLuminance } from '../utils/colorUtils.js';
+import {
+        calculateThemeColors,
+        applyThemeColors,
+        getCurrentThemeColors,
+        createBubbleThemeColors
+} from '../utils/colorUtils.js';
 
 // 保存原始全局主题色
 let originalTheme = {
@@ -47,35 +52,38 @@ export function saveActorThemeChoice(actorId, isUsingUserBubble) {
 
 // 初始化时保存原始主题色
 export function saveOriginalTheme() {
-        const root = document.documentElement;
-        const styles = getComputedStyle(root);
-        
-        originalTheme.primary = styles.getPropertyValue('--accent-primary').trim();
-        originalTheme.text = styles.getPropertyValue('--accent-text').trim();
-        originalTheme.darker = styles.getPropertyValue('--accent-darker').trim();
-        originalTheme.lighter = styles.getPropertyValue('--accent-lighter').trim();
-        
-        console.log('Saved original theme:', originalTheme);
-}
+        const currentTheme = getCurrentThemeColors();
 
-// 恢复原始全局主题色
+        if (currentTheme) {
+                originalTheme.primary = currentTheme.primary;
+                originalTheme.text = currentTheme.text;
+                originalTheme.darker = currentTheme.darker;
+                originalTheme.lighter = currentTheme.lighter;
+        }
+
+        console.log('Saved original theme:', originalTheme);
+}// 恢复原始全局主题色
 export function restoreOriginalTheme() {
         if (!originalTheme.primary) return;
-        
-        const root = document.documentElement;
-        root.style.setProperty('--accent-primary', originalTheme.primary);
-        root.style.setProperty('--accent-text', originalTheme.text);
-        if (originalTheme.darker) {
-                root.style.setProperty('--accent-darker', originalTheme.darker);
-        }
-        if (originalTheme.lighter) {
-                root.style.setProperty('--accent-lighter', originalTheme.lighter);
-        }
-        
+
+        // 使用新的函数应用原始主题色
+        const originalThemeColors = {
+                primary: originalTheme.primary,
+                text: originalTheme.text,
+                darker: originalTheme.darker,
+                lighter: originalTheme.lighter,
+                glowShadow: '0 0 0 2px rgba(0, 0, 0, 0.2)', // 默认值
+                primaryRgba20: 'rgba(0, 0, 0, 0.2)', // 默认值
+                primaryRgba30: 'rgba(0, 0, 0, 0.3)', // 默认值
+                primaryRgba50: 'rgba(0, 0, 0, 0.5)'  // 默认值
+        };
+
+        applyThemeColors(originalThemeColors);
+
         // 清除角色主题状态
         currentActorTheme.actorId = null;
         currentActorTheme.bubbleStyle = null;
-        
+
         console.log('Restored original theme');
 }
 
@@ -86,95 +94,56 @@ export async function applyActorTheme(actorId, isUsingUserBubble = null, force =
                 if (isUsingUserBubble === null) {
                         isUsingUserBubble = getActorThemeChoice(actorId);
                 }
-                
+
                 // 如果已经在使用这个角色的主题，并且不是强制更新，则跳过
                 if (!force && currentActorTheme.actorId === actorId && currentActorTheme.isUsingUserBubble === isUsingUserBubble) {
                         console.log('Actor theme already applied for', actorId);
                         return currentActorTheme.bubbleStyle;
                 }
-                
+
                 const bubbleStyle = await getActorBubbleStyle(actorId);
-                
+
                 // 更新当前角色主题状态
                 currentActorTheme.actorId = actorId;
                 currentActorTheme.bubbleStyle = bubbleStyle;
                 currentActorTheme.isUsingUserBubble = isUsingUserBubble;
-                
-                // 应用主题色
-                const root = document.documentElement;
-                let primaryColor, textColor;
-                
-                if (isUsingUserBubble) {
-                        primaryColor = bubbleStyle.userBubbleBg;
-                        textColor = bubbleStyle.userBubbleText;
-                } else {
-                        primaryColor = bubbleStyle.charBubbleBg;
-                        textColor = bubbleStyle.charBubbleText;
+
+                // 使用新的函数创建和应用主题色
+                const themeColors = createBubbleThemeColors(bubbleStyle, isUsingUserBubble);
+                if (themeColors) {
+                        applyThemeColors(themeColors);
+
+                        // 同时设置气泡样式CSS变量
+                        const root = document.documentElement;
+                        root.style.setProperty('--char-bubble-bg', bubbleStyle.charBubbleBg);
+                        root.style.setProperty('--char-bubble-text', bubbleStyle.charBubbleText);
+                        root.style.setProperty('--user-bubble-bg', bubbleStyle.userBubbleBg);
+                        root.style.setProperty('--user-bubble-text', bubbleStyle.userBubbleText);
                 }
-                
-                root.style.setProperty('--accent-primary', primaryColor);
-                root.style.setProperty('--accent-text', textColor);
-                
-                // 计算并设置衍生颜色
-                try {
-                        const darkerColor = adjustColorLuminance(primaryColor, -0.2);
-                        const lighterColor = adjustColorLuminance(primaryColor, 0.2);
-                        root.style.setProperty('--accent-darker', darkerColor);
-                        root.style.setProperty('--accent-lighter', lighterColor);
-                } catch (error) {
-                        console.warn('Failed to calculate accent color variants:', error);
-                }
-                
-                // 同时设置气泡样式CSS变量
-                root.style.setProperty('--char-bubble-bg', bubbleStyle.charBubbleBg);
-                root.style.setProperty('--char-bubble-text', bubbleStyle.charBubbleText);
-                root.style.setProperty('--user-bubble-bg', bubbleStyle.userBubbleBg);
-                root.style.setProperty('--user-bubble-text', bubbleStyle.userBubbleText);
-                
+
                 console.log('Applied actor theme for', actorId, 'using', isUsingUserBubble ? 'user' : 'char', 'bubble color');
-                
+
                 return bubbleStyle;
         } catch (error) {
                 console.error('Failed to apply actor theme:', error);
                 return null;
         }
-}
-
-// 切换当前角色的主题色（用户气泡色 ↔ 角色气泡色）
+}// 切换当前角色的主题色（用户气泡色 ↔ 角色气泡色）
 export function toggleActorTheme() {
         if (!currentActorTheme.bubbleStyle || !currentActorTheme.actorId) return false;
-        
+
         const newIsUsingUserBubble = !currentActorTheme.isUsingUserBubble;
         currentActorTheme.isUsingUserBubble = newIsUsingUserBubble;
-        
+
         // 保存用户的选择
         saveActorThemeChoice(currentActorTheme.actorId, newIsUsingUserBubble);
-        
-        const root = document.documentElement;
-        const bubbleStyle = currentActorTheme.bubbleStyle;
-        
-        let primaryColor, textColor;
-        if (newIsUsingUserBubble) {
-                primaryColor = bubbleStyle.userBubbleBg;
-                textColor = bubbleStyle.userBubbleText;
-        } else {
-                primaryColor = bubbleStyle.charBubbleBg;
-                textColor = bubbleStyle.charBubbleText;
+
+        // 使用新的函数创建和应用主题色
+        const themeColors = createBubbleThemeColors(currentActorTheme.bubbleStyle, newIsUsingUserBubble);
+        if (themeColors) {
+                applyThemeColors(themeColors);
         }
-        
-        root.style.setProperty('--accent-primary', primaryColor);
-        root.style.setProperty('--accent-text', textColor);
-        
-        // 计算并设置衍生颜色
-        try {
-                const darkerColor = adjustColorLuminance(primaryColor, -0.2);
-                const lighterColor = adjustColorLuminance(primaryColor, 0.2);
-                root.style.setProperty('--accent-darker', darkerColor);
-                root.style.setProperty('--accent-lighter', lighterColor);
-        } catch (error) {
-                console.warn('Failed to calculate accent color variants:', error);
-        }
-        
+
         console.log('Toggled actor theme to', newIsUsingUserBubble ? 'user' : 'char', 'bubble color');
         return newIsUsingUserBubble;
 }
@@ -189,12 +158,35 @@ export function isUsingActorTheme(actorId) {
         return currentActorTheme.actorId === actorId;
 }
 
+// 获取当前主题的详细信息
+export function getCurrentThemeInfo() {
+        const currentThemeColors = getCurrentThemeColors();
+
+        return {
+                ...currentThemeColors,
+                isUsingActorTheme: currentActorTheme.actorId !== null,
+                currentActorId: currentActorTheme.actorId,
+                isUsingUserBubble: currentActorTheme.isUsingUserBubble,
+                originalTheme: { ...originalTheme }
+        };
+}
+
+// 初始化主题系统（在应用启动时调用）
+export function initializeThemeSystem() {
+        // 确保保存了原始主题
+        if (!originalTheme.primary) {
+                saveOriginalTheme();
+        }
+
+        console.log('Theme system initialized');
+}
+
 // 在页面初始化时调用，确保保存原始主题
 if (typeof window !== 'undefined') {
         // 等待DOM加载完成
         if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', saveOriginalTheme);
+                document.addEventListener('DOMContentLoaded', initializeThemeSystem);
         } else {
-                saveOriginalTheme();
+                initializeThemeSystem();
         }
 }

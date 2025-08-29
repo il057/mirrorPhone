@@ -1243,6 +1243,9 @@ onMounted(async () => {
         await loadMomentsHeaderImage();
         await loadMoments();
 
+        // 清除moments未读状态
+        await clearMomentsUnreadStatus();
+
         // 如果是角色的个人动态页面，应用角色主题（使用用户保存的主题选择）
         if (isPersonalFeed.value && props.id && props.id !== USER_ACTOR_ID && !props.id?.startsWith('user_')) {
                 await applyActorTheme(props.id, null);
@@ -1264,6 +1267,22 @@ onMounted(async () => {
         // 调试信息
         console.log('MomentsView mounted');
 });
+
+// 清除moments未读状态
+const clearMomentsUnreadStatus = async () => {
+        try {
+                // 更新全局设置，记录用户最后查看moments的时间
+                const settings = await db.globalSettings.get('global') || {};
+                await db.globalSettings.put({
+                        ...settings,
+                        id: 'global',
+                        lastViewedMoments: Date.now()
+                });
+                console.log('已清除moments未读状态');
+        } catch (error) {
+                console.error('清除moments未读状态失败:', error);
+        }
+};
 
 // 清理事件监听器
 onUnmounted(() => {

@@ -25,9 +25,10 @@ function getModalsContainer() {
  * @param {Object|null} memory - 要编辑的回忆对象，新建时传null
  * @param {string} actorId - 拥有者ID（默认用户人格ID）
  * @param {string|null} relatedActorId - 相关角色ID（用于筛选）
+ * @param {string} mode - 模式：'memory' 或 'diary'
  * @returns {Promise<boolean>} - 返回是否保存了更改
  */
-export function showMemoryEditModal(memory = null, actorId = '__USER__', relatedActorId = null) {
+export function showMemoryEditModal(memory = null, actorId = '__USER__', relatedActorId = null, mode = 'memory') {
         return new Promise((resolve) => {
                 const container = getModalsContainer();
                 const modalWrapper = document.createElement('div');
@@ -45,6 +46,7 @@ export function showMemoryEditModal(memory = null, actorId = '__USER__', related
                         memory: memory,
                         actorId: actorId,
                         relatedActorId: relatedActorId,
+                        mode: mode,
                         onClose: () => {
                                 cleanup();
                                 resolve(false);

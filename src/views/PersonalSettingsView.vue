@@ -14,12 +14,9 @@
                                         <div class="setting-header">
                                                 <h3>打字模拟</h3>
                                                 <div class="toggle-switch">
-                                                        <input
-                                                                type="checkbox"
-                                                                id="typing-simulation"
+                                                        <input type="checkbox" id="typing-simulation"
                                                                 v-model="settings.typingSimulation.enabled"
-                                                                @change="onTypingSimulationToggle"
-                                                        />
+                                                                @change="onTypingSimulationToggle" />
                                                         <label for="typing-simulation" class="toggle-label">
                                                                 <span class="toggle-slider"></span>
                                                         </label>
@@ -28,18 +25,14 @@
                                         <p class="setting-description">
                                                 开启后，AI回复将模拟真实的拼音打字效果；关闭后将使用随机间隔时间发送消息
                                         </p>
-                                        
+
                                         <!-- 打字速度设置 -->
                                         <div v-show="settings.typingSimulation.enabled" class="speed-setting">
-                                                <RangeSlider
-                                                        v-model="settings.typingSimulation.speed"
-                                                        :min="1"
-                                                        :max="10"
-                                                        :step="1"
-                                                        label="打字速度"
-                                                />
+                                                <RangeSlider v-model="settings.typingSimulation.speed" :min="1"
+                                                        :max="10" :step="1" label="打字速度" />
                                                 <div class="speed-indicator">
-                                                        <span class="speed-text">{{ getSpeedText(settings.typingSimulation.speed) }}</span>
+                                                        <span class="speed-text">{{
+                                                                getSpeedText(settings.typingSimulation.speed) }}</span>
                                                 </div>
                                         </div>
                                 </div>
@@ -49,12 +42,8 @@
                                         <div class="setting-header">
                                                 <h3>语音自动转文字</h3>
                                                 <div class="toggle-switch">
-                                                        <input
-                                                                type="checkbox"
-                                                                id="voice-to-text"
-                                                                v-model="settings.voiceToText.enabled"
-                                                                disabled
-                                                        />
+                                                        <input type="checkbox" id="voice-to-text"
+                                                                v-model="settings.voiceToText.enabled" disabled />
                                                         <label for="voice-to-text" class="toggle-label disabled">
                                                                 <span class="toggle-slider"></span>
                                                         </label>
@@ -70,11 +59,8 @@
                                         <div class="setting-header">
                                                 <h3>语音消息自动显示文字</h3>
                                                 <div class="toggle-switch">
-                                                        <input
-                                                                type="checkbox"
-                                                                id="voice-auto-show"
-                                                                v-model="settings.voiceMessage.autoShowText"
-                                                        />
+                                                        <input type="checkbox" id="voice-auto-show"
+                                                                v-model="settings.voiceMessage.autoShowText" />
                                                         <label for="voice-auto-show" class="toggle-label">
                                                                 <span class="toggle-slider"></span>
                                                         </label>
@@ -90,11 +76,8 @@
                                         <div class="setting-header">
                                                 <h3>自动接受一起听邀请</h3>
                                                 <div class="toggle-switch">
-                                                        <input
-                                                                type="checkbox"
-                                                                id="auto-accept-listen-together"
-                                                                v-model="settings.musicSharing.autoAcceptListenTogether"
-                                                        />
+                                                        <input type="checkbox" id="auto-accept-listen-together"
+                                                                v-model="settings.musicSharing.autoAcceptListenTogether" />
                                                         <label for="auto-accept-listen-together" class="toggle-label">
                                                                 <span class="toggle-slider"></span>
                                                         </label>
@@ -108,98 +91,110 @@
 
                         <!-- 世界设置 -->
                         <AccordionItem title="世界设置" :defaultExpanded="false">
-                                <!-- 离线模拟与情报 -->
                                 <div class="setting-section">
                                         <div class="setting-header">
-                                                <h3>离线模拟与情报</h3>
+                                                <h3>离线总结与模拟</h3>
                                                 <div class="toggle-switch">
-                                                        <input
-                                                                type="checkbox"
-                                                                id="offline-simulation"
-                                                                v-model="settings.offlineSimulation.enabled"
-                                                                disabled
-                                                        />
-                                                        <label for="offline-simulation" class="toggle-label disabled">
+                                                        <input type="checkbox" id="offline-simulation"
+                                                                v-model="settings.offlineSimulation.enabled" />
+                                                        <label for="offline-simulation" class="toggle-label">
                                                                 <span class="toggle-slider"></span>
                                                         </label>
                                                 </div>
                                         </div>
-                                        <p class="setting-description placeholder">
-                                                角色离线时的智能模拟和情报生成（功能开发中...）
+                                        <p class="setting-description">
+                                                角色离线时的智能模拟和情报生成。
                                         </p>
+                                        <div v-if="settings.offlineSimulation.enabled" class="speed-setting">
+                                                <div class="form-group">
+                                                        <label>离线总结触发间隔（小时）</label>
+                                                        <RangeSlider v-model="settings.offlineSimulation.intervalHours"
+                                                                :min="1" :max="72" :step="1" />
+                                                </div>
+                                        </div>
                                 </div>
 
-                                <!-- 分组世界书绑定 -->
                                 <div class="setting-section">
                                         <div class="setting-header">
-                                                <h3>分组世界书绑定</h3>
+                                                <h3>分组世界书与离线总结</h3>
                                         </div>
                                         <p class="setting-description">
-                                                为每个角色分组绑定世界书分组，影响该分组下所有角色的对话上下文
+                                                为每个角色分组绑定世界书，并选择是否为该分组开启离线总结。
                                         </p>
-                                        
+
                                         <div class="group-worldbook-list">
-                                                <div
-                                                        v-for="group in groups"
-                                                        :key="group.id"
-                                                        class="group-item"
-                                                        :class="{ expanded: expandedGroups.includes(group.id) }"
-                                                >
+                                                <div v-for="group in groups" :key="group.id" class="group-item"
+                                                        :class="{ expanded: expandedGroups.includes(group.id) }">
                                                         <div class="group-header" @click="toggleGroup(group.id)">
                                                                 <div class="group-info">
                                                                         <h4>{{ group.name }}</h4>
                                                                         <span class="group-stats">
-                                                                                {{ getGroupCharCount(group.id) }}个角色 | 
-                                                                                {{ getGroupWorldbookCount(group.id) }}个世界书
+                                                                                {{ getGroupCharCount(group.id) }}个角色 |
+                                                                                {{ getGroupWorldbookCount(group.id)
+                                                                                }}个世界书
                                                                         </span>
                                                                 </div>
-                                                                <svg class="expand-icon" :class="{ rotated: expandedGroups.includes(group.id) }">
-                                                                        <path d="M7 10l5 5 5-5z" fill="currentColor"/>
+                                                                <svg class="expand-icon"
+                                                                        :class="{ rotated: expandedGroups.includes(group.id) }">
+                                                                        <path d="M7 10l5 5 5-5z" fill="currentColor" />
                                                                 </svg>
                                                         </div>
-                                                        
-                                                        <!-- 分组世界书绑定 -->
-                                                        <div v-show="expandedGroups.includes(group.id)" class="group-content">
-                                                                <div class="worldbook-section">
-                                                                        <h5>绑定世界书分组</h5>
-                                                                        <div class="worldbook-checkboxes">
-                                                                                <label
-                                                                                        v-for="wbGroup in worldbookGroups"
-                                                                                        :key="wbGroup.id"
-                                                                                        class="checkbox-item"
-                                                                                >
-                                                                                        <input
-                                                                                                type="checkbox"
-                                                                                                :value="wbGroup.id"
-                                                                                                v-model="groupWorldbookBindings[group.id]"
-                                                                                        />
-                                                                                        <span class="checkbox-label">{{ wbGroup.name }}</span>
+
+                                                        <div v-show="expandedGroups.includes(group.id)"
+                                                                class="group-content">
+                                                                <div class="setting-header"
+                                                                        style="margin-bottom: 15px;">
+                                                                        <h5>开启离线总结</h5>
+                                                                        <div class="toggle-switch">
+                                                                                <input type="checkbox"
+                                                                                        :id="'offline-summary-' + group.id"
+                                                                                        v-model="groupOfflineSummaryBindings[group.id]" />
+                                                                                <label :for="'offline-summary-' + group.id"
+                                                                                        class="toggle-label">
+                                                                                        <span
+                                                                                                class="toggle-slider"></span>
                                                                                 </label>
                                                                         </div>
                                                                 </div>
-                                                                
-                                                                <!-- 该分组下的角色列表 -->
+
+                                                                <div class="worldbook-section">
+                                                                        <h5>绑定世界书分组</h5>
+                                                                        <div class="worldbook-checkboxes">
+                                                                                <label v-for="wbGroup in worldbookGroups"
+                                                                                        :key="wbGroup.id"
+                                                                                        class="checkbox-item">
+                                                                                        <input type="checkbox"
+                                                                                                :value="wbGroup.id"
+                                                                                                v-model="groupWorldbookBindings[group.id]" />
+                                                                                        <span class="checkbox-label">{{
+                                                                                                wbGroup.name }}</span>
+                                                                                </label>
+                                                                        </div>
+                                                                </div>
+
                                                                 <div class="characters-section">
                                                                         <h5>分组内角色</h5>
                                                                         <div class="character-list">
-                                                                                <div
-                                                                                        v-for="character in getGroupCharacters(group.id)"
+                                                                                <div v-for="character in getGroupCharacters(group.id)"
                                                                                         :key="character.id"
-                                                                                        class="character-item"
-                                                                                >
+                                                                                        class="character-item">
                                                                                         <div class="character-info">
                                                                                                 <div class="avatar">
-                                                                                                        <img v-if="character.currentAvatar || character.avatar" 
-                                                                                                             :src="character.currentAvatar || character.avatar" 
-                                                                                                             :alt="character.name">
-                                                                                                        <span v-else class="avatar-initial">{{ getInitial(character.name) }}</span>
+                                                                                                        <img v-if="character.currentAvatar || character.avatar"
+                                                                                                                :src="character.currentAvatar || character.avatar"
+                                                                                                                :alt="character.name">
+                                                                                                        <span v-else
+                                                                                                                class="avatar-initial">{{
+                                                                                                                getInitial(character.name)
+                                                                                                                }}</span>
                                                                                                 </div>
-                                                                                                <span class="character-name">{{ character.name }}</span>
+                                                                                                <span
+                                                                                                        class="character-name">{{
+                                                                                                        character.name
+                                                                                                        }}</span>
                                                                                         </div>
-                                                                                        <button
-                                                                                                @click="openCharacterWorldbooks(character)"
-                                                                                                class="bind-worldbook-btn"
-                                                                                        >
+                                                                                        <button @click="openCharacterWorldbooks(character)"
+                                                                                                class="bind-worldbook-btn">
                                                                                                 个人世界书
                                                                                         </button>
                                                                                 </div>
@@ -224,21 +219,16 @@
                                                 为 {{ selectedCharacter?.name }} 绑定个人专属的世界书分组
                                         </p>
                                         <div class="worldbook-checkboxes">
-                                                <label
-                                                        v-for="wbGroup in availableWorldbookGroups"
-                                                        :key="wbGroup.id"
+                                                <label v-for="wbGroup in availableWorldbookGroups" :key="wbGroup.id"
                                                         class="checkbox-item"
-                                                        :class="{ disabled: isWorldbookGroupDisabled(wbGroup.id) }"
-                                                >
-                                                        <input
-                                                                type="checkbox"
-                                                                :value="wbGroup.id"
+                                                        :class="{ disabled: isWorldbookGroupDisabled(wbGroup.id) }">
+                                                        <input type="checkbox" :value="wbGroup.id"
                                                                 v-model="characterWorldbookBindings[selectedCharacter?.id]"
-                                                                :disabled="isWorldbookGroupDisabled(wbGroup.id)"
-                                                        />
+                                                                :disabled="isWorldbookGroupDisabled(wbGroup.id)" />
                                                         <span class="checkbox-label">
                                                                 {{ wbGroup.name }}
-                                                                <span v-if="isWorldbookGroupDisabled(wbGroup.id)" class="disabled-text">
+                                                                <span v-if="isWorldbookGroupDisabled(wbGroup.id)"
+                                                                        class="disabled-text">
                                                                         (已被分组绑定)
                                                                 </span>
                                                         </span>
@@ -246,7 +236,8 @@
                                         </div>
                                 </div>
                                 <div class="modal-actions">
-                                        <button @click="closeCharacterWorldbookModal" class="modal-btn cancel">取消</button>
+                                        <button @click="closeCharacterWorldbookModal"
+                                                class="modal-btn cancel">取消</button>
                                         <button @click="saveCharacterWorldbooks" class="modal-btn confirm">保存</button>
                                 </div>
                         </div>
@@ -286,7 +277,8 @@ const settings = reactive({
                 autoAcceptListenTogether: false // 默认关闭自动接受一起听邀请
         },
         offlineSimulation: {
-                enabled: false
+                enabled: true,
+                intervalHours: 24 // 离线总结触发间隔
         }
 });
 
@@ -298,6 +290,7 @@ const selectedCharacter = ref(null);
 // 绑定关系数据
 const groupWorldbookBindings = reactive({});
 const characterWorldbookBindings = reactive({});
+const groupOfflineSummaryBindings = reactive({});
 
 // Toast引用已移除，使用showToast函数
 
@@ -440,11 +433,16 @@ const saveSettings = async () => {
                         throw new Error('保存个人设置失败');
                 }
                 
-                // 保存分组世界书绑定（写入前深拷贝以移除 reactive Proxy）
+                // 保存分组世界书和离线总结绑定
                 for (const [groupId, worldbookIds] of Object.entries(groupWorldbookBindings)) {
                         if (Array.isArray(worldbookIds)) {
                                 const safeArray = JSON.parse(JSON.stringify(worldbookIds));
-                                await db.groups.update(groupId, { worldbookIds: safeArray });
+                                // 保存为 0/1
+                                const offlineSummaryEnabled = groupOfflineSummaryBindings[groupId] ? 1 : 0;
+                                await db.groups.update(groupId, {
+                                        worldbookIds: safeArray,
+                                        offlineSummaryEnabled: offlineSummaryEnabled
+                                });
                         }
                 }
                 
@@ -466,6 +464,8 @@ const initializeData = async () => {
                 const allGroups = await db.groups.toArray();
                 allGroups.forEach(group => {
                         groupWorldbookBindings[group.id] = group.worldbookIds || [];
+                        // 读取为布尔值
+                        groupOfflineSummaryBindings[group.id] = group.offlineSummaryEnabled === 1;
                 });
                 
                 // 加载角色世界书绑定
@@ -485,10 +485,7 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.settings-content {
-        padding: 20px;
-        padding-bottom: 100px; /* 为底部导航栏留出空间 */
-}
+
 
 .setting-section {
         margin-bottom: 30px;

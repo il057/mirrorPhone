@@ -44,11 +44,13 @@ export async function packDataForExport() {
                         for (const tableName of tablesToBackup) {
                                 try {
                                         const tableData = await db[tableName].toArray();
-                                        exportData.data[tableName] = tableData;
-                                        console.log(`已备份 ${tableName} 表，包含 ${tableData.length} 条记录`);
+                                        // 只导出有数据的表
+                                        if (tableData && tableData.length > 0) {
+                                                exportData.data[tableName] = tableData;
+                                                console.log(`已备份 ${tableName} 表，包含 ${tableData.length} 条记录`);
+                                        }
                                 } catch (error) {
                                         console.warn(`跳过表 ${tableName}:`, error.message);
-                                        exportData.data[tableName] = [];
                                 }
                         }
                 });
@@ -57,7 +59,10 @@ export async function packDataForExport() {
                 throw new Error(`导出失败: ${error.message}`);
         }
 
-        return JSON.stringify(exportData, null, 2); // 格式化JSON以便阅读
+        // 使用压缩的JSON格式（去掉格式化空格）
+        const jsonString = JSON.stringify(exportData);
+        console.log(`备份数据大小: ${(jsonString.length / 1024).toFixed(2)} KB`);
+        return jsonString;
 }
 
 /**

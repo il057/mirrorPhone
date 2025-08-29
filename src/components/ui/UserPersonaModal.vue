@@ -711,12 +711,22 @@ onMounted(() => {
         transition: all 0.2s ease;
 }
 
+/* iOS Safari 日期输入框修复 */
+.form-group input[type="date"] {
+        -webkit-appearance: none;
+        appearance: none;
+        height: 44px; /* 确保与iOS Safari的触摸目标一致 */
+        min-height: 44px;
+        padding: 10px 12px;
+        font-size: 16px; /* 防止iOS Safari自动缩放 */
+}
+
 .form-group input:focus,
 .form-group select:focus,
 .form-group textarea:focus {
         outline: none;
         border-color: var(--accent-primary);
-        box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
+        box-shadow: var(--accent-glow-shadow);
 }
 
 .form-group textarea {

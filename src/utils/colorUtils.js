@@ -152,3 +152,192 @@ export function getAccentColor(hexColor) {
 
         return `#${complement.toString(16).padStart(6, '0')}`;
 }
+
+/**
+ * 将十六进制颜色转换为 RGB 格式（用于 CSS 变量）
+ * @param {string} hexColor 十六进制颜色代码，如 #ffffff 或 #fff
+ * @returns {string} RGB 值字符串，如 "255, 255, 255"
+ */
+export function hexToRgb(hexColor) {
+        // 移除 # 号
+        let hex = hexColor.replace('#', '');
+
+        // 处理 3 位十六进制颜色
+        if (hex.length === 3) {
+                hex = hex.split('').map(char => char + char).join('');
+        }
+
+        // 确保是 6 位十六进制
+        if (hex.length !== 6) {
+                console.warn('Invalid hex color format:', hexColor);
+                return '0, 0, 0'; // 返回默认值
+        }
+
+        // 转换为 RGB 值
+        const r = parseInt(hex.substring(0, 2), 16);
+        const g = parseInt(hex.substring(2, 4), 16);
+        const b = parseInt(hex.substring(4, 6), 16);
+
+        return `${r}, ${g}, ${b}`;
+}
+
+/**
+ * 将十六进制颜色转换为 RGBA 格式，用于发光效果
+ * @param {string} hexColor 十六进制颜色代码，如 #ffffff 或 #fff
+ * @param {number} alpha 透明度值，0-1之间，默认为 0.2
+ * @returns {string} RGBA 颜色字符串，如 rgba(255, 255, 255, 0.2)
+ */
+export function hexToRgba(hexColor, alpha = 0.2) {
+        // 移除 # 号
+        let hex = hexColor.replace('#', '');
+
+        // 处理 3 位十六进制颜色
+        if (hex.length === 3) {
+                hex = hex.split('').map(char => char + char).join('');
+        }
+
+        // 确保是 6 位十六进制
+        if (hex.length !== 6) {
+                console.warn('Invalid hex color format:', hexColor);
+                return 'rgba(0, 0, 0, 0.2)'; // 返回默认值
+        }
+
+        // 转换为 RGB 值
+        const r = parseInt(hex.substring(0, 2), 16);
+        const g = parseInt(hex.substring(2, 4), 16);
+        const b = parseInt(hex.substring(4, 6), 16);
+
+        // 确保 alpha 值在有效范围内
+        const validAlpha = Math.max(0, Math.min(1, alpha));
+
+        return `rgba(${r}, ${g}, ${b}, ${validAlpha})`;
+}
+
+/**
+ * 获取用于 input 发光效果的 box-shadow 值
+ * @param {string} accentColor accent-primary 颜色
+ * @param {number} intensity 发光强度，默认为 0.2
+ * @returns {string} CSS box-shadow 值
+ */
+export function getInputGlowShadow(accentColor, intensity = 0.2) {
+        const rgbaColor = hexToRgba(accentColor, intensity);
+        return `0 0 0 2px ${rgbaColor}`;
+}
+
+/**
+ * 计算主题色的衍生颜色（用于主题系统）
+ * @param {string} primaryColor 主色调十六进制代码
+ * @returns {object} 包含所有主题色变量的对象
+ */
+export function calculateThemeColors(primaryColor) {
+        try {
+                // 计算衍生颜色
+                const darkerColor = adjustColorLuminance(primaryColor, -0.2);
+                const lighterColor = adjustColorLuminance(primaryColor, 0.2);
+
+                // 计算文本颜色（基于主色调的对比度）
+                const textColor = getContrastTextColor(primaryColor);
+
+                // 计算用于发光效果的 RGBA 颜色
+                const glowShadow = getInputGlowShadow(primaryColor, 0.2);
+
+                return {
+                        primary: primaryColor,
+                        text: textColor,
+                        darker: darkerColor,
+                        lighter: lighterColor,
+                        glowShadow: glowShadow,
+                        // 额外的透明度变体
+                        primaryRgba20: hexToRgba(primaryColor, 0.2),
+                        primaryRgba30: hexToRgba(primaryColor, 0.3),
+                        primaryRgba50: hexToRgba(primaryColor, 0.5)
+                };
+        } catch (error) {
+                console.warn('Failed to calculate theme colors:', error);
+                // 返回默认值
+                return {
+                        primary: primaryColor,
+                        text: '#ffffff',
+                        darker: primaryColor,
+                        lighter: primaryColor,
+                        glowShadow: '0 0 0 2px rgba(0, 0, 0, 0.2)',
+                        primaryRgba20: 'rgba(0, 0, 0, 0.2)',
+                        primaryRgba30: 'rgba(0, 0, 0, 0.3)',
+                        primaryRgba50: 'rgba(0, 0, 0, 0.5)'
+                };
+        }
+}
+
+/**
+ * 应用主题色到 CSS 变量
+ * @param {object} themeColors calculateThemeColors 返回的主题色对象
+ * @param {HTMLElement} root 根元素，默认为 document.documentElement
+ */
+export function applyThemeColors(themeColors, root = document.documentElement) {
+        if (!themeColors || !root) return;
+
+        // 应用基础主题色
+        root.style.setProperty('--accent-primary', themeColors.primary);
+        root.style.setProperty('--accent-primary-rgb', hexToRgb(themeColors.primary));
+        root.style.setProperty('--accent-text', themeColors.text);
+        root.style.setProperty('--accent-darker', themeColors.darker);
+        root.style.setProperty('--accent-lighter', themeColors.lighter);
+
+        // 应用发光效果
+        root.style.setProperty('--accent-glow-shadow', themeColors.glowShadow);
+
+        // 应用透明度变体
+        root.style.setProperty('--accent-primary-rgba-20', themeColors.primaryRgba20);
+        root.style.setProperty('--accent-primary-rgba-30', themeColors.primaryRgba30);
+        root.style.setProperty('--accent-primary-rgba-50', themeColors.primaryRgba50);
+}
+
+/**
+ * 从 CSS 变量获取当前主题色
+ * @param {HTMLElement} root 根元素，默认为 document.documentElement
+ * @returns {object} 当前主题色的对象
+ */
+export function getCurrentThemeColors(root = document.documentElement) {
+        if (!root) return null;
+
+        const styles = getComputedStyle(root);
+
+        return {
+                primary: styles.getPropertyValue('--accent-primary').trim(),
+                primaryRgb: styles.getPropertyValue('--accent-primary-rgb').trim(),
+                text: styles.getPropertyValue('--accent-text').trim(),
+                darker: styles.getPropertyValue('--accent-darker').trim(),
+                lighter: styles.getPropertyValue('--accent-lighter').trim(),
+                glowShadow: styles.getPropertyValue('--accent-glow-shadow').trim(),
+                primaryRgba20: styles.getPropertyValue('--accent-primary-rgba-20').trim(),
+                primaryRgba30: styles.getPropertyValue('--accent-primary-rgba-30').trim(),
+                primaryRgba50: styles.getPropertyValue('--accent-primary-rgba-50').trim()
+        };
+}
+
+/**
+ * 创建气泡样式的主题色配置
+ * @param {object} bubbleStyle 气泡样式对象
+ * @param {boolean} useUserBubble 是否使用用户气泡色
+ * @returns {object} 主题色配置对象
+ */
+export function createBubbleThemeColors(bubbleStyle, useUserBubble = true) {
+        if (!bubbleStyle) return null;
+
+        const primaryColor = useUserBubble ? bubbleStyle.userBubbleBg : bubbleStyle.charBubbleBg;
+        const textColor = useUserBubble ? bubbleStyle.userBubbleText : bubbleStyle.charBubbleText;
+
+        const themeColors = calculateThemeColors(primaryColor);
+        // 覆盖自动计算的文本颜色，使用气泡样式的文本颜色
+        themeColors.text = textColor;
+
+        return {
+                ...themeColors,
+                // 额外的气泡样式信息
+                charBubbleBg: bubbleStyle.charBubbleBg,
+                charBubbleText: bubbleStyle.charBubbleText,
+                userBubbleBg: bubbleStyle.userBubbleBg,
+                userBubbleText: bubbleStyle.userBubbleText,
+                isUsingUserBubble: useUserBubble
+        };
+}

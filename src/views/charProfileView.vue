@@ -91,6 +91,17 @@
                                                 </svg>
                                         </span>
                                 </div>
+                                <div class="detail-item" @click="goToDiary">
+                                        <span class="label">日记</span>
+                                        <span class="value accessory">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                                                        fill="currentColor" class="bi bi-chevron-right"
+                                                        viewBox="0 0 16 16">
+                                                        <path fill-rule="evenodd"
+                                                                d="M4.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L10.293 8 4.646 2.354a.5.5 0 0 1 0-.708" />
+                                                </svg>
+                                        </span>
+                                </div>
                         </section>
                 </main>
 
@@ -213,6 +224,11 @@ const goToMoments = () => {
 // 跳转到回忆页面
 const goToMemories = () => {
         router.push(`/memories?actorId=${actorId.value}`);
+};
+
+// 跳转到日记页面
+const goToDiary = () => {
+        router.push(`/diary?actorId=${actorId.value}`);
 };
 
 

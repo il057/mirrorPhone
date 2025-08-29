@@ -53,6 +53,12 @@ const router = createRouter({
                         component: () => import('../views/WorldbookView.vue')
                 },
                 {
+                        path: '/offline-summary',
+                        name: 'offline-summary',
+                        component: () => import('../views/OfflineSummaryView.vue'),
+                        meta: { title: '离线总结' }
+                },
+                {
                         path: '/chat',
                         component: () => import('../views/ChatLayout.vue'),
                         redirect: '/chat/messages',
@@ -90,12 +96,26 @@ const router = createRouter({
                         component: () => import('../views/PersonalSettingsView.vue'),
                         meta: { title: '个人设置' }
                 },
+                // 用户人格管理页面
+                {
+                        path: '/user-persona',
+                        name: 'user-persona',
+                        component: () => import('../views/UserPersonaView.vue'),
+                        meta: { title: '人格管理' }
+                },
                 // 回忆界面路由
                 {
                         path: '/memories',
                         name: 'memories',
                         component: () => import('../views/MemoriesView.vue'),
                         meta: { title: '回忆' }
+                },
+                // 日记界面路由
+                {
+                        path: '/diary',
+                        name: 'diary',
+                        component: () => import('../views/DiaryView.vue'),
+                        meta: { title: '日记' }
                 },
                 // 个人动态页面 - 移到ChatLayout外部，不在Footer控制范围内
                 {

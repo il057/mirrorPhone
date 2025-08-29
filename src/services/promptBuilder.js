@@ -4,7 +4,7 @@
  */
 
 import db from './database.js';
-import { formatTimestamp } from '../utils/datetime.js';
+import { formatTimestamp, formatDate } from '../utils/datetime.js';
 import { getDefaultUserPersona, getUserPersonaForGroup } from './userPersonaService.js';
 import spotifyService from './spotifyService.js';
 
@@ -171,9 +171,120 @@ export async function buildMemoryInfo(character, userMessage = '', memoryLimit =
         prompt += `\n\n相关记忆：`;
         allMemories.forEach(memory => {
             const date = new Date(memory.timestamp);
-            const dateStr = date.toLocaleDateString('zh-CN');
+            const dateStr = formatDate(date);
             prompt += `\n[${dateStr}] ${memory.content}`;
         });
+    }
+    
+    return prompt;
+}
+
+/**
+ * 构建离线总结上下文信息提示词
+ * @param {Object} character - 角色信息
+ * @returns {Promise<string>} 离线总结上下文提示词
+ */
+export async function buildOfflineSummaryContext(character) {
+    let prompt = '';
+    
+    if (!character.groupIds || character.groupIds.length === 0) {
+        return prompt;
+    }
+    
+    // 获取角色所在分组中未交付给AI的离线总结
+    let undeliveredSummaries = [];
+    if (character.groupIds && character.groupIds.length > 0) {
+        undeliveredSummaries = await db.offlineSummaries
+            .where('groupId').anyOf(character.groupIds)
+            .toArray();
+        // 只筛选未交付给AI的总结
+        undeliveredSummaries = undeliveredSummaries.filter(summary => summary.isDeliveredToAI === 0);
+        // 按时间戳排序
+        undeliveredSummaries.sort((a, b) => a.timestamp - b.timestamp);
+    }
+    
+    if (undeliveredSummaries.length > 0) {
+        prompt += `\n\n## 📚 最近的离线总结\n`;
+        prompt += `以下是你离线期间发生的重要事件总结，这些信息能帮助你了解最近错过的故事：\n\n`;
+        
+        for (const summary of undeliveredSummaries) {
+            const group = await db.groups.get(summary.groupId);
+            const summaryDate = formatDate(new Date(summary.timestamp));
+            
+            prompt += `**${group?.name || '未知分组'} - ${summaryDate}**\n`;
+            
+            if (summary.summaryContent?.story) {
+                prompt += `${summary.summaryContent.story}\n\n`;
+            }
+            
+            // 添加关系变化信息
+            if (summary.relationshipChanges && summary.relationshipChanges.length > 0) {
+                prompt += `关系变化：\n`;
+                for (const change of summary.relationshipChanges) {
+                    // 只显示与当前角色相关的关系变化
+                    if (change.sourceId === character.id || change.targetId === character.id) {
+                        prompt += `- ${change.changeDescription}\n`;
+                    }
+                }
+                prompt += `\n`;
+            }
+        }
+        
+        prompt += `💡 请根据这些离线总结中的信息，自然地融入到对话中。你可以提及这些事件，或者基于这些经历来调整你的回应和态度。`;
+    }
+    
+    return prompt;
+}
+
+/**
+ * 构建日记信息提示词
+ * @param {Object} character - 角色信息
+ * @param {string} userMessage - 用户消息（用于关键词匹配）
+ * @param {number} diaryLimit - 日记数量限制
+ * @returns {Promise<string>} 日记信息提示词
+ */
+export async function buildDiaryInfo(character, userMessage = '', diaryLimit = 5) {
+    let prompt = '';
+    
+    // 获取角色的日记
+    const characterDiaries = await db.memories
+        .where('actorId').equals(character.id)
+        .and(memory => memory.type === 'diary')
+        .reverse()
+        .limit(diaryLimit)
+        .toArray();
+    
+    if (characterDiaries.length > 0) {
+        prompt += `\n\n## 📖 最近的日记片段
+        
+以下是${character.name}最近的日记内容，这些是ta最私密的想法和感受：`;
+        
+        characterDiaries.forEach(diary => {
+            const date = new Date(diary.timestamp);
+            const dateStr = formatDateTime(date, { 
+                month: '2-digit', 
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+            
+            // 处理日记内容格式化标记
+            let content = diary.content;
+            // 移除格式化标记但保留内容
+            content = content
+                .replace(/==([^=]+)==/g, '【$1】') // 重要内容用方括号
+                .replace(/~~([^~]+)~~/g, '($1)') // 删除线内容用括号
+                .replace(/__([^_]+)__/g, '『$1』') // 下划线内容用书名号
+                .replace(/\|\|([^|]+)\|\|/g, '▣$1▣'); // 隐藏内容用特殊符号
+            
+            prompt += `\n\n**${dateStr}**\n${content}`;
+            
+            if (diary.keywords && diary.keywords.length > 0) {
+                prompt += `\n关键词：${diary.keywords.join(', ')}`;
+            }
+        });
+        
+        prompt += `\n\n💡 这些日记内容可以帮助你更好地理解${character.name}的内心世界和最近的状态，请适当融入到对话中。`;
     }
     
     return prompt;
@@ -225,7 +336,7 @@ export async function buildMomentsInfo(character, momentsLimit = 5) {
                 (await db.actors.get(moment.actorId))?.name || '未知';
             
             const date = new Date(moment.timestamp);
-            const timeStr = date.toLocaleString('zh-CN', { 
+            const timeStr = formatDateTime(date, { 
                 month: 'short', 
                 day: 'numeric', 
                 hour: '2-digit', 
@@ -477,7 +588,30 @@ export function buildMemoryCreationInstructions() {
 - 提到重要的日期、事件、计划时
 - 表达喜好、兴趣、习惯时
 - 关键词应选择便于日后匹配的词汇
-- targetDate 仅在 memoryType="date" 时需要`;
+- targetDate 仅在 memoryType="date" 时需要
+
+## 📖 日记创建功能
+在特定情况下，你可以主动创建日记来记录重要的内心感受和体验：
+
+### 日记创建格式：
+{"type": "create_diary", "content": "详细的日记内容", "keywords": ["关键词1", "关键词2"]}
+
+### 日记内容要求：
+- **内容与长度**: 日记应该是一段【结构完整、内容详实】的段落，至少包含**150-300字**。
+- 请详细描述事件的【起因、经过】，以及你【最真实、最具体】的心理活动和思考。不要只做简单的陈述，要展现你的情感变化和内心矛盾。
+
+### 格式化标记（请谨慎、少量地使用）：
+- \`== 文字 ==\`: 用于标记让你【开心、重要或需要强调】的核心语句。
+- \`~~ 文字 ~~\`: 用于标记你【希望忘记、但又忍不住想起】的矛盾内容。
+- \`__ 文字 __\`: 用于标记你【暗下决心或默默记在心里】的内容。
+- \`|| 文字 ||\`: 用于标记你【不敢直面或隐藏起来】的秘密想法。
+
+### 日记创建时机：
+- 经历了重要的情感事件后
+- 内心有强烈感受需要记录时
+- 发生了值得深度反思的事情
+- 与用户有重要互动或关系变化时
+- 关键词应提炼出3-5个核心词汇`;
 }
 
 /**
@@ -544,6 +678,14 @@ export async function buildChatSystemPrompt(character, userId, contextSettings, 
     // 记忆信息
     if (contextSettings.memory > 0) {
         prompt += await buildMemoryInfo(character, newUserMessage, contextSettings.memory);
+    }
+
+    // 离线总结信息（如果角色所在分组有未交付的离线总结）
+    prompt += await buildOfflineSummaryContext(character);
+    
+    // 日记信息
+    if (contextSettings.diary > 0) {
+        prompt += await buildDiaryInfo(character, newUserMessage, contextSettings.diary);
     }
     
     // 动态信息
@@ -631,7 +773,7 @@ export async function buildBackgroundActivityPrompt(character) {
         .where('contextId').equals(character.id)
         .and(event => event.type === 'privateMessage')
         .reverse()
-        .limit(8) // 增加聊天记录数量
+        .limit(8)
         .toArray();
     recentMessages.reverse();
 
@@ -642,17 +784,16 @@ export async function buildBackgroundActivityPrompt(character) {
         .limit(5)
         .toArray();
 
-    // 获取最近的动态
+    // 获取最近的动态（包含完整的postId信息）
     const recentPosts = await db.events
         .where('type').equals('post')
         .reverse()
         .limit(10)
         .toArray();
 
-    // 获取其他角色的动态（可以点赞评论的内容）
+    // 获取其他角色和指定人员的动态（可以点赞评论的内容）
     const otherActorsPosts = recentPosts.filter(post => 
-        post.actorId !== character.id && 
-        post.actorId !== '__USER__'
+        post.actorId !== character.id
     ).slice(0, 5);
 
     // 获取角色的关系信息
@@ -665,33 +806,35 @@ export async function buildBackgroundActivityPrompt(character) {
     // 核心规则
     prompt += `\n\n# 核心规则
 1. 你的回复必须是严格的JSON格式
-2. **严禁重复**：避免与最近的活动内容相似
-3. **可以执行多个动作**：你可以一次性发送多条消息、发布动态并评论其他人的动态等
-4. **可以选择跳过**：如果你觉得现在没有合适的事情要做，可以返回 {} 跳过本次活动
-5. **要符合角色设定**：所有行为都应该符合你的性格和当前情况`;
+2. **明确对话对象**：你正在与 ${userPersona?.name || '一个朋友'} 互动，所有私聊消息都是发给ta的
+3. **严禁重复**：避免与最近的活动内容相似
+4. **可以执行多个动作**：你可以一次性发送多条消息、发布动态并评论其他人的动态等
+5. **可以选择跳过**：如果你觉得现在没有合适的事情要做，可以返回 {} 跳过本次活动
+6. **要符合角色设定**：所有行为都应该符合你的性格和当前情况`;
 
     if (character.persona) {
         prompt += `\n\n# 你的角色设定：\n${character.persona}`;
     }
 
     if (userPersona) {
-        prompt += `\n\n# 你正在互动的用户（${userPersona.name}）的信息：\n${userPersona.persona || '用户没有设定特别的人格。'}`;
+        prompt += `\n\n# 你的对话伙伴 ${userPersona.name} 的信息：\n${userPersona.persona || '这个人没有设定特别的人格。'}`;
+        prompt += `\n注意：当你主动发起对话时，是在与 ${userPersona.name} 交流，不是与其他朋友。`;
     }
 
     // 注入当前时间和情境
     prompt += buildTimeInfo();
     prompt += `\n\n# 当前情境分析
-- 现在是后台活动时间，用户可能在忙其他事情
-- 你可以选择主动联系用户、发布动态、或与其他内容互动
+- 现在是后台活动时间，${userPersona?.name || '对方'} 可能在忙其他事情
+- 你可以选择主动联系 ${userPersona?.name || '对方'}、发布动态、或与其他内容互动
 - 也可以选择什么都不做，安静地等待`;
 
     // 注入最近聊天记录
     if (recentMessages.length > 0) {
-        prompt += `\n\n# 最近聊天记录 (用于了解当前关系状态和避免重复):`;
+        prompt += `\n\n# 与 ${userPersona?.name || '对方'} 的最近聊天记录 (用于了解当前关系状态和避免重复):`;
         for (const msg of recentMessages) {
-            const author = msg.actorId === character.id ? character.name : (userPersona?.name || '用户');
+            const author = msg.actorId === character.id ? character.name : (userPersona?.name || '对方');
             const content = msg.content?.content || '[非文本消息]';
-            const time = new Date(msg.timestamp).toLocaleString('zh-CN');
+            const time = formatDateTime(new Date(msg.timestamp));
             prompt += `\n- [${time}] ${author}: ${content.substring(0, 60)}${content.length > 60 ? '...' : ''}`;
         }
     }
@@ -701,21 +844,27 @@ export async function buildBackgroundActivityPrompt(character) {
         prompt += `\n\n# 你最近的活动记录 (避免重复):`;
         for (const activity of recentActivities) {
             const content = activity.content?.text || activity.content?.content || '[非文本活动]';
-            const time = new Date(activity.timestamp).toLocaleString('zh-CN');
-            const type = activity.type === 'post' ? '发布动态' : '发送消息';
+            const time = formatDateTime(new Date(activity.timestamp));
+            const type = activity.type === 'post' ? '发布动态' : activity.type === 'privateMessage' ? '发送消息' : '其他活动';
             prompt += `\n- [${time}] ${type}: ${content.substring(0, 60)}${content.length > 60 ? '...' : ''}`;
         }
     }
 
-    // 注入可互动的动态
+    // 注入可互动的动态（包含正确的postId）
     if (otherActorsPosts.length > 0) {
-        prompt += `\n\n# 可以互动的动态 (你可以选择点赞或评论):`;
+        prompt += `\n\n# 最近的动态 (你可以点赞或评论):`;
         for (const post of otherActorsPosts) {
-            const author = await db.actors.get(post.actorId);
-            const authorName = author ? author.name : '某人';
-            const content = post.content?.text || '[动态内容]';
-            const time = new Date(post.timestamp).toLocaleString('zh-CN');
-            prompt += `\n- [${time}] ${authorName} 发布: ${content.substring(0, 80)}${content.length > 80 ? '...' : ''} (ID: ${post.id})`;
+            const authorName = post.actorId === '__USER__' ? (userPersona?.name || '对方') :
+                               (await db.actors.get(post.actorId))?.name || '未知';
+            const content = post.content?.text || post.content?.content || '[动态内容]';
+            const time = formatDateTime(new Date(post.timestamp));
+            
+            // 获取已有的点赞和评论数量
+            const likes = await db.events.where('contextId').equals(post.contextId).and(e => e.type === 'like').count();
+            const comments = await db.events.where('contextId').equals(post.contextId).and(e => e.type === 'comment').count();
+            
+            prompt += `\n- [${time}] ${authorName}: ${content.substring(0, 80)}${content.length > 80 ? '...' : ''}`;
+            prompt += `\n  动态ID: ${post.contextId}, 点赞数: ${likes}, 评论数: ${comments}`;
         }
     }
 
@@ -738,37 +887,331 @@ export async function buildBackgroundActivityPrompt(character) {
     prompt += await buildWorldbookInfo(character);
 
     // 输出格式要求
-    prompt += `\n\n# 输出格式要求
-你的回复必须是严格的JSON格式。你可以选择以下任意一种或组合多种行为：
+    prompt += `\n\n# 🚨 重要：输出格式要求 🚨
+你的回复必须是严格的JSON格式，只能返回以下格式之一，不要包含任何额外的文字、解释或markdown标记：
 
-1. **跳过本次活动**：
-   {}
+## 格式1：跳过本次活动
+{}
 
-2. **发送消息（可发送多条）**：
-   {"actions": [{"type": "sendMessage", "message": {"type": "text", "content": "消息内容"}}]}
+## 格式2：执行单个动作
+{"actions": [{"type": "动作类型", "相关参数": "参数值"}]}
 
-3. **发布动态**：
-   {"actions": [{"type": "createPost", "post": {"text": "动态内容"}}]}
+## 格式3：执行多个动作
+{"actions": [
+  {"type": "动作类型1", "相关参数1": "参数值1"},
+  {"type": "动作类型2", "相关参数2": "参数值2"}
+]}
 
-4. **更新状态**：
-   {"actions": [{"type": "updateStatus", "status": {"text": "状态文本", "color": "#颜色", "mood": "心情", "location": "位置", "outfit": "装扮"}}]}
+## 支持的动作类型：
+- **发送消息**：{"type": "sendMessage", "message": {"type": "text", "content": "消息内容"}}
+- **发布动态**：{"type": "createPost", "post": {"text": "动态内容"}}
+- **更新状态**：{"type": "updateStatus", "status": {"text": "状态文本", "color": "#颜色", "mood": "心情"}}
+- **点赞动态**：{"type": "likePost", "postId": "动态的contextId（如：post_1234567890_abc123）"}
+- **评论动态**：{"type": "commentPost", "postId": "动态的contextId（如：post_1234567890_abc123）", "comment": "评论内容"}
 
-5. **点赞动态**：
-   {"actions": [{"type": "likePost", "postId": 动态ID}]}
-
-6. **评论动态**：
-   {"actions": [{"type": "commentPost", "postId": 动态ID, "comment": "评论内容"}]}
-
-7. **组合多个行为**：
-   {"actions": [
-     {"type": "createPost", "post": {"text": "发布动态"}},
-     {"type": "likePost", "postId": 123},
-     {"type": "sendMessage", "message": {"type": "text", "content": "发送消息"}}
-   ]}
-
-请只返回JSON，不要包含任何额外的解释或标记。如果你觉得现在没有合适的事情要做，请返回 {}。`;
+## 重要提醒：
+1. 只返回JSON对象，不要有其他内容
+2. 不要使用markdown代码块包装
+3. 确保JSON格式正确
+4. 如果不想做任何事，返回 {}
+5. 动态ID必须是完整的contextId字符串，不要使用数字ID`;
 
     return prompt;
+}
+
+/**
+ * 构建离线故事生成提示词
+ * @param {Object} group - 分组信息
+ * @param {Array} members - 分组成员
+ * @param {number} offlineStartTime - 离线开始时间戳
+ * @param {number} currentTime - 当前时间戳
+ * @returns {Promise<string>}
+ */
+export async function buildOfflineStoryPrompt(group, members, offlineStartTime, currentTime) {
+        const timeSpan = currentTime - offlineStartTime;
+        const hours = Math.floor(timeSpan / (1000 * 60 * 60));
+        const currentTimeStr = new Date(currentTime).toLocaleString('zh-CN');
+        const startTimeStr = new Date(offlineStartTime).toLocaleString('zh-CN');
+        
+        let prompt = `# 任务：离线故事创作\n`;
+        prompt += `你是一个创意故事作家，需要基于角色的性格和关系，为分组 "${group.name}" 创作一个发生在用户离线期间的故事。\n\n`;
+
+        // 时间信息
+        prompt += `## 时间设定\n`;
+        prompt += `- 故事发生时间: ${startTimeStr} - ${currentTimeStr}\n`;
+        prompt += `- 时间跨度: 约${hours}小时\n\n`;
+
+        // 获取用户人格信息
+        const userPersona = await db.actors.filter(actor => 
+                actor.id && actor.id.startsWith('user_') && actor.isDefault
+        ).first();
+
+        // 分组信息
+        prompt += `## 角色信息\n`;
+        prompt += `分组名称: ${group.name}\n`;
+        prompt += `角色成员:\n`;
+        for (const member of members) {
+                prompt += `- **${member.name}**: ${member.persona || '无详细设定'}\n`;
+                if (member.realName && member.realName !== member.name) {
+                        prompt += `  (真名: ${member.realName})\n`;
+                }
+                if (member.birthday) {
+                        prompt += `  生日: ${member.birthday}\n`;
+                }
+                if (member.gender) {
+                        prompt += `  性别: ${member.gender}\n`;
+                }
+        }
+
+        // 用户信息
+        if (userPersona) {
+                prompt += `\n用户信息:\n`;
+                prompt += `- **${userPersona.name}** (用户本人，目前不在线)\n`;
+                if (userPersona.persona) {
+                        prompt += `  设定: ${userPersona.persona}\n`;
+                }
+                prompt += `注意：角色们都认识用户，可以在故事中提及用户，但用户不会直接参与对话。\n`;
+        }
+
+        // 当前角色间关系状态
+        prompt += `\n## 当前关系状态\n`;
+        for (let i = 0; i < members.length; i++) {
+                for (let j = i + 1; j < members.length; j++) {
+                        const memberA = members[i];
+                        const memberB = members[j];
+                        
+                        // 获取双向关系
+                        const relationshipAB = await db.relationships
+                                .where('[sourceId+targetId]').equals([memberA.id, memberB.id])
+                                .first();
+                        const relationshipBA = await db.relationships
+                                .where('[sourceId+targetId]').equals([memberB.id, memberA.id])
+                                .first();
+
+                        prompt += `**${memberA.name} 与 ${memberB.name} 的关系:**\n`;
+                        prompt += `- ${memberA.name} → ${memberB.name}: `;
+                        if (relationshipAB) {
+                                prompt += `${relationshipAB.type || '普通关系'} (好感度: ${relationshipAB.score || 0})`;
+                                if (relationshipAB.tags && relationshipAB.tags.length > 0) {
+                                        prompt += `, 印象: ${relationshipAB.tags.map(tag => tag.name).join('、')}`;
+                                }
+                        } else {
+                                prompt += `尚未建立关系`;
+                        }
+                        prompt += `\n`;
+
+                        prompt += `- ${memberB.name} → ${memberA.name}: `;
+                        if (relationshipBA) {
+                                prompt += `${relationshipBA.type || '普通关系'} (好感度: ${relationshipBA.score || 0})`;
+                                if (relationshipBA.tags && relationshipBA.tags.length > 0) {
+                                        prompt += `, 印象: ${relationshipBA.tags.map(tag => tag.name).join('、')}`;
+                                }
+                        } else {
+                                prompt += `尚未建立关系`;
+                        }
+                        prompt += `\n\n`;
+                }
+        }
+
+        // 故事创作要求
+        prompt += `## 创作要求\n`;
+        
+        if (members.length === 1) {
+                prompt += `由于分组内只有 **${members[0].name}** 一人，请创作一个关于他/她个人经历的故事。\n`;
+                prompt += `故事应该体现角色的性格特点，可以包括：\n`;
+                prompt += `- 个人思考和感悟\n`;
+                prompt += `- 日常生活片段\n`;
+                prompt += `- 对用户的想念或关心\n`;
+                prompt += `- 个人成长或变化\n\n`;
+        } else {
+                prompt += `请创作一个角色间互动的故事，要求：\n`;
+                prompt += `1. **基于现有关系**: 故事应该符合角色间的当前关系状态\n`;
+                prompt += `2. **性格一致**: 每个角色的行为应该符合其性格设定\n`;
+                prompt += `3. **自然发展**: 故事情节应该自然流畅，不要过于戏剧化\n`;
+                prompt += `4. **关系变化**: 故事可以推动角色关系的发展，但变化要合理\n`;
+                prompt += `5. **时间合理**: 故事内容要符合${hours}小时的时间跨度\n\n`;
+                
+                prompt += `故事可以包括但不限于：\n`;
+                prompt += `- 日常对话和互动\n`;
+                prompt += `- 共同活动或经历\n`;
+                prompt += `- 情感交流和理解\n`;
+                prompt += `- 小的冲突和解决\n`;
+                prompt += `- 对用户的讨论或关心\n\n`;
+        }
+
+        // 输出格式
+        if (members.length === 1) {
+                prompt += `## 输出格式 (单人模式)\n`;
+                prompt += `{
+  "story": "以${members[0].name}的视角，描述他/她的个人经历、思考和感受...",
+  "relationshipChanges": []
+}`;
+        } else {
+                prompt += `## 输出格式 (多人模式)\n`;
+                prompt += `{
+  "story": "完整的故事内容，包含角色对话和行为描述...",
+  "relationshipChanges": [
+    {
+      "sourceId": "角色A的ID",
+      "targetId": "角色B的ID",
+      "changeDescription": "关系变化的原因和描述",
+      "scoreChange": "好感度变化值 (-20到+20范围内)",
+      "typeChange": "新的关系类型（如果有变化）",
+      "newTags": [{"name": "新印象标签", "strength": "1-10"}],
+      "removeTags": ["要移除的印象标签"]
+    }
+  ]
+}`;
+        }
+
+        prompt += `\n\n**请严格按照以上JSON格式输出，创作一个有趣且符合角色设定的故事。**`;
+        return prompt;
+}
+
+/**
+ * 构建基于事件的离线总结提示词 (原版本，保留备用)
+ * @param {Object} group - 分组信息
+ * @param {Array} members - 分组成员
+ * @param {Array} events - 相关事件
+ * @returns {Promise<string>}
+ */
+export async function buildOfflineSummaryPrompt(group, members, events, sinceTimestamp) {
+        const now = Date.now();
+        const timeSpan = now - sinceTimestamp;
+        const hours = Math.floor(timeSpan / (1000 * 60 * 60));
+        const currentTime = new Date().toLocaleString('zh-CN');
+        const startTime = new Date(sinceTimestamp).toLocaleString('zh-CN');
+        
+        let prompt = `# 任务：离线总结生成器\n`;
+        prompt += `你是一个故事讲述者，需要根据以下信息，为用户总结在他/她离线期间，角色分组 "${group.name}" 内发生的事情。\n\n`;
+
+        // 时间信息
+        prompt += `## 时间信息\n`;
+        prompt += `- 当前时间: ${currentTime}\n`;
+        prompt += `- 离线开始时间: ${startTime}\n`;
+        prompt += `- 时间跨度: 约${hours}小时\n`;
+        prompt += `- 事件总数: ${events.length}个\n\n`;
+
+        // 获取用户人格信息
+        const userPersona = await db.actors.filter(actor => 
+                actor.id && actor.id.startsWith('user_') && actor.isDefault
+        ).first();
+
+        // 分组信息
+        prompt += `## 分组信息\n- 分组名称: ${group.name}\n- 成员: ${members.map(m => m.name).join('、')}\n\n`;
+
+        // 用户人格信息（让角色知道用户的存在，但不用更新关系）
+        if (userPersona) {
+                prompt += `## 用户信息\n`;
+                prompt += `- 用户名: ${userPersona.name}\n`;
+                if (userPersona.persona) {
+                        prompt += `- 用户设定: ${userPersona.persona}\n`;
+                }
+                prompt += `注意：用户是这个世界中的重要存在，角色们都认识并了解用户。但离线总结不需要更新角色与用户的关系。\n\n`;
+        }
+
+        // 角色信息和当前关系状态
+        prompt += `## 角色设定\n`;
+        for (const member of members) {
+                prompt += `- **${member.name}**: ${member.persona || '无详细设定'}\n`;
+        }
+
+        // 当前角色间关系状态
+        prompt += `\n## 当前角色间关系状态\n`;
+        for (let i = 0; i < members.length; i++) {
+                for (let j = i + 1; j < members.length; j++) {
+                        const memberA = members[i];
+                        const memberB = members[j];
+                        
+                        // 获取双向关系
+                        const relationshipAB = await db.relationships
+                                .where('[sourceId+targetId]').equals([memberA.id, memberB.id])
+                                .first();
+                        const relationshipBA = await db.relationships
+                                .where('[sourceId+targetId]').equals([memberB.id, memberA.id])
+                                .first();
+
+                        prompt += `- **${memberA.name} → ${memberB.name}**: `;
+                        if (relationshipAB) {
+                                prompt += `关系类型: ${relationshipAB.type || '未定义'}, 好感度: ${relationshipAB.score || 0}`;
+                                if (relationshipAB.tags && relationshipAB.tags.length > 0) {
+                                        prompt += `, 印象标签: ${relationshipAB.tags.map(tag => `${tag.name}(${tag.strength})`).join('、')}`;
+                                }
+                        } else {
+                                prompt += `关系未建立`;
+                        }
+                        prompt += `\n`;
+
+                        prompt += `- **${memberB.name} → ${memberA.name}**: `;
+                        if (relationshipBA) {
+                                prompt += `关系类型: ${relationshipBA.type || '未定义'}, 好感度: ${relationshipBA.score || 0}`;
+                                if (relationshipBA.tags && relationshipBA.tags.length > 0) {
+                                        prompt += `, 印象标签: ${relationshipBA.tags.map(tag => `${tag.name}(${tag.strength})`).join('、')}`;
+                                }
+                        } else {
+                                prompt += `关系未建立`;
+                        }
+                        prompt += `\n`;
+                }
+        }
+
+        // 离线期间发生的事件（可选）
+        if (events.length > 0) {
+                prompt += `\n## 离线期间的关键事件记录\n`;
+                for (const event of events) {
+                        const author = members.find(m => m.id === event.actorId)?.name || '未知';
+                        const timestamp = new Date(event.timestamp).toLocaleString('zh-CN');
+                        const content = event.content.content || event.content.text || '[非文本事件]';
+                        prompt += `- [${timestamp}] ${author}: ${content}\n`;
+                }
+        }
+
+        // 单人分组特殊处理
+        if (members.length === 1) {
+                prompt += `\n# 输出要求 (单人模式)\n`;
+                prompt += `由于分组内只有 **${members[0].name}** 一人，请以他/她的口吻，写一封给用户的信，讲述他/她最近的个人经历、思考和感受。\n`;
+                prompt += `格式如下：\n`;
+                prompt += `{
+  "story": "信件或日记风格的文本内容...",
+  "relationshipChanges": []
+}`;
+        } else { // 多人分组处理
+                prompt += `\n# 输出要求 (多人模式)\n`;
+                prompt += `请根据以上信息，创作一段故事，描述成员之间发生的互动。然后，根据故事内容，总结角色之间的关系变化。\n`;
+                prompt += `\n**关系变化规则：**\n`;
+                prompt += `- 关系是双向的：如果A对B的印象改变，B对A的印象也可能相应改变\n`;
+                prompt += `- 好感度变化范围：-50到+50（一次性变化不宜过大）\n`;
+                prompt += `- 印象标签强度：1-10（数字越大印象越深刻）\n`;
+                prompt += `- 只更新确实发生变化的关系，没有变化的关系不需要记录\n\n`;
+                
+                prompt += `格式如下：\n`;
+                prompt += `{
+  "story": "故事文本内容，描述角色间的互动和发生的事件...",
+  "relationshipChanges": [
+    {
+      "sourceId": "角色A的ID",
+      "targetId": "角色B的ID", 
+      "changeDescription": "因为[具体事件]，角色A对角色B的印象发生了变化",
+      "scoreChange": 15,
+      "typeChange": "朋友",
+      "newTags": [{"name": "可靠", "strength": 7}],
+      "removeTags": ["陌生"]
+    },
+    {
+      "sourceId": "角色B的ID",
+      "targetId": "角色A的ID",
+      "changeDescription": "相应地，角色B对角色A也产生了新的看法", 
+      "scoreChange": 10,
+      "typeChange": null,
+      "newTags": [{"name": "温柔", "strength": 6}],
+      "removeTags": []
+    }
+  ]
+}`;
+        }
+
+        prompt += `\n\n**请严格按照以上JSON格式输出，不要添加任何额外的解释。**`;
+        return prompt;
 }
 
 /**

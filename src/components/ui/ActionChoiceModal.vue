@@ -16,8 +16,8 @@
                                 <div class="action-grid">
                                         <button v-for="action in actions" :key="action.key" class="action-item"
                                                 @click="$emit('select', action.key)">
-                                                <!-- 使用增强的SVG图标获取函数 -->
-                                                <span class="action-icon" v-html="getSvgIcon(action)"></span>
+                                                <!-- 仅当有svg时显示图标 -->
+                                                <span v-if="getSvgIcon(action)" class="action-icon" v-html="getSvgIcon(action)"></span>
                                                 <span class="action-label">{{ action.label }}</span>
                                         </button>
                                 </div>
@@ -130,16 +130,9 @@ const getSvgIcon = (action) => {
                 return svgIcons[action.key];
         }
 
-        // 否则使用默认图标
-        return defaultSvg;
+        // 没有svg时返回 null
+        return null;
 };
-
-// 默认的 SVG 占位符
-const defaultSvg = `
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" width="36" height="36">
-  <rect x="3" y="3" width="18" height="18" rx="3" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M8 12h8M12 8v8" stroke-linecap="round" stroke-linejoin="round"/>
-</svg>`;
 </script>
 
 <style scoped>
@@ -205,6 +198,7 @@ const defaultSvg = `
 
 .modal-content {
         padding: 20px;
+        border-radius: 0;
 }
 
 .action-grid {

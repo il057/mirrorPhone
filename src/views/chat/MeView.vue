@@ -70,12 +70,14 @@
 
 <script setup>
 import { ref, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
 import { useObservable } from '@vueuse/rxjs';
 import { liveQuery } from 'dexie';
 import db from '../../services/database.js';
 import AppHeader from '../../components/layout/Header.vue';
-import { showUserPersonaModal } from '../../services/uiService.js';
 import { getDefaultUserPersona } from '../../services/userPersonaService.js';
+
+const router = useRouter();
 
 // 当前默认人格预设 - 使用响应式观察
 const currentPersona = useObservable(
@@ -84,14 +86,8 @@ const currentPersona = useObservable(
 );
 
 // 打开人格预设管理
-const openPersonaManagement = async () => {
-        console.log('Opening persona management modal...');
-        try {
-                await showUserPersonaModal();
-                // 由于使用了响应式观察，不需要手动重新加载
-        } catch (error) {
-                console.error('Failed to open persona management:', error);
-        }
+const openPersonaManagement = () => {
+        router.push('/user-persona');
 };
 
 // 初始化函数 - 确保至少有一个默认人格

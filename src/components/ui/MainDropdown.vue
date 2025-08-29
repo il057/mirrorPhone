@@ -141,7 +141,7 @@ onUnmounted(() => {
 
 .dropdown-trigger.active {
         border-color: var(--accent-primary);
-        box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
+        box-shadow: var(--accent-glow-shadow);
 }
 
 .dropdown-trigger:disabled {
@@ -289,7 +289,7 @@ onUnmounted(() => {
 
 /* 深色主题优化 */
 [data-theme="dark"] .dropdown-trigger.active {
-        box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.3);
+        box-shadow: var(--accent-glow-shadow);
 }
 
 [data-theme="dark"] .dropdown-content {
@@ -298,7 +298,7 @@ onUnmounted(() => {
 
 /* 浅色主题优化 */
 [data-theme="light"] .dropdown-trigger.active {
-        box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
+        box-shadow: var(--accent-glow-shadow);
 }
 
 [data-theme="light"] .dropdown-content {

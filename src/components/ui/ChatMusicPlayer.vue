@@ -371,11 +371,11 @@ defineExpose({
 .album-placeholder {
         width: 100%;
         height: 100%;
-        background: rgba(255, 255, 255, 0.1);
+        background: var(--glass-bg-light);
         display: flex;
         align-items: center;
         justify-content: center;
-        color: rgba(255, 255, 255, 0.6);
+        color: var(--opacity-60);
         border-radius: 8px;
 }
 
@@ -434,8 +434,8 @@ defineExpose({
         height: 28px;
         border: none;
         border-radius: 50%;
-        background: rgba(255, 255, 255, 0.15);
-        color: rgba(255, 255, 255, 0.9);
+        background: var(--glass-bg-medium);
+        color: var(--opacity-90);
         display: flex;
         align-items: center;
         justify-content: center;
@@ -451,7 +451,7 @@ defineExpose({
 
 .control-btn:hover:not(:disabled),
 .play-pause-btn:hover:not(:disabled) {
-        background: rgba(255, 255, 255, 0.25);
+        background: var(--glass-bg-strong);
         transform: scale(1.05);
 }
 
@@ -478,7 +478,7 @@ defineExpose({
         left: 0;
         right: 0;
         height: 3px;
-        background: rgba(255, 255, 255, 0.1);
+        background: var(--glass-bg-light);
 }
 
 .progress-bar {

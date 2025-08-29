@@ -52,7 +52,7 @@
                                         <div v-if="memory.keywords && memory.keywords.length > 0"
                                                 class="memory-keywords">
                                                 <span v-for="keyword in memory.keywords" :key="keyword"
-                                                        class="keyword-tag">{{ keyword }}</span>
+                                                        class="keyword-tag">#{{ keyword }}</span>
                                         </div>
                                 </div>
                         </div>
@@ -95,7 +95,7 @@
                                         <div v-if="memory.keywords && memory.keywords.length > 0"
                                                 class="memory-keywords">
                                                 <span v-for="keyword in memory.keywords" :key="keyword"
-                                                        class="keyword-tag">{{ keyword }}</span>
+                                                        class="keyword-tag">#{{ keyword }}</span>
                                         </div>
                                 </div>
                         </div>
@@ -119,6 +119,7 @@ import AppHeader from '../components/layout/Header.vue';
 import DropdownMenu from '../components/ui/DropdownMenu.vue';
 import { showMemoryEditModal } from '../services/memoryService.js';
 import { showConfirm } from '../services/uiService.js';
+import { applyActorTheme, restoreOriginalTheme } from '../services/themeService.js';
 
 const route = useRoute();
 const router = useRouter();
@@ -346,6 +347,11 @@ onMounted(() => {
         // 加载相关角色信息
         loadRelatedActor();
         
+        // 如果有角色ID，应用角色的专属主题色
+        if (actorId.value && actorId.value !== '__USER__') {
+                applyActorTheme(actorId.value);
+        }
+        
         // 启动时间更新定时器
         timeUpdateInterval = setInterval(() => {
                 currentTime.value = new Date();
@@ -367,7 +373,9 @@ onUnmounted(() => {
                 clearInterval(timeUpdateInterval);
         }
         window.removeEventListener('click', closeMenu);
-
+        
+        // 恢复原始主题色
+        restoreOriginalTheme();
 });
 </script>
 

@@ -1,5 +1,6 @@
 // src/services/gistService.js
 import { packDataForExport, unpackAndImportData } from './dataService.js';
+import { formatDateTime } from '../utils/datetime.js';
 
 /**
  * GitHub Gist API 服务
@@ -136,7 +137,7 @@ export async function syncToGist(token, gistId = null) {
         }
 
         const content = await packDataForExport();
-        const timestamp = new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' });
+        const timestamp = formatDateTime(Date.now(), { timeZone: 'Asia/Shanghai' });
         const description = `mirrorPhone 数据备份 - ${timestamp}`;
 
         if (gistId) {

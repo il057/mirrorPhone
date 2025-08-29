@@ -51,10 +51,18 @@
                                                         class="delete-button">×</button>
 
                                                 <!-- 如果是 App，渲染 AppIcon -->
-                                                <AppIcon v-if="item.type === 'app'" :name="item.name"
-                                                        :icon-src="appIconSettings[item.id]">
-                                                        <component :is="item.component" />
-                                                </AppIcon>
+                                                <div v-if="item.type === 'app'" class="app-wrapper"
+                                                     :class="{
+                                                             'has-notification': notificationEffectsEnabled && (
+                                                                 (item.id === 'chat' && hasUnreadMessages) || 
+                                                                 (item.id === 'offline-summary' && hasNewOfflineSummaries) ||
+                                                                 (item.id === 'moments' && hasNewMoments)
+                                                             )
+                                                     }">
+                                                        <AppIcon :name="item.name" :icon-src="appIconSettings[item.id]">
+                                                                <component :is="item.component" />
+                                                        </AppIcon>
+                                                </div>
 
                                                 <!-- 如果是 Widget，用类似AppIcon的结构包装 -->
                                                 <div v-else-if="item.type === 'widget'" class="widget-wrapper">
@@ -121,6 +129,7 @@ import IconMusic from '../components/icons/IconMusic.vue';
 import IconPersonalization from '../components/icons/IconPersonalization.vue';
 import IconSettings from '../components/icons/IconSettings.vue';
 import IconWorldbook from '../components/icons/IconWorldbook.vue';
+import IconOfflineSummary from '../components/icons/IconOfflineSummary.vue';
 
 // Import widget components
 import ClockWidget from '../components/widgets/ClockWidget.vue';
@@ -128,6 +137,7 @@ import PhotoWidget from '../components/widgets/PhotoWidget.vue';
 import MusicPlayerWidget from '../components/widgets/MusicPlayerWidget.vue';
 import CalendarWidget from '../components/widgets/CalendarWidget.vue';
 import StatusNoteWidget from '../components/widgets/StatusNoteWidget.vue';
+import { injectNotificationStyles } from '../services/notificationEffectService.js';
 
 // --- State Management ---
 const isEditMode = ref(false);
@@ -160,6 +170,7 @@ const componentMap = {
         'IconAlbum': IconAlbum,
         'IconMusic': IconMusic,
         'IconWorldbook': IconWorldbook,
+        'IconOfflineSummary': IconOfflineSummary,
         'ClockWidget': ClockWidget,
         'PhotoWidget': PhotoWidget,
         'MusicPlayerWidget': MusicPlayerWidget,
@@ -181,6 +192,49 @@ const globalListenTogetherInfo = useObservable(
                 return null;
         }),
         { initialValue: null }
+);
+
+// 检测新消息和离线总结
+const hasUnreadMessages = useObservable(
+        liveQuery(async () => {
+                const conversations = await db.conversations.where('unreadCount').above(0).toArray();
+                return conversations.length > 0;
+        }),
+        { initialValue: false }
+);
+
+const hasNewOfflineSummaries = useObservable(
+        liveQuery(async () => {
+                // 检查是否有新的离线总结（用户最后查看时间之后）
+                const settings = await db.globalSettings.get('global');
+                const lastViewedTime = settings?.lastViewedOfflineSummaries || 0;
+                const recentSummaries = await db.offlineSummaries.where('timestamp').above(lastViewedTime).toArray();
+                return recentSummaries.length > 0;
+        }),
+        { initialValue: false }
+);
+
+const hasNewMoments = useObservable(
+        liveQuery(async () => {
+                // 检查是否有新的动态（用户最后查看时间之后）
+                const settings = await db.globalSettings.get('global');
+                const lastViewedTime = settings?.lastViewedMoments || 0;
+                const recentMoments = await db.events
+                        .where('type').equals('post')
+                        .and(event => event.timestamp > lastViewedTime)
+                        .toArray();
+                return recentMoments.length > 0;
+        }),
+        { initialValue: false }
+);
+
+// 通知特效开关状态
+const notificationEffectsEnabled = useObservable(
+        liveQuery(async () => {
+                const settings = await db.globalSettings.get('global');
+                return settings?.notificationEffectsEnabled !== false; // 默认开启
+        }),
+        { initialValue: true }
 );
 
 // 动态计算网格配置
@@ -526,7 +580,9 @@ const loadLayout = async () => {
                         {id: 'personalization', type: 'app', component: 'IconPersonalization', name: '个性化', route: '/personalization', gridSpan: { col: 1, row: 1 }},
                         {id: 'album', type: 'app', component: 'IconAlbum', name: '相册', route: '/album', gridSpan: { col: 1, row: 1 }},
                         {id: 'music', type: 'app', component: 'IconMusic', name: '音乐', route: '/music', gridSpan: { col: 1, row: 1 }},
-                        {id: 'worldbook', type: 'app', component: 'IconWorldbook', name: '世界书', route: '/worldbook', gridSpan: { col: 1, row: 1 }}
+                        {id: 'worldbook', type: 'app', component: 'IconWorldbook', name: '世界书', route: '/worldbook', gridSpan: { col: 1, row: 1 }},
+                        { id: 'offline-summary', type: 'app', component: 'IconOfflineSummary', name: '离线总结', route: '/offline-summary', gridSpan: { col: 1, row: 1 } }
+
                 ];
         }
 
@@ -539,6 +595,9 @@ const loadLayout = async () => {
 
 // --- Lifecycle Hook ---
 onMounted(async () => {
+        // 注入通知特效样式
+        injectNotificationStyles();
+
         await loadLayout();
         // 加载全局设置以应用个性化设置
         await loadGlobalSettings();
@@ -1645,6 +1704,14 @@ const addWidgetToScreen = (widgetBlueprint) => {
         position: relative;
 }
 
+.app-wrapper {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        width: 100%;
+        height: 100%;
+}
+
 /* Widget包装器样式，保持与AppIcon对齐 */
 .widget-wrapper {
         display: flex;
@@ -2001,18 +2068,18 @@ const addWidgetToScreen = (widgetBlueprint) => {
         width: 8px;
         height: 8px;
         border-radius: 50%;
-        background: rgba(255, 255, 255, 0.3);
+        background: var(--opacity-30);
         cursor: pointer;
         transition: all 0.3s ease;
 }
 
 .page-dot.active {
-        background: rgba(255, 255, 255, 0.8);
+        background: var(--opacity-80);
         transform: scale(1.2);
 }
 
 .page-dot:hover {
-        background: rgba(255, 255, 255, 0.6);
+        background: var(--opacity-60);
         transform: scale(1.1);
 }
 

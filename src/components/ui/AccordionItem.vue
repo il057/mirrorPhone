@@ -39,7 +39,8 @@ const toggleExpanded = () => {
 .accordion-item {
         background-color: var(--bg-card);
         border-radius: 8px;
-        margin-bottom: 15px;
+        margin-bottom: 8px;
+        margin-top: 8px;
         overflow: visible;
 }
 

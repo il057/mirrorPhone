@@ -2,7 +2,7 @@
         <div class="page-container">
                 <AppHeader title="世界书">
                         <template #right>
-                                <button @click="isDropdownOpen = true" class="header-action-button">
+                        <button @click="isDropdownOpen = !isDropdownOpen" class="header-action-button">
                                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"
                                                 viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                                                 stroke-linecap="round" stroke-linejoin="round">
@@ -86,17 +86,17 @@
                         </div>
                 </main>
 
-                <DropdownMenu :is-open="isDropdownOpen" @close="isDropdownOpen = false">
+                <HeaderDropdownMenu :is-open="isDropdownOpen" @close="isDropdownOpen = false">
                         <li @click="handleDropdownAction('addWorldbook')">新建世界书</li>
                         <li @click="handleDropdownAction('manageGroups')">管理分组</li>
-                </DropdownMenu>
+                </HeaderDropdownMenu>
         </div>
 </template>
 
 <script setup>
 import { ref, computed, watchEffect } from 'vue';
 import AppHeader from '../components/layout/Header.vue';
-import DropdownMenu from '../components/ui/DropdownMenu.vue';
+import HeaderDropdownMenu from '../components/ui/HeaderDropdownMenu.vue';
 import MainDropdown from '../components/ui/MainDropdown.vue';
 import { showManageGroupsModal, showWorldbookEditModal } from '../services/uiService.js';
 import db from '../services/database.js';

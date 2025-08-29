@@ -54,12 +54,15 @@ db.version(1).stores({
          * &id: 主键，必须唯一
          * name: 显示名称
          * worldbookIds: 关联的世界书ID数组
+         * order: 排序值
+         * offlineSummaryEnabled: 是否启用离线总结 (0,1)
          */
         groups: `
         &id,
         name,
         worldbookIds,
-        order
+        order,
+        offlineSummaryEnabled
         `,
 
         /**
@@ -143,6 +146,28 @@ db.version(1).stores({
         [actorId+relatedActorId]`, // *keywords 表示这是一个多值索引，可以高效地按关键词搜索
 
         /**
+         * 表：offlineSummaries (离线总结)
+         * 存储AI生成的离线期间的故事和关系变化。
+         * ++id: 自增主键
+         * timestamp: 总结生成的时间戳
+         * groupId: 关联的分组ID
+         * summaryContent: 总结的内容 (JSON对象，包含故事和关系变化)
+         * relatedEvents: 总结所基于的事件ID数组
+         * isDeliveredToAI: 是否已作为上下文注入给AI (0或1)
+         * relationshipChanges: 角色间关系变化的详细记录 (JSON数组)
+         */
+        offlineSummaries: `
+            ++id,
+            timestamp,
+            groupId,
+            summaryContent,
+            *relatedEvents,
+            isDeliveredToAI,
+            relationshipChanges,
+            [groupId+timestamp]
+        `,
+
+        /**
          * 辅助与设置表
          */
         globalSettings: '&id', // 移除具体字段限制，支持动态字段
@@ -198,7 +223,18 @@ db.version(1).stores({
          * content: 收藏内容快照
          * createTime: 收藏时间
          */
-        favorites: '++id, eventId, eventType, authorId, authorName, content, createTime, [authorId+eventType]'
+        favorites: '++id, eventId, eventType, authorId, authorName, content, createTime, [authorId+eventType]',
+        
+        /**
+         * 表：userSessions (用户会话状态)
+         * 追踪用户的在线/离线状态，用于离线总结生成
+         * ++id: 自增主键
+         * sessionType: 会话类型 ('online', 'offline')
+         * startTime: 开始时间戳
+         * endTime: 结束时间戳 (null表示正在进行中)
+         * duration: 持续时间(毫秒)
+         */
+        userSessions: '++id, sessionType, startTime, endTime, duration'
         // 你未来可以增加更多的表，例如 'gallery', 'musicPlaylists' 等。
 });
 export async function initializeDefaultFonts() {
@@ -207,7 +243,8 @@ export async function initializeDefaultFonts() {
                 { id: 1, name: '默认字体', family: '', url: '', isDefault: 1 },
                 { id: 2, name: '思源宋体', family: "'Noto Serif SC'", url: 'https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700&display=swap', isDefault: 1 },
                 { id: 3, name: '思源黑体', family: "'Noto Sans SC'", url: 'https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;700&display=swap', isDefault: 1 },
-                { id: 4, name: '霞鹜文楷', family: "'LXGW WenKai'", url: 'https://cdn.jsdelivr.net/npm/lxgw-wenkai-webfont@1.1.0/style.css', isDefault: 1 }
+                { id: 4, name: '霞鹜文楷', family: "'LXGW WenKai'", url: 'https://cdn.jsdelivr.net/npm/lxgw-wenkai-webfont@1.1.0/style.css', isDefault: 1 },
+                { id: 5, name: '龙藏体', family: "'Long Cang'", url: 'https://fonts.googleapis.com/css2?family=Long+Cang&family=Noto+Serif+SC:wght@200..900&display=swap', isDefault: 1 }
         ];
         const count = await db.fonts.count();
         if (count === 0) {
@@ -234,7 +271,13 @@ export async function initializeGlobalSettings() {
                                 enabled: true,
                                 interval: 100000, // 100秒
                                 probability: 50,  // 50%
-                                maxChars: 2
+                                maxChars: 2,
+                                personalSettings: {
+                                        offlineSimulation: {
+                                                enabled: false,
+                                                intervalHours: 24 // 24小时生成一次离线总结
+                                        }
+                                }
                         },
                         // 使用统一的壁纸和主题设置
                         wallpaper: 'linear-gradient(to top, #2c3e50, #bdc3c7)', // 默认渐变壁纸
@@ -268,7 +311,23 @@ export async function initializeGlobalSettings() {
                                 enabled: true,
                                 interval: 100000,
                                 probability: 50,
-                                maxChars: 2
+                                maxChars: 2,
+                                personalSettings: {
+                                        offlineSimulation: {
+                                                enabled: false,
+                                                intervalHours: 24
+                                        }
+                                }
+                        }
+                });
+        } else if (!settings.backgroundActivity.personalSettings) {
+                // 如果存在backgroundActivity但没有personalSettings，则添加
+                await db.globalSettings.update('global', {
+                        'backgroundActivity.personalSettings': {
+                                offlineSimulation: {
+                                        enabled: false,
+                                        intervalHours: 24
+                                }
                         }
                 });
         } else {
@@ -321,39 +380,6 @@ export default db;
 export const USER_ACTOR_ID = '__USER__'; // 特殊标识符，表示用户操作
 
 /**
- * 获取用户在指定上下文中应该使用的实际人格ID
- * @param {string} contextId - 上下文ID（如分组ID、聊天ID等）
- * @returns {Promise<string>} 实际的人格ID
- */
-export async function resolveUserPersonaForContext(contextId) {
-        try {
-                // 首先尝试获取该上下文绑定的用户人格
-                const boundPersona = await db.actors
-                        .filter(actor =>
-                                actor.id &&
-                                actor.id.startsWith('user_') &&
-                                actor.groupIds &&
-                                actor.groupIds.includes(contextId)
-                        )
-                        .first();
-
-                if (boundPersona) {
-                        return boundPersona.id;
-                }
-
-                // 如果没有绑定的人格，返回默认人格
-                const defaultPersona = await db.actors
-                        .filter(actor => actor.id && actor.id.startsWith('user_') && actor.isDefault)
-                        .first();
-
-                return defaultPersona ? defaultPersona.id : 'user_default';
-        } catch (error) {
-                console.error('Failed to resolve user persona for context:', error);
-                return 'user_default';
-        }
-}
-
-/**
  * 获取用户在动态场景中使用的实际人格ID（始终使用默认人格）
  * @returns {Promise<string>} 默认人格ID
  */
@@ -367,5 +393,124 @@ export async function resolveUserPersonaForMoments() {
         } catch (error) {
                 console.error('Failed to resolve user persona for moments:', error);
                 return 'user_default';
+        }
+}
+
+// ==================== 用户会话状态管理 ====================
+
+/**
+ * 记录用户上线
+ */
+export async function recordUserOnline() {
+        try {
+                const now = Date.now();
+                
+                // 结束之前可能未完成的离线会话
+                await db.userSessions
+                        .where('sessionType').equals('offline')
+                        .and(session => session.endTime === null)
+                        .modify(session => {
+                                session.endTime = now;
+                                session.duration = now - session.startTime;
+                        });
+                
+                // 开始新的在线会话
+                await db.userSessions.add({
+                        sessionType: 'online',
+                        startTime: now,
+                        endTime: null,
+                        duration: 0
+                });
+                
+                console.log('用户上线记录已保存');
+        } catch (error) {
+                console.error('记录用户上线失败:', error);
+        }
+}
+
+/**
+ * 记录用户下线
+ */
+export async function recordUserOffline() {
+        try {
+                const now = Date.now();
+                
+                // 结束当前在线会话
+                await db.userSessions
+                        .where('sessionType').equals('online')
+                        .and(session => session.endTime === null)
+                        .modify(session => {
+                                session.endTime = now;
+                                session.duration = now - session.startTime;
+                        });
+                
+                // 开始离线会话
+                await db.userSessions.add({
+                        sessionType: 'offline',
+                        startTime: now,
+                        endTime: null,
+                        duration: 0
+                });
+                
+                console.log('用户下线记录已保存');
+        } catch (error) {
+                console.error('记录用户下线失败:', error);
+        }
+}
+
+/**
+ * 获取最后一次离线时间
+ * @returns {Promise<number|null>} 离线开始时间戳
+ */
+export async function getLastOfflineTime() {
+        try {
+                const lastOfflineSession = await db.userSessions
+                        .where('sessionType').equals('offline')
+                        .orderBy('startTime')
+                        .last();
+                
+                return lastOfflineSession ? lastOfflineSession.startTime : null;
+        } catch (error) {
+                console.error('获取最后离线时间失败:', error);
+                return null;
+        }
+}
+
+/**
+ * 获取最后一次上线时间
+ * @returns {Promise<number|null>} 上线开始时间戳
+ */
+export async function getLastOnlineTime() {
+        try {
+                const lastOnlineSession = await db.userSessions
+                        .where('sessionType').equals('online')
+                        .orderBy('startTime')
+                        .last();
+                
+                return lastOnlineSession ? lastOnlineSession.startTime : null;
+        } catch (error) {
+                console.error('获取最后上线时间失败:', error);
+                return null;
+        }
+}
+
+/**
+ * 获取当前用户状态
+ * @returns {Promise<'online'|'offline'>} 当前状态
+ */
+export async function getCurrentUserStatus() {
+        try {
+                const lastSession = await db.userSessions
+                        .orderBy('startTime')
+                        .last();
+                
+                if (!lastSession || lastSession.endTime !== null) {
+                        return 'offline'; // 没有会话或最后会话已结束
+                }
+                
+                return lastSession.sessionType;
+        } catch (error) {
+                console.error('获取当前用户状态失败:', error);
+                return 'offline';
         }
 }

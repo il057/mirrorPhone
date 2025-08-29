@@ -16,6 +16,52 @@ export function formatDuration(duration) {
 }
 
 /**
+ * 格式化日期为中文格式
+ * @param {Date | string | number} date - 日期
+ * @param {object} options - 格式化选项
+ * @returns {string} 格式化的日期字符串
+ */
+export function formatDate(date, options = {}) {
+        const d = new Date(date);
+        return d.toLocaleDateString('zh-CN', options);
+}
+
+/**
+ * 格式化时间为中文格式
+ * @param {Date | string | number} date - 日期
+ * @param {object} options - 格式化选项
+ * @returns {string} 格式化的时间字符串
+ */
+export function formatTime(date, options = {}) {
+        const d = new Date(date);
+        return d.toLocaleTimeString('zh-CN', {
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false,
+                ...options
+        });
+}
+
+/**
+ * 格式化日期时间为中文格式
+ * @param {Date | string | number} date - 日期
+ * @param {object} options - 格式化选项
+ * @returns {string} 格式化的日期时间字符串
+ */
+export function formatDateTime(date, options = {}) {
+        const d = new Date(date);
+        return d.toLocaleString('zh-CN', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false,
+                ...options
+        });
+}
+
+/**
  * Calculates age based on a birthdate string (YYYY-MM-DD).
  * @param {string} birthdateString
  * @returns {number | null}

@@ -5,7 +5,7 @@
                         <slot v-else></slot>
                 </div>
         </div>
-        <span class="app-name">{{ name }}</span>
+        <span v-if="!isPreview" class="app-name">{{ name }}</span>
 </template>
 <script setup>
 defineProps({
@@ -16,6 +16,10 @@ defineProps({
         iconSrc: {
                 type: String,
                 default: ''
+        },
+        isPreview: {
+                type: Boolean,
+                default: false
         }
         });
 </script>

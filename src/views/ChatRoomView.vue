@@ -3183,6 +3183,39 @@ watch(() => personalSettings.value, async (newSettings) => {
 }, { deep: true });
 */
 
+const injectOfflineSummaries = async () => {
+        if (!actor.value || !actor.value.groupIds || actor.value.groupIds.length === 0) return;
+
+        const groupId = actor.value.groupIds[0];
+        const undeliveredSummaries = await db.offlineSummaries
+                .where({ groupId: groupId, isDeliveredToAI: 0 })
+                .toArray();
+
+        if (undeliveredSummaries.length > 0) {
+                let summaryText = "在我离线期间，你们之间发生了这些事：\n";
+                const summaryIds = [];
+
+                undeliveredSummaries.forEach(summary => {
+                        summaryText += `\n--- 总结于 ${formatTimestamp(summary.timestamp)} ---\n`;
+                        summaryText += summary.summaryContent.story;
+                        if (summary.summaryContent.relationshipChanges) {
+                                summary.summaryContent.relationshipChanges.forEach(change => {
+                                        summaryText += `\n[关系变化: ${change.actors.join('和')} - ${change.changeDescription}]`;
+                                });
+                        }
+                        summaryIds.push(summary.id);
+                });
+
+                // 发送用户不可见的系统消息
+                await sendSystemMessage(summaryText, false, 'offline_summary_context');
+
+                // 标记为已注入
+                await db.offlineSummaries.bulkUpdate(summaryIds.map(id => ({ key: id, changes: { isDeliveredToAI: 1 } })));
+
+                showToast('已同步离线期间发生的故事', 'info');
+        }
+};
+
 // 初始化默认状态
 onMounted(async () => {
 	// 设置当前聊天室状态
@@ -3248,6 +3281,8 @@ onMounted(async () => {
 	
 	// 加载表情包数据
 	loadStickers();
+        await injectOfflineSummaries();
+
 	
 	// 加载并应用气泡样式作为主题
 	if (actor.value) {
@@ -3884,7 +3919,7 @@ onUnmounted(() => {
 .payment-status {
         margin-top: 12px;
         padding-top: 8px;
-        border-top: 1px solid rgba(255, 255, 255, 0.2);
+        border-top: 1px solid var(--opacity-20);
 }
 
 .status-accepted {
@@ -3902,35 +3937,12 @@ onUnmounted(() => {
 .payment-pending {
         margin-top: 12px;
         padding-top: 8px;
-        border-top: 1px solid rgba(255, 255, 255, 0.2);
+        border-top: 1px solid var(--opacity-20);
         font-size: 12px;
         opacity: 0.8;
         font-style: italic;
 }
 
-/* 拍一拍消息样式 */
-.pat-message {
-        background: linear-gradient(135deg, #FFE082, #FFAB91) !important;
-        color: #5D4037 !important;
-        font-style: italic;
-        text-align: center;
-        border-radius: 20px !important;
-        padding: 12px 16px !important;
-        margin: 8px 0 !important;
-        box-shadow: 0 2px 8px rgba(255, 171, 145, 0.3);
-        animation: patBounce 0.6s ease-out;
-}
-
-.pat-suffix {
-        color: #FF7043;
-        font-weight: 600;
-}
-
-@keyframes patBounce {
-        0% { transform: scale(0.8); opacity: 0; }
-        50% { transform: scale(1.1); }
-        100% { transform: scale(1); opacity: 1; }
-}
 
 /* 面板切换动画 */
 .sticker-panel-enter-active,
@@ -4202,15 +4214,6 @@ onUnmounted(() => {
 }
 
 /* 拍一拍消息样式 */
-.pat-message {
-	background: linear-gradient(135deg, #FFE4B5, #FFD700);
-	color: #8B4513;
-	padding: 12px 16px;
-	border-radius: 16px;
-	text-align: center;
-	box-shadow: 0 2px 8px rgba(255, 215, 0, 0.3);
-	animation: pat-shake 0.5s ease-in-out;
-}
 
 .pat-content {
 	display: flex;

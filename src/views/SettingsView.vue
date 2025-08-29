@@ -138,10 +138,10 @@
                                                         min="1" placeholder="默认: 2">
                                         </div>
                                         <div class="form-group">
-                                                <label>活动检测间隔 (毫秒)</label>
+                                                <label>活动检测间隔 (秒)</label>
                                                 <input type="number"
-                                                        v-model.number="globalSettings.backgroundActivity.interval"
-                                                        min="10000" placeholder="默认: 100000">
+                                                        v-model.number="backgroundActivityIntervalInSeconds"
+                                                        min="10" placeholder="默认: 100">
                                                 <p class="form-help">
                                                         应用会每隔设定的时间尝试触发一次后台活动。
                                                 </p>
@@ -188,7 +188,7 @@
 
                 <section class="settings-card">
                         <div class="card-header">
-                                <h2>云端同步 (GitHub Gist)</h2>
+                                <h2>云端同步</h2>
                                 <div class="sync-status">
                                         <span v-if="isSyncing" class="status-indicator syncing">同步中...</span>
                                         <span v-else-if="lastSyncTime" class="status-indicator success">
@@ -196,22 +196,65 @@
                                         </span>
                                 </div>
                         </div>
+                        
+                        <!-- 同步方式选择 -->
                         <div class="form-group">
-                                <label for="githubToken">GitHub Personal Access Token</label>
-                                <input id="githubToken" type="password" v-model="globalSettings.githubToken"
-                                        placeholder="ghp_xxxxxxxxxxxxxxxxxxxx">
-                                <p class="form-help">
-                                        需要具有 'gist' 权限的 Personal Access Token。
-                                        <a href="https://github.com/settings/tokens" target="_blank"
-                                                rel="noopener">创建 Token</a>
-                                </p>
+                                <label>同步服务</label>
+                                <div class="segmented-control">
+                                        <input type="radio" id="sync-github" value="github" v-model="syncServiceType">
+                                        <label for="sync-github" :class="{ active: syncServiceType === 'github' }">GitHub Gist</label>
+                                        <input type="radio" id="sync-nutstore" value="nutstore" v-model="syncServiceType">
+                                        <label for="sync-nutstore" :class="{ active: syncServiceType === 'nutstore' }">坚果云</label>
+                                </div>
                         </div>
-                        <div class="form-group">
-                                <label for="gistId">Gist ID (可选)</label>
-                                <input id="gistId" type="text" v-model="globalSettings.githubGistId"
-                                        placeholder="留空则自动创建新的 Gist">
-                                <p class="form-help">如果已有备份 Gist，请填入其 ID</p>
-                        </div>
+
+                        <!-- GitHub Gist 配置 -->
+                        <template v-if="syncServiceType === 'github'">
+                                <div class="form-group">
+                                        <label for="githubToken">GitHub Personal Access Token</label>
+                                        <input id="githubToken" type="password" v-model="globalSettings.githubToken"
+                                                placeholder="ghp_xxxxxxxxxxxxxxxxxxxx">
+                                        <p class="form-help">
+                                                需要具有 'gist' 权限的 Personal Access Token。
+                                                <a href="https://github.com/settings/tokens" target="_blank"
+                                                        rel="noopener">创建 Token</a>
+                                        </p>
+                                </div>
+                                <div class="form-group">
+                                        <label for="gistId">Gist ID (可选)</label>
+                                        <input id="gistId" type="text" v-model="globalSettings.githubGistId"
+                                                placeholder="留空则自动创建新的 Gist">
+                                        <p class="form-help">如果已有备份 Gist，请填入其 ID</p>
+                                </div>
+                        </template>
+
+                        <!-- 坚果云配置 -->
+                        <template v-if="syncServiceType === 'nutstore'">
+                                <div class="form-group">
+                                        <label for="nutstoreEmail">坚果云邮箱</label>
+                                        <input id="nutstoreEmail" type="email" v-model="globalSettings.nutstoreEmail"
+                                                placeholder="你的坚果云邮箱地址">
+                                        <p class="form-help">
+                                                坚果云账户的邮箱地址，用于WebDAV认证
+                                        </p>
+                                </div>
+                                <div class="form-group">
+                                        <label for="nutstoreToken">坚果云 Access Token</label>
+                                        <input id="nutstoreToken" type="password" v-model="globalSettings.nutstoreToken"
+                                                placeholder="你的坚果云 Access Token">
+                                        <p class="form-help">
+                                                Access Token作为WebDAV密码使用。
+                                                <a href="https://www.jianguoyun.com/d/login" target="_blank"
+                                                        rel="noopener">获取 Token</a>
+                                        </p>
+                                </div>
+                                <div class="form-group">
+                                        <label for="nutstorePath">备份路径 (可选)</label>
+                                        <input id="nutstorePath" type="text" v-model="globalSettings.nutstorePath"
+                                                placeholder="/mirrorPhone/backup.json">
+                                        <p class="form-help">坚果云中的备份文件路径，留空则使用默认路径</p>
+                                </div>
+                        </template>
                         
                         <!-- 自动备份设置 -->
                         <div class="setting-section">
@@ -226,7 +269,7 @@
                                         </div>
                                 </div>
                                 <p class="setting-description">
-                                        启用后，应用会自动将数据备份到 GitHub Gist，无需手动操作。
+                                        启用后，应用会自动将数据备份到{{ syncServiceType === 'github' ? ' GitHub Gist' : ' 坚果云' }}，无需手动操作。
                                 </p>
                         </div>
 
@@ -273,15 +316,18 @@
                         </div>
 
                         <div class="sync-actions">
-                                <button @click="handleSyncToGist" :disabled="!canSync || isSyncing"
+                                <button @click="handleSync" :disabled="!canSync || isSyncing"
                                         class="sync-button primary">
                                         <span v-if="isSyncing">同步中...</span>
-                                        <span v-else>{{ globalSettings.githubGistId ? '更新到 Gist' : '创建并同步到 Gist'
-                                                }}</span>
+                                        <span v-else>
+                                                {{ syncServiceType === 'github' 
+                                                        ? (globalSettings.githubGistId ? '更新到 Gist' : '创建并同步到 Gist')
+                                                        : '同步到坚果云' }}
+                                        </span>
                                 </button>
-                                <button @click="handleRestoreFromGist" :disabled="!canRestore || isSyncing"
+                                <button @click="handleRestore" :disabled="!canRestore || isSyncing"
                                         class="sync-button secondary">
-                                        从 Gist 恢复
+                                        {{ syncServiceType === 'github' ? '从 Gist 恢复' : '从坚果云恢复' }}
                                 </button>
                         </div>
                 </section>                        <section class="settings-card">
@@ -320,6 +366,7 @@ import AppHeader from '../components/layout/Header.vue';
 import MainDropdown from '../components/ui/MainDropdown.vue';
 import { packDataForExport, unpackAndImportData } from '../services/dataService.js';
 import { syncToGist, restoreFromGist } from '../services/gistService.js';
+import { syncToNutstore, restoreFromNutstore } from '../services/nutstoreService.js';
 import { showToast, showConfirm } from '../services/uiService.js';
 import RangeSlider from '../components/ui/RangeSlider.vue';
 import { requestNotificationPermission } from '../services/notificationService.js'; 
@@ -347,7 +394,16 @@ const globalSettings = ref({
                 probability: 50,
                 maxChars: 2,
                 interval: 100000,
-        }
+        },
+        // 云端同步配置
+        syncServiceType: 'github', // 'github' 或 'nutstore'
+        // GitHub 配置
+        githubToken: '',
+        githubGistId: '',
+        // 坚果云配置
+        nutstoreEmail: '',
+        nutstoreToken: '',
+        nutstorePath: '/mirrorPhone-backup.json'
     });
 const isFetchingModels = ref(false);
 const availableModels = ref([]);
@@ -360,6 +416,7 @@ const elevenLabsVoices = ref([]);
 // 云端同步相关状态
 const isSyncing = ref(false);
 const lastSyncTime = ref('');
+const syncServiceType = ref('github'); // 'github' 或 'nutstore'
 
 // 自动备份相关状态
 const autoBackupSettings = ref({
@@ -371,11 +428,30 @@ const backupStats = ref(null);
 
 // 计算属性
 const canSync = computed(() => {
-        return globalSettings.value.githubToken && globalSettings.value.githubToken.trim() !== '';
+        if (syncServiceType.value === 'github') {
+                return globalSettings.value.githubToken && globalSettings.value.githubToken.trim() !== '';
+        } else if (syncServiceType.value === 'nutstore') {
+                return globalSettings.value.nutstoreEmail && globalSettings.value.nutstoreEmail.trim() !== '' &&
+                       globalSettings.value.nutstoreToken && globalSettings.value.nutstoreToken.trim() !== '';
+        }
+        return false;
 });
 
 const canRestore = computed(() => {
-        return canSync.value && globalSettings.value.githubGistId && globalSettings.value.githubGistId.trim() !== '';
+        if (syncServiceType.value === 'github') {
+                return canSync.value && globalSettings.value.githubGistId && globalSettings.value.githubGistId.trim() !== '';
+        } else if (syncServiceType.value === 'nutstore') {
+                return canSync.value; // 坚果云可以从默认路径恢复
+        }
+        return false;
+});
+
+// 后台活动间隔秒数转换
+const backgroundActivityIntervalInSeconds = computed({
+        get: () => Math.floor(globalSettings.value.backgroundActivity.interval / 1000),
+        set: (value) => {
+                globalSettings.value.backgroundActivity.interval = value * 1000;
+        }
 });
 
 // 下拉菜单选项
@@ -500,6 +576,10 @@ async function loadGlobalSettings() {
         const settings = await db.globalSettings.get('global');
         if (settings) {
                 globalSettings.value = { ...globalSettings.value, ...settings }; 
+                // 加载同步服务类型
+                if (settings.syncServiceType) {
+                        syncServiceType.value = settings.syncServiceType;
+                }
                 if (settings.activeApiProfileId) {
                         activeProfileId.value = settings.activeApiProfileId;
                         loadProfileForEditing(activeProfileId.value);
@@ -665,8 +745,13 @@ async function saveChanges() {
                         activeTtsProfileId: globalSettings.value.activeTtsProfileId,
                         cloudinaryCloudName: globalSettings.value.cloudinaryCloudName,
                         cloudinaryUploadPreset: globalSettings.value.cloudinaryUploadPreset,
+                        // 云端同步配置
+                        syncServiceType: syncServiceType.value,
                         githubGistId: globalSettings.value.githubGistId,
                         githubToken: globalSettings.value.githubToken,
+                        nutstoreEmail: globalSettings.value.nutstoreEmail,
+                        nutstoreToken: globalSettings.value.nutstoreToken,
+                        nutstorePath: globalSettings.value.nutstorePath,
                         backgroundActivity: JSON.parse(JSON.stringify(globalSettings.value.backgroundActivity)),
 
                 };
@@ -707,11 +792,11 @@ function loadBackupStats() {
         backupStats.value = getBackupStats();
 }
 
-// 监听自动备份设置变化
-watch(autoBackupSettings, (newSettings) => {
-        saveAutoBackupSettings(newSettings);
-        loadBackupStats(); // 更新统计信息
-}, { deep: true });
+// 监听同步服务类型变化
+watch(syncServiceType, (newType) => {
+        // 当切换同步服务类型时，可以在这里添加逻辑
+        // 例如重置相关配置或显示提示
+});
 
 // 格式化日期
 function formatDate(timestamp) {
@@ -721,24 +806,31 @@ function formatDate(timestamp) {
 
 // --- 云端同步处理 ---
 
-async function handleSyncToGist() {
+async function handleSync() {
         if (!canSync.value) {
-                showToast('请先配置 GitHub Token', 'error');
+                const serviceName = syncServiceType.value === 'github' ? 'GitHub Token' : '坚果云邮箱和Access Token';
+                showToast(`请先配置 ${serviceName}`, 'error');
                 return;
         }
 
         isSyncing.value = true;
         try {
-                const gistId = await syncToGist(globalSettings.value.githubToken, globalSettings.value.githubGistId);
+                if (syncServiceType.value === 'github') {
+                        const gistId = await syncToGist(globalSettings.value.githubToken, globalSettings.value.githubGistId);
 
-                // 如果是新创建的 Gist，更新设置中的 Gist ID
-                if (!globalSettings.value.githubGistId) {
-                        globalSettings.value.githubGistId = gistId;
-                        await saveChanges(); // 保存新的 Gist ID
+                        // 如果是新创建的 Gist，更新设置中的 Gist ID
+                        if (!globalSettings.value.githubGistId) {
+                                globalSettings.value.githubGistId = gistId;
+                                await saveChanges(); // 保存新的 Gist ID
+                        }
+
+                        showToast('数据已成功同步到 GitHub Gist！', 'success');
+                } else if (syncServiceType.value === 'nutstore') {
+                        await syncToNutstore(globalSettings.value.nutstoreEmail, globalSettings.value.nutstoreToken, globalSettings.value.nutstorePath);
+                        showToast('数据已成功同步到坚果云！', 'success');
                 }
 
                 lastSyncTime.value = new Date().toLocaleString('zh-CN');
-                showToast('数据已成功同步到 GitHub Gist！', 'success');
         } catch (error) {
                 console.error('同步失败:', error);
                 showToast(`同步失败: ${error.message}`, 'error');
@@ -747,14 +839,18 @@ async function handleSyncToGist() {
         }
 }
 
-async function handleRestoreFromGist() {
+async function handleRestore() {
         if (!canRestore.value) {
-                showToast('请先配置 GitHub Token 和 Gist ID', 'error');
+                const message = syncServiceType.value === 'github' 
+                        ? '请先配置 GitHub Token 和 Gist ID'
+                        : '请先配置坚果云邮箱和Access Token';
+                showToast(message, 'error');
                 return;
         }
 
+        const serviceName = syncServiceType.value === 'github' ? 'Gist' : '坚果云';
         const confirmed = await showConfirm(
-                '从 Gist 恢复',
+                `从 ${serviceName} 恢复`,
                 '这将覆盖所有本地数据，确定要继续吗？'
         );
 
@@ -762,7 +858,12 @@ async function handleRestoreFromGist() {
 
         isSyncing.value = true;
         try {
-                await restoreFromGist(globalSettings.value.githubToken, globalSettings.value.githubGistId);
+                if (syncServiceType.value === 'github') {
+                        await restoreFromGist(globalSettings.value.githubToken, globalSettings.value.githubGistId);
+                } else if (syncServiceType.value === 'nutstore') {
+                        await restoreFromNutstore(globalSettings.value.nutstoreEmail, globalSettings.value.nutstoreToken, globalSettings.value.nutstorePath);
+                }
+
                 showToast('数据恢复成功！应用将重新加载。', 'success');
                 // 重新加载页面以确保所有状态都从新数据库中读取
                 setTimeout(() => {
@@ -1141,53 +1242,5 @@ async function handleLocalImport(event) {
         font-size: 14px;
         color: var(--text-secondary);
         line-height: 1.5;
-}
-
-.toggle-switch {
-        position: relative;
-        display: inline-block;
-}
-
-.toggle-switch input[type="checkbox"] {
-        opacity: 0;
-        width: 0;
-        height: 0;
-}
-
-.toggle-label {
-        display: block;
-        width: 52px;
-        height: 28px;
-        background-color: var(--bg-secondary);
-        border-radius: 14px;
-        position: relative;
-        cursor: pointer;
-        transition: background-color 0.2s;
-        border: 1px solid var(--border-color);
-}
-
-.toggle-label:hover {
-        background-color: var(--bg-card);
-}
-
-.toggle-slider {
-        position: absolute;
-        top: 3px;
-        left: 3px;
-        width: 20px;
-        height: 20px;
-        background-color: white;
-        border-radius: 50%;
-        transition: transform 0.2s;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-}
-
-.toggle-switch input[type="checkbox"]:checked + .toggle-label {
-        background-color: var(--accent-primary);
-        border-color: var(--accent-primary);
-}
-
-.toggle-switch input[type="checkbox"]:checked + .toggle-label .toggle-slider {
-        transform: translateX(24px);
 }
 </style>

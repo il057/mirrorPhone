@@ -22,6 +22,11 @@
                                                         <input type="radio" v-model="activeMainMode" value="icon">
                                                         <span>图标</span>
                                                 </label>
+                                                <label :class="{ active: activeMainMode === 'notification' }">
+                                                        <input type="radio" v-model="activeMainMode"
+                                                                value="notification">
+                                                        <span>通知特效</span>
+                                                </label>
                                         </div>
                                 </div>
 
@@ -31,16 +36,39 @@
                                         <div class="icon-preview-grid"
                                                 :class="{ 'is-wallpaper-mode': activeMainMode === 'wallpaper' }">
                                                 <div v-for="app in homeScreenApps" :key="app.id"
-                                                        class="preview-app-icon"
+                                                        class="app-wrapper-preview"
                                                         @click="activeMainMode === 'icon' && selectAppIcon(app)">
-                                                        <div class="icon-image-container">
-                                                                <img v-if="appIconSettings[app.id]"
-                                                                        :src="appIconSettings[app.id]"
-                                                                        class="icon-image" alt="App Icon Preview" />
-                                                                <component v-else :is="app.component" />
+                                                        <div class="app-wrapper" :class="{
+                                                                'has-notification': activeMainMode === 'notification' && notificationEffectsEnabled && ['chat', 'offline-summary'].includes(app.id)
+                                                        }">
+                                                                <AppIcon :name="app.name"
+                                                                        :icon-src="appIconSettings[app.id]"
+                                                                        :is-preview="true">
+                                                                        <component :is="app.component" />
+                                                                </AppIcon>
                                                         </div>
-                                                        <span class="icon-name">{{ app.name }}</span>
+                                                        <span class="app-name-preview">{{ app.name }}</span>
                                                 </div>
+                                        </div>
+                                </div>
+
+                                <!-- 通知特效设置 - 放置在预览框下方 -->
+                                <div v-if="activeMainMode === 'notification'" class="notification-settings">
+                                        <div class="form-group">
+                                                <label>新消息通知特效</label>
+                                                <div class="toggle-switch-container">
+                                                        <div class="toggle-switch">
+                                                                <input type="checkbox" id="notification-effects"
+                                                                        v-model="notificationEffectsEnabled"
+                                                                        @change="saveNotificationSettings">
+                                                                <label for="notification-effects" class="toggle-label">
+                                                                        <span class="toggle-slider"></span>
+                                                                </label>
+                                                        </div>
+                                                        <span class="toggle-label">{{ notificationEffectsEnabled ? '开启'
+                                                                : '关闭' }}</span>
+                                                </div>
+                                                <p class="setting-description">当有新消息或离线总结时，主屏幕图标会显示发光特效</p>
                                         </div>
                                 </div>
 
@@ -294,34 +322,26 @@ import { ref, shallowRef, reactive, computed, onMounted, onUnmounted, nextTick }
 import db from '../services/database.js';
 import { showToast, showConfirm, promptForInput, showAlbumPickerModal, showUploadChoiceModal } from '../services/uiService.js';
 import AppHeader from '../components/layout/Header.vue';
+import IconGrid from '../components/IconGrid.vue';
+import { homeScreenApps as defaultHomeScreenApps } from '../services/iconService.js';
 import { getContrastTextColor, generateColorScheme } from '../utils/colorUtils.js';
-
 import AppIcon from '../components/AppIcon.vue';
-import IconChat from '../components/icons/IconChat.vue';
-import IconSettings from '../components/icons/IconSettings.vue';
-import IconPersonalization from '../components/icons/IconPersonalization.vue';
-import IconAlbum from '../components/icons/IconAlbum.vue';
-import IconMusic from '../components/icons/IconMusic.vue';
-import IconWorldbook from '../components/icons/IconWorldbook.vue';
 import { uploadToCloudinary } from '../services/cloudinaryService.js';
+import { injectNotificationStyles } from '../services/notificationEffectService.js';
 
 
 // --- State Management ---
 const wallpaperPreviewRef = ref(null);
 const wallpaperEffectRef = ref(null);
 
-const activeMainMode = ref('wallpaper'); // 'wallpaper' or 'icon'
+const activeMainMode = ref('wallpaper'); // 'wallpaper', 'icon', or 'notification'
+
+// 通知特效设置
+const notificationEffectsEnabled = ref(true);
 
 // 图标设置状态
 const appIconSettings = ref({});
-const homeScreenApps = shallowRef([
-        { id: 'chat', component: IconChat, name: '见我' },
-        { id: 'settings', component: IconSettings, name: '设置' },
-        { id: 'personalization', component: IconPersonalization, name: '个性化' },
-        { id: 'album', component: IconAlbum, name: '相册' },
-        { id: 'music', component: IconMusic, name: '音乐' },
-        { id: 'worldbook', component: IconWorldbook, name: '世界书' }
-]);
+const homeScreenApps = shallowRef(defaultHomeScreenApps);
 
 const activeWallpaperMode = ref('gradient');
 const wallpaperPresets = ref([]);
@@ -359,6 +379,8 @@ const activePreset = ref(null);
 let mediaQueryListener = null;
 
 onMounted(async () => {
+        // 注入通知特效样式
+        injectNotificationStyles();
         await loadSettings();
 });
 
@@ -376,6 +398,9 @@ async function loadSettings() {
 
         // 加载已保存的图标设置
         appIconSettings.value = settings.appIconSettings || {};
+
+        // 加载通知特效设置
+        notificationEffectsEnabled.value = settings.notificationEffectsEnabled !== false; // 默认开启
 
         // 加载壁纸和主题
         wallpaperPresets.value = settings.wallpaperPresets || [];
@@ -429,6 +454,7 @@ async function saveAllSettings() {
                         wallpaperPresets: JSON.parse(JSON.stringify(wallpaperPresets.value)),
                         activeFontId: activeFontId.value,
                         appIconSettings: JSON.parse(JSON.stringify(appIconSettings.value)), // 保存图标设置
+                        notificationEffectsEnabled: notificationEffectsEnabled.value, // 保存通知特效设置
 
                 };
                 await db.globalSettings.put(settingsToSave);
@@ -442,6 +468,19 @@ async function saveAllSettings() {
         } catch (error) {
                 console.error("保存失败:", error);
                 showToast(`保存失败: ${error.message}`, 'error');
+        }
+}
+
+// 保存通知特效设置
+async function saveNotificationSettings() {
+        try {
+                const settings = await db.globalSettings.get('global') || {};
+                settings.notificationEffectsEnabled = notificationEffectsEnabled.value;
+                await db.globalSettings.put(settings);
+                showToast(`通知特效已${notificationEffectsEnabled.value ? '开启' : '关闭'}`, 'success');
+        } catch (error) {
+                console.error('保存通知设置失败:', error);
+                showToast('保存失败', 'error');
         }
 }
 
@@ -1289,80 +1328,83 @@ function showCustomPresetEditor() {
 }
 
 .icon-preview-grid {
+        /* 让图标填满整个容器 */
+        display: grid;
+        grid-template-columns: repeat(4, 1fr); /* 固定4列，与HomeView竖屏保持一致 */
+        grid-auto-rows: minmax(70px, 1fr); /* 增加行高以容纳图标和app-name */
+        width: 100%;
+        height: 100%;
+        padding: 16px;
+        gap: 16px;
+        box-sizing: border-box;
+        justify-items: center;
+        align-items: start; /* 改为start，让图标从顶部开始排列 */
         position: absolute;
         top: 0;
         left: 0;
-        width: 100%;
-        height: 100%;
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        gap: 12px;
-        /* 稍微减小间距以适应预览框 */
-        padding: 15px;
-        /* 增加内边距 */
-        box-sizing: border-box;
-        align-content: start;
         transition: opacity 0.3s ease;
         /* 添加过渡效果 */
         z-index: 2;
         overflow: hidden;
+        align-content: start;
 }
 
-/* 当处于壁纸编辑模式时，让图标半透明 */
-.icon-preview-grid.is-wallpaper-mode {
-        opacity: 0;
-        pointer-events: none;
-        /* 防止在壁纸模式下点击图标 */
-}
-.preview-app-icon {
+.app-wrapper-preview {
+        /* 这是每个图标的外部容器，使其可点击 */
+        cursor: pointer;
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: 6px;
-        /* 减小间距 */
-        cursor: pointer;
-        padding: 4px;
-        border-radius: 8px;
-        transition: background-color 0.2s ease;
+        justify-content: flex-start;
+        gap: 4px; /* 在图标和名字之间添加间距 */
 }
 
-/* 稍微缩小图标和字体以适应预览框 */
-.icon-image-container {
-        width: 50px;
-        height: 50px;
-        background: var(--app-bg);
-        border: 1px solid var(--app-border);
-        border-radius: 10px;
+.app-wrapper {
+        /* 这是内部容器，与HomeView保持一致 */
         display: flex;
-        justify-content: center;
+        flex-direction: column;
         align-items: center;
-        color: white;
-        overflow: hidden;
-        backdrop-filter: blur(15px);
-        -webkit-backdrop-filter: blur(15px);
+        width: 48px; /* 固定宽度 */
+        height: 48px; /* 固定高度，保持正方形 */
+        position: relative; /* 为绝对定位的app-name提供定位上下文 */
 }
 
-.icon-image-container .icon-image {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-}
-
-.icon-image-container svg {
-        width: 55%;
-        height: 55%;
-}
-
-.icon-name {
+/* 预览模式下的app名称样式 */
+.app-name-preview {
         font-size: 10px;
-        color: #fff;
-        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
-        /* 给文字添加阴影以提高可读性 */
+        color: var(--text-secondary);
+        text-align: center;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 48px;
+        margin-top: 2px;
+        line-height: 1.2;
 }
 
-.description {
+
+/* === 通知特效设置样式 === */
+.notification-settings {
+        margin-top: 20px;
+}
+
+.toggle-switch-container {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-top: 8px;
+}
+
+.toggle-label {
         font-size: 14px;
+        color: var(--text-primary);
+        font-weight: 500;
+}
+
+.setting-description {
+        font-size: 12px;
         color: var(--text-secondary);
-        line-height: 1.6;
+        margin-top: 8px;
+        line-height: 1.4;
 }
 </style>

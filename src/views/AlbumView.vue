@@ -168,7 +168,7 @@ const handleDeleteSelected = async () => {
 
 .photo-item.is-selecting {
         transform: scale(0.95);
-        box-shadow: 0 0 0 3px var(--accent-primary);
+        box-shadow: var(--accent-glow-shadow);
 }
 
 .photo-item img {

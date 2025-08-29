@@ -1,6 +1,7 @@
 // src/services/incrementalBackupService.js
 import db from './database.js';
 import { syncToGist } from './gistService.js';
+import { syncToNutstore } from './nutstoreService.js';
 import { showToast } from './uiService.js';
 
 /**
@@ -127,12 +128,31 @@ async function checkAutoBackup() {
  */
 async function performAutoBackup() {
         const globalSettings = await db.globalSettings.get('global');
-        if (!globalSettings?.githubToken) {
-                return; // 没有配置GitHub Token，无法自动备份
+        if (!globalSettings) {
+                return; // 无法获取全局设置
+        }
+
+        // 检查是否有有效的同步配置
+        const syncServiceType = globalSettings.syncServiceType || 'github';
+        let canSync = false;
+
+        if (syncServiceType === 'github') {
+                canSync = globalSettings.githubToken && globalSettings.githubToken.trim() !== '';
+        } else if (syncServiceType === 'nutstore') {
+                canSync = globalSettings.nutstoreEmail && globalSettings.nutstoreEmail.trim() !== '' &&
+                         globalSettings.nutstoreToken && globalSettings.nutstoreToken.trim() !== '';
+        }
+
+        if (!canSync) {
+                return; // 没有配置有效的同步服务，无法自动备份
         }
         
         try {
-                await syncToGist(globalSettings.githubToken, globalSettings.githubGistId);
+                if (syncServiceType === 'github') {
+                        await syncToGist(globalSettings.githubToken, globalSettings.githubGistId);
+                } else if (syncServiceType === 'nutstore') {
+                        await syncToNutstore(globalSettings.nutstoreEmail, globalSettings.nutstoreToken, globalSettings.nutstorePath);
+                }
                 
                 // 更新备份状态
                 const state = getBackupState();
@@ -167,13 +187,33 @@ export async function performIncrementalBackup() {
         }
         
         const globalSettings = await db.globalSettings.get('global');
-        if (!globalSettings?.githubToken) {
-                throw new Error('请先配置 GitHub Token');
+        if (!globalSettings) {
+                throw new Error('无法获取全局设置');
+        }
+
+        // 检查是否有有效的同步配置
+        const syncServiceType = globalSettings.syncServiceType || 'github';
+        let canSync = false;
+
+        if (syncServiceType === 'github') {
+                canSync = globalSettings.githubToken && globalSettings.githubToken.trim() !== '';
+        } else if (syncServiceType === 'nutstore') {
+                canSync = globalSettings.nutstoreEmail && globalSettings.nutstoreEmail.trim() !== '' &&
+                         globalSettings.nutstoreToken && globalSettings.nutstoreToken.trim() !== '';
+        }
+
+        if (!canSync) {
+                const serviceName = syncServiceType === 'github' ? 'GitHub Token' : '坚果云邮箱和Access Token';
+                throw new Error(`请先配置 ${serviceName}`);
         }
         
         try {
                 // 执行完整备份（因为增量备份需要更复杂的合并逻辑）
-                await syncToGist(globalSettings.githubToken, globalSettings.githubGistId);
+                if (syncServiceType === 'github') {
+                        await syncToGist(globalSettings.githubToken, globalSettings.githubGistId);
+                } else if (syncServiceType === 'nutstore') {
+                        await syncToNutstore(globalSettings.nutstoreEmail, globalSettings.nutstoreToken, globalSettings.nutstorePath);
+                }
                 
                 // 更新状态
                 const now = Date.now();

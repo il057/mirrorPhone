@@ -121,7 +121,7 @@ const navItems = ref([
         border-radius: 50%;
         z-index: 0;
         animation: glow-pulse 2s infinite ease-out;
-        box-shadow: 0 0 18px var(--accent-primary);
+        box-shadow: var(--accent-glow-shadow);;
 }
 
 .notification-glow::after {

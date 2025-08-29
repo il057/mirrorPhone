@@ -131,7 +131,7 @@ onUnmounted(() => {
         justify-content: center;
         align-items: center;
         height: 100%;
-        color: rgba(255, 255, 255, 0.7);
+        color: var(--opacity-70);
         text-align: center;
 }
 
@@ -143,7 +143,7 @@ onUnmounted(() => {
 .loading-spinner {
         width: 24px;
         height: 24px;
-        border: 2px solid rgba(255, 255, 255, 0.3);
+        border: 2px solid var(--opacity-30);
         border-top: 2px solid white;
         border-radius: 50%;
         animation: spin 1s linear infinite;

@@ -3,27 +3,24 @@ import App from './App.vue'
 import router from './router'
 import './assets/main.css' // 引入全局样式
 import { populateMockData } from './services/mockData.js';
-import { initializeGlobalSettings, initializeDefaultFonts, initializeUserEntity } from './services/database.js';
+import { initializeGlobalSettings, initializeDefaultFonts, initializeUserEntity, recordUserOnline, recordUserOffline } from './services/database.js';
 import { startBackgroundActivityTimer } from './services/backgroundActivityService.js'; 
 import { initializeBackupTracking } from './services/incrementalBackupService.js';
 
 import db from './services/database.js';
-import { getContrastTextColor, generateColorScheme } from './utils/colorUtils.js';
+import { calculateThemeColors, applyThemeColors } from './utils/colorUtils.js';
+import { loadActiveFont } from './services/fontService.js';
+import { initializeThemeSystem } from './services/themeService.js';
 
 // 应用主题色
 function applyThemeColor(color) {
         if (!color) return;
-        // 设置主题色
-        document.documentElement.style.setProperty('--accent-primary', color);
-        
-        // 计算并设置对比文本颜色
-        const textColor = getContrastTextColor(color);
-        document.documentElement.style.setProperty('--accent-text', textColor);
-        
-        // 获取更丰富的配色方案
-        const colorScheme = generateColorScheme(color);
-        document.documentElement.style.setProperty('--accent-lighter', colorScheme.lighter);
-        document.documentElement.style.setProperty('--accent-darker', colorScheme.darker);
+
+        // 使用新的颜色工具函数计算完整的主题色
+        const themeColors = calculateThemeColors(color);
+
+        // 应用所有主题色变量
+        applyThemeColors(themeColors);
 }
 
 // 初始化主题
@@ -45,6 +42,12 @@ async function initializeTheme() {
         if (themeColor) {
                 applyThemeColor(themeColor);
         }
+
+        // 初始化主题系统
+        initializeThemeSystem();
+
+        await loadActiveFont(); 
+
 }
 
 const registerServiceWorker = () => {
@@ -74,5 +77,23 @@ Promise.all([
         startBackgroundActivityTimer(); // 在应用挂载后启动定时器
         initializeBackupTracking(); // 初始化备份跟踪
         registerServiceWorker();
-
+        
+        // 记录用户上线
+        recordUserOnline();
+        
+        // 监听页面隐藏/显示事件来追踪用户状态
+        document.addEventListener('visibilitychange', () => {
+                if (document.hidden) {
+                        recordUserOffline();
+                } else {
+                        recordUserOnline();
+                }
+        });
+        
+        // 监听窗口焦点事件
+        window.addEventListener('focus', recordUserOnline);
+        window.addEventListener('blur', recordUserOffline);
+        
+        // 监听页面卸载事件
+        window.addEventListener('beforeunload', recordUserOffline);
     });
