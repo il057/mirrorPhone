@@ -84,6 +84,8 @@ const truncateStory = (story) => {
 
 .card-header {
         margin-bottom: 12px;
+        flex-direction: column;
+        align-items: normal;
 }
 
 .group-info {

@@ -317,16 +317,6 @@ onMounted(() => {
 <style scoped>
 /* 模态框样式覆盖 */
 .modal-overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background-color: rgba(0, 0, 0, 0.6);
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        z-index: 1000;
         padding: 20px;
         box-sizing: border-box;
 }
@@ -372,7 +362,6 @@ onMounted(() => {
 
 .close-button:hover {
         color: var(--text-primary);
-        background-color: var(--opacity-10);
 }
 
 .modal-body {
@@ -507,9 +496,7 @@ onMounted(() => {
 
 /* 响应式设计 */
 @media (max-width: 480px) {
-        .modal-overlay {
-                padding: 10px;
-        }
+
         
         .modal-header,
         .modal-body,

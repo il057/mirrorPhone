@@ -249,24 +249,12 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.modal-overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: rgba(0, 0, 0, 0.5);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 1000;
-}
 
 .forward-modal {
         width: 90%;
         max-width: 500px;
         max-height: 80vh;
-        background: var(--bg-color);
+        background: var(--bg-card);
         border-radius: 12px;
         overflow: hidden;
         display: flex;

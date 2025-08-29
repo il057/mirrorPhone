@@ -1018,19 +1018,6 @@ onMounted(async () => {
 }
 
 /* 播放列表弹窗样式 */
-.modal-overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.7);
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        z-index: 1000;
-        backdrop-filter: blur(5px);
-}
 
 .playlist-modal {
         background: var(--bg-card);
@@ -1054,7 +1041,6 @@ onMounted(async () => {
         position: absolute;
         top: 16px;
         right: 16px;
-        background: var(--button-bg);
         color: var(--text-primary);
         border: none;
         border-radius: 50%;
@@ -1063,11 +1049,9 @@ onMounted(async () => {
         font-size: 18px;
         cursor: pointer;
         transition: all 0.2s ease;
+        background: none;
 }
 
-.close-btn:hover {
-        background: var(--button-bg-hover);
-}
 
 .playlist-details {
         display: flex;

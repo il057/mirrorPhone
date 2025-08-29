@@ -55,8 +55,8 @@
                                 <!-- 通知特效设置 - 放置在预览框下方 -->
                                 <div v-if="activeMainMode === 'notification'" class="notification-settings">
                                         <div class="form-group">
-                                                <label>新消息通知特效</label>
                                                 <div class="toggle-switch-container">
+                                                        <label>新消息通知特效</label>
                                                         <div class="toggle-switch">
                                                                 <input type="checkbox" id="notification-effects"
                                                                         v-model="notificationEffectsEnabled"
@@ -65,8 +65,6 @@
                                                                         <span class="toggle-slider"></span>
                                                                 </label>
                                                         </div>
-                                                        <span class="toggle-label">{{ notificationEffectsEnabled ? '开启'
-                                                                : '关闭' }}</span>
                                                 </div>
                                                 <p class="setting-description">当有新消息或离线总结时，主屏幕图标会显示发光特效</p>
                                         </div>
@@ -1349,6 +1347,10 @@ function showCustomPresetEditor() {
         align-content: start;
 }
 
+.icon-preview-grid.is-wallpaper-mode {
+        opacity: 0;
+}
+
 .app-wrapper-preview {
         /* 这是每个图标的外部容器，使其可点击 */
         cursor: pointer;
@@ -1372,7 +1374,7 @@ function showCustomPresetEditor() {
 /* 预览模式下的app名称样式 */
 .app-name-preview {
         font-size: 10px;
-        color: var(--text-secondary);
+        color: white;
         text-align: center;
         white-space: nowrap;
         overflow: hidden;
@@ -1386,19 +1388,20 @@ function showCustomPresetEditor() {
 /* === 通知特效设置样式 === */
 .notification-settings {
         margin-top: 20px;
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+        gap: 24px;
 }
 
 .toggle-switch-container {
         display: flex;
+        flex-direction: row;
+        justify-content: space-between;
         align-items: center;
         gap: 12px;
-        margin-top: 8px;
-}
-
-.toggle-label {
-        font-size: 14px;
-        color: var(--text-primary);
-        font-weight: 500;
+        margin-top: 0;
 }
 
 .setting-description {

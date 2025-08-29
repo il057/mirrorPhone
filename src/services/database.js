@@ -280,8 +280,8 @@ export async function initializeGlobalSettings() {
                                 }
                         },
                         // 使用统一的壁纸和主题设置
-                        wallpaper: 'linear-gradient(to top, #2c3e50, #bdc3c7)', // 默认渐变壁纸
-                        themeColor: '#778088', // 默认主题色
+                        wallpaper: 'linear-gradient(to top, #000000, #ffffff)', // 默认黑白渐变壁纸
+                        themeColor: '#808080', // 默认灰色主题色
                         themeMode: 'auto', // 默认主题模式
                         activeFontId: 1,
                         appIconSettings: {},

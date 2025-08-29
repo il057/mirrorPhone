@@ -332,8 +332,10 @@ onMounted(() => {
 
 <style scoped>
 .summary-content {
-        padding-left: 20px;
-        padding-right: 20px;
+        padding-left: 10px;
+        padding-right: 10px;
+        padding-top: calc(10px + var(--header-height));
+        padding-bottom: 10px;
 }
 
 .empty-state {
@@ -400,16 +402,6 @@ onMounted(() => {
 
 /* 模态框样式 */
 .modal-overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background-color: var(--overlay-bg);
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        z-index: 1000;
         padding: 20px;
         box-sizing: border-box;
 }
@@ -459,18 +451,16 @@ onMounted(() => {
 
 .close-btn:hover {
         color: var(--text-primary);
-        background-color: var(--bg-primary);
 }
 
 .modal-body {
         padding: 24px;
         flex: 1;
         overflow-y: auto;
+        margin-bottom: 0;
 }
 
-.story-content {
-        margin-bottom: 24px;
-}
+
 
 .story-text {
         margin: 0;

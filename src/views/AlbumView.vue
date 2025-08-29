@@ -147,6 +147,7 @@ const handleDeleteSelected = async () => {
         padding-left: 10px;
         padding-right: 10px;
         padding-bottom: 80px;
+        padding-top: calc(10px + var(--header-height));
         /* Space for edit footer */
 }
 
