@@ -13,108 +13,187 @@ import { showLocalNotification } from './notificationService';
 import { isCurrentChatRoom } from './currentStateService.js';
 import { getDefaultUserPersona, getEffectiveUserPersonaId } from './userPersonaService.js';
 import * as promptBuilder from './promptBuilder.js';
+
+/**
+ * 辅助函数：通过URL获取图片并转换为Base64
+ * @param {string} imageUrl - 图片的URL
+ * @returns {Promise<{mimeType: string, data: string}>}
+ */
+async function fetchImageAsBase64(imageUrl) {
+        try {
+                const response = await fetch(imageUrl);
+                if (!response.ok) {
+                        throw new Error(`无法获取图片: ${response.statusText}`);
+                }
+                const blob = await response.blob();
+
+                // 确保MIME类型是支持的类型
+                const mimeType = blob.type.startsWith('image/') ? blob.type : 'image/jpeg';
+
+                return new Promise((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                                // reader.result 包含 "data:image/jpeg;base64,..."
+                                // 我们需要移除 "data:mime/type;base64," 前缀
+                                const base64Data = reader.result.split(',')[1];
+                                resolve({ mimeType, data: base64Data });
+                        };
+                        reader.onerror = reject;
+                        reader.readAsDataURL(blob);
+                });
+        } catch (error) {
+                console.error("图片转Base64失败:", error);
+                throw error;
+        }
+}
+
 /**
  * 调用AI API生成回复
  * @param {Object} profile - API配置档案
  * @param {Array} messages - 消息历史记录
  * @param {Object} character - 角色信息
- * @param {Object} context - 上下文信息（记忆、关系等）
+ * @param {Object} context - 上下文信息
  * @returns {Promise<Object>} API响应结果
  */
 export async function callAIAPI(profile, messages, character, context) {
-    if (!profile || !profile.apiKey) {
-        throw new Error('API配置未找到或API密钥为空');
-    }
-
-    let apiUrl;
-    let requestHeaders = {
-        'Content-Type': 'application/json'
-    };
-    let requestBody;
-
-    // 根据连接方式配置URL和请求头
-    if (profile.connectionType === 'direct') {
-        // Gemini 直连方式
-        apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${profile.model}:generateContent?key=${profile.apiKey}`;
-        
-        // Gemini API 使用不同的消息格式
-        requestBody = {
-            contents: messages.map(msg => ({
-                role: msg.role === 'assistant' ? 'model' : 'user',
-                parts: [{ text: msg.content }]
-            })),
-            generationConfig: {
-                temperature: 0.9,
-                candidateCount: 1,
-                                response_mime_type: "application/json"
-
-            }
-        };
-    } else {
-        // 反代方式 (兼容OpenAI格式)
-        if (!profile.apiUrl || !profile.apiUrl.trim()) {
-            throw new Error('反向代理地址不能为空');
-        }
-        
-        const cleanBaseUrl = profile.apiUrl.trim().endsWith('/')
-            ? profile.apiUrl.trim().slice(0, -1)
-            : profile.apiUrl.trim();
-
-        apiUrl = `${cleanBaseUrl}/v1/chat/completions`;
-        requestHeaders['Authorization'] = `Bearer ${profile.apiKey}`;
-        
-        requestBody = {
-            model: profile.model,
-            messages: messages,
-            temperature: 0.9,
-            stream: false,
-            response_format: { type: "json_object" }
-        };
-    }
-
-    const fetchOptions = {
-        method: 'POST',
-        headers: requestHeaders,
-        body: JSON.stringify(requestBody)
-    };
-
-    try {
-        const response = await fetch(apiUrl, fetchOptions);
-
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            const errorMessage = errorData.error?.message || `HTTP 错误, 状态码: ${response.status}`;
-            throw new Error(errorMessage);
+        if (!profile || !profile.apiKey) {
+                throw new Error('API配置未找到或API密钥为空');
         }
 
-        const data = await response.json();
-        
-        // 根据API类型解析响应
+        let apiUrl;
+        let requestHeaders = {
+                'Content-Type': 'application/json'
+        };
+        let requestBody;
+
+        // 根据连接方式配置URL和请求头
         if (profile.connectionType === 'direct') {
-            // Gemini 响应格式
-            if (data.candidates && data.candidates[0] && data.candidates[0].content) {
-                return {
-                    content: data.candidates[0].content.parts[0].text,
-                    finishReason: data.candidates[0].finishReason
+                // Gemini 直连方式
+                apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${profile.model}:generateContent?key=${profile.apiKey}`;
+
+                // Gemini API 使用不同的消息格式，并支持多模态
+                const contents = await Promise.all(messages.map(async (msg) => {
+                        const role = msg.role === 'assistant' ? 'model' : 'user';
+
+                        if (typeof msg.content === 'object' && msg.content.type === 'image') {
+                                // 处理图片消息
+                                const { mimeType, data } = await fetchImageAsBase64(msg.content.image_url);
+                                return {
+                                        role,
+                                        parts: [
+                                                { text: msg.content.text },
+                                                {
+                                                        inline_data: {
+                                                                mime_type: mimeType,
+                                                                data: data
+                                                        }
+                                                }
+                                        ]
+                                };
+                        }
+                        // 处理普通文本消息
+                        return {
+                                role,
+                                parts: [{ text: msg.content }]
+                        };
+                }));
+
+                requestBody = {
+                        contents,
+                        generationConfig: {
+                                temperature: 0.9,
+                                candidateCount: 1,
+                                response_mime_type: "application/json"
+                        }
                 };
-            } else {
-                throw new Error('Gemini API 返回格式异常');
-            }
         } else {
-            // OpenAI 兼容格式
-            if (data.choices && data.choices[0] && data.choices[0].message) {
-                return {
-                    content: data.choices[0].message.content,
-                    finishReason: data.choices[0].finish_reason
+                // 反代方式 (兼容OpenAI格式)
+                if (!profile.apiUrl || !profile.apiUrl.trim()) {
+                        throw new Error('反向代理地址不能为空');
+                }
+
+                const cleanBaseUrl = profile.apiUrl.trim().endsWith('/')
+                        ? profile.apiUrl.trim().slice(0, -1)
+                        : profile.apiUrl.trim();
+
+                apiUrl = `${cleanBaseUrl}/v1/chat/completions`;
+                requestHeaders['Authorization'] = `Bearer ${profile.apiKey}`;
+
+                // 格式化消息以支持OpenAI的视觉模型输入
+                const formattedMessages = messages.map(msg => {
+                        const role = msg.role === 'system' ? 'system' : (msg.role === 'assistant' ? 'assistant' : 'user');
+
+                        if (typeof msg.content === 'object' && msg.content.type === 'image') {
+                                return {
+                                        role,
+                                        content: [
+                                                { type: 'text', text: msg.content.text },
+                                                {
+                                                        type: 'image_url',
+                                                        image_url: {
+                                                                url: msg.content.image_url
+                                                        }
+                                                }
+                                        ]
+                                };
+                        }
+                        // 系统消息或普通文本消息
+                        return {
+                                role,
+                                content: msg.content
+                        };
+                });
+
+                requestBody = {
+                        model: profile.model,
+                        messages: formattedMessages,
+                        temperature: 0.9,
+                        stream: false,
+                        response_format: { type: "json_object" }
                 };
-            } else {
-                throw new Error('API 返回格式异常');
-            }
         }
-    } catch (error) {
-        console.error('AI API 调用失败:', error);
-        throw error;
-    }
+
+        const fetchOptions = {
+                method: 'POST',
+                headers: requestHeaders,
+                body: JSON.stringify(requestBody)
+        };
+
+        try {
+                const response = await fetch(apiUrl, fetchOptions);
+
+                if (!response.ok) {
+                        const errorData = await response.json().catch(() => ({}));
+                        const errorMessage = errorData.error?.message || `HTTP 错误, 状态码: ${response.status}`;
+                        throw new Error(errorMessage);
+                }
+
+                const data = await response.json();
+
+                // 根据API类型解析响应
+                if (profile.connectionType === 'direct') {
+                        if (data.candidates && data.candidates[0] && data.candidates[0].content) {
+                                return {
+                                        content: data.candidates[0].content.parts[0].text,
+                                        finishReason: data.candidates[0].finishReason
+                                };
+                        } else {
+                                throw new Error('Gemini API 返回格式异常');
+                        }
+                } else {
+                        if (data.choices && data.choices[0] && data.choices[0].message) {
+                                return {
+                                        content: data.choices[0].message.content,
+                                        finishReason: data.choices[0].finish_reason
+                                };
+                        } else {
+                                throw new Error('API 返回格式异常');
+                        }
+                }
+        } catch (error) {
+                console.error('AI API 调用失败:', error);
+                throw error;
+        }
 }
 
 /**
@@ -439,7 +518,11 @@ function formatMessageForAI(messageContent) {
             if (messageContent.subtype === 'text') {
                 return `[图片描述]: ${messageContent.description}`;
             } else {
-                return `[图片]: ${messageContent.fileName || '用户发送了一张图片'}`;
+                    return {
+                            type: "image",
+                            text:  "[图片]: 发送了一张图片。",
+                            image_url: messageContent.url
+                    };
             }
             
         case 'voice':
@@ -1342,12 +1425,6 @@ async function updateCharacterBackground(characterId, description) {
 
 /** 后台活动 */
 /**
- * 为后台活动构建一个轻量级的系统提示词
- * @param {Object} character - 角色信息
- * @returns {Promise<string>} 系统提示词
- */
-
-/**
  * 触发一个或多个角色的后台活动
  * @returns {Promise<void>}
  */
@@ -1401,37 +1478,18 @@ export async function triggerBackgroundActivity() {
                         const aiResponse = await callAIAPI(apiProfile, messages, char, {});
                         const parsedResponse = JSON.parse(aiResponse.content.replace(/```json\n?|\n?```/g, ''));
 
-                        if (parsedResponse.activityType === 'sendMessage') {
-                                const messageEvent = await processAIMessage(parsedResponse.message, char.id);
-                                if (messageEvent) {
-                                        await db.events.add(messageEvent);
-                                        // 更新会话和未读计数
-                                        const conversation = await db.conversations.get(char.id) || { unreadCount: 0 };
-                                        await db.conversations.put({
-                                                id: char.id,
-                                                lastEventTimestamp: messageEvent.timestamp,
-                                                lastEventContent: messageEvent.content,
-                                                unreadCount: (conversation.unreadCount || 0) + 1,
-                                        });
-                                        if (!isCurrentChatRoom(char.id)) {
-                                                const notificationBody = messageEvent.content.content || '[新消息]';
-                                                showLocalNotification(char.name, notificationBody, `/chatroom/${char.id}`);
-                                            }
-                                }
-                        } else if (parsedResponse.activityType === 'createPost') {
-                                const postEvent = {
-                                        type: 'post',
-                                        contextId: `post_${Date.now()}`,
-                                        actorId: char.id,
-                                        content: parsedResponse.post,
-                                        timestamp: Date.now(),
-                                        visibility: { mode: 'public', groups: [], friends: [] }
-                                };
-                                await db.events.add(postEvent);
-                                if (document.hidden) {
-                                        showLocalNotification(char.name, `发布了新动态: ${parsedResponse.post.text.substring(0, 50)}...`, '/chat/moments');
-                                }
+                        // 检查是否跳过本次活动
+                        if (!parsedResponse.actions && Object.keys(parsedResponse).length === 0) {
+                                console.log(`${char.name} chose to skip this background activity.`);
+                                continue;
                         }
+
+                        // 处理新的多动作格式
+                        if (parsedResponse.actions && Array.isArray(parsedResponse.actions)) {
+                                for (const action of parsedResponse.actions) {
+                                        await processBackgroundAction(char, action);
+                                }
+                        } 
                 } catch (error) {
                         console.error(`Error during background activity for ${char.name}:`, error);
                 }
@@ -1586,6 +1644,97 @@ export async function generateAIReply(characterId, userId, userMessage) {
         };
     }
 }
+
+/**
+ * 处理单个后台动作
+ * @param {Object} character - 角色信息
+ * @param {Object} action - 动作对象
+ */
+async function processBackgroundAction(character, action) {
+    try {
+        switch (action.type) {
+            case 'sendMessage':
+                const messageEvent = await processAIMessage(action.message, character.id);
+                if (messageEvent) {
+                    await db.events.add(messageEvent);
+                    // 更新会话和未读计数
+                    const conversation = await db.conversations.get(character.id) || { unreadCount: 0 };
+                    await db.conversations.put({
+                        id: character.id,
+                        lastEventTimestamp: messageEvent.timestamp,
+                        lastEventContent: messageEvent.content,
+                        unreadCount: (conversation.unreadCount || 0) + 1,
+                    });
+                    if (!isCurrentChatRoom(character.id)) {
+                        const notificationBody = messageEvent.content.content || '[新消息]';
+                        showLocalNotification(character.name, notificationBody, `/chatroom/${character.id}`);
+                    }
+                    console.log(`${character.name} sent a background message: ${action.message.content?.substring(0, 50)}...`);
+                }
+                break;
+
+            case 'createPost':
+                const postEvent = {
+                    type: 'post',
+                    contextId: `post_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                    actorId: character.id,
+                    content: action.post,
+                    timestamp: Date.now(),
+                    visibility: { mode: 'public', groups: [], friends: [] }
+                };
+                await db.events.add(postEvent);
+                if (document.hidden) {
+                    showLocalNotification(character.name, `发布了新动态: ${action.post.text?.substring(0, 50)}...`, '/chat/moments');
+                }
+                console.log(`${character.name} created a background post: ${action.post.text?.substring(0, 50)}...`);
+                break;
+
+            case 'updateStatus':
+                const currentActor = await db.actors.get(character.id);
+                if (currentActor) {
+                    await db.actors.update(character.id, {
+                        status: {
+                            text: action.status.text || '',
+                            color: action.status.color || '#888888',
+                            mood: action.status.mood || '',
+                            location: action.status.location || '',
+                            outfit: action.status.outfit || ''
+                        }
+                    });
+                    console.log(`${character.name} updated status: ${action.status.text}`);
+                }
+                break;
+
+            case 'likePost':
+                if (action.postId) {
+                    try {
+                        await likeMomentPost(character.id, action.postId);
+                        console.log(`${character.name} liked post ${action.postId}`);
+                    } catch (error) {
+                        console.error(`Failed to like post ${action.postId}:`, error);
+                    }
+                }
+                break;
+
+            case 'commentPost':
+                if (action.postId && action.comment) {
+                    try {
+                        await commentOnMomentPost(character.id, action.postId, action.comment);
+                        console.log(`${character.name} commented on post ${action.postId}: ${action.comment.substring(0, 30)}...`);
+                    } catch (error) {
+                        console.error(`Failed to comment on post ${action.postId}:`, error);
+                    }
+                }
+                break;
+
+            default:
+                console.warn(`Unknown background action type: ${action.type}`);
+        }
+    } catch (error) {
+        console.error(`Error processing background action ${action.type} for ${character.name}:`, error);
+    }
+}
+
 
 export default {
     callAIAPI,

@@ -67,7 +67,7 @@ Promise.all([
         initializeGlobalSettings(),
         initializeDefaultFonts(),
         initializeUserEntity(),
-        populateMockData(),
+        //populateMockData(),
         initializeTheme()
 ]).then(() => {
         app.mount('#app');

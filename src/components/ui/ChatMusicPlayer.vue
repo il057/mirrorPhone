@@ -318,6 +318,20 @@ defineExpose({
 
 <style scoped>
 .chat-music-player {
+        position: fixed;
+        /* 将播放器脱离文档流 */
+        top: var(--header-height);
+        /* 定位在 Header 正下方 */
+        left: 16px;
+        /* 左右边距与原 margin 保持一致 */
+        right: 16px;
+        width: auto;
+        /* 宽度由 left 和 right 决定 */
+        z-index: 10;
+        /* z-index 保持，确保在内容之上 */
+        margin: 8px 0;
+        /* 只需要上下边距 */
+
         display: flex;
         align-items: center;
         background: var(--app-bg);
@@ -325,14 +339,10 @@ defineExpose({
         border: 1px solid var(--app-border);
         border-radius: 12px;
         padding: 8px 12px;
-        margin: 8px 16px;
         min-height: 46px;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        position: relative;
         overflow: hidden;
-        z-index: 10;
 }
-
 /* 专辑封面 */
 .album-cover {
         flex-shrink: 0;

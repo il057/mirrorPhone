@@ -1,5 +1,6 @@
 <template>
-        <div class="page-container">
+        <div class="page-container" :style="chatBackgroundStyle">
+
                 <AppHeader
                         :title="multiSelectMode ? `已选择 ${selectedMessages.size} 条消息` : (isTyping ? '正在输入中…' : (actor?.name || '聊天'))"
                         :override-back-action="multiSelectMode ? exitMultiSelectMode : goBack"
@@ -455,7 +456,8 @@
                 </div>
 
                 <!-- 输入区域 -->
-                <div class="input-area" :class="{ 'keyboard-visible': isKeyboardVisible }" v-if="actor">
+                <div class="input-area" ref="inputAreaRef" :class="{ 'keyboard-visible': isKeyboardVisible }"
+                        v-if="actor">
                         <!-- 引用消息显示 -->
                         <div v-if="quotedMessage" class="quoted-message-display">
                                 <div class="quoted-message-content">
@@ -689,8 +691,8 @@
                                         </div>
                                         <div class="status-item" v-if="actor?.status?.innerThoughts">
                                                 <div class="status-icon">
-                                                        <svg xmlns="http://www.w3.org/2000/svg" 
-                                                                viewBox="0 -960 960 960"  fill="var(--accent-primary)">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"
+                                                                fill="var(--accent-primary)">
                                                                 <path
                                                                         d="m440-803-83 83H240v117l-83 83 83 83v117h117l83 83 100-100 168 85-86-167 101-101-83-83v-117H523l-83-83Zm0-113 116 116h164v164l116 116-116 116 115 226q7 13 4 25.5T828-132q-8 8-20.5 11t-25.5-4L556-240 440-124 324-240H160v-164L44-520l116-116v-164h164l116-116Zm0 396Z" />
                                                         </svg>
@@ -768,7 +770,9 @@ const showStickerPanel = ref(false);
 const stickers = ref([]);
 // 虚拟键盘状态 - 简化处理，不再依赖复杂的检测
 const isKeyboardVisible = ref(false);
-
+const inputAreaRef = ref(null);
+const inputAreaHeight = ref(0);
+let resizeObserver = null;
 // 个人设置
 const personalSettings = ref({
         typingSimulation: {
@@ -860,6 +864,18 @@ const listenTogetherMode = computed(() => {
         };
 });
 
+const chatBackgroundStyle = computed(() => {
+        if (actor.value?.chatBackground) {
+                return {
+                        backgroundImage: `url('${actor.value.chatBackground}')`,
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
+                        backgroundAttachment: 'fixed' // 核心属性：使背景固定，不随内容滚动
+                };
+        }
+        // 如果没有背景图，返回空对象，会使用 main.css 中的默认背景色
+        return {};
+});
 // 获取角色信息
 const actor = useObservable(
         liveQuery(() => db.actors.get(actorId.value)),
@@ -3240,21 +3256,21 @@ onMounted(async () => {
 			currentBubbleStyle.value = bubbleStyle;
 			
 			// 应用聊天背景
-			const messagesContainerEl = document.querySelector('.messages-container');
-			if (messagesContainerEl && actor.value.chatBackground) {
-				messagesContainerEl.style.backgroundImage = `url('${actor.value.chatBackground}')`;
-				messagesContainerEl.style.backgroundSize = 'cover';
-				messagesContainerEl.style.backgroundPosition = 'center';
-				messagesContainerEl.style.backgroundRepeat = 'no-repeat';
-				messagesContainerEl.style.backgroundAttachment = 'fixed';
-			} else if (messagesContainerEl) {
-				// 清除背景图
-				messagesContainerEl.style.backgroundImage = 'none';
-			}
+	
 		} catch (error) {
 			console.error('Failed to load bubble style:', error);
 		}
 	}
+        if (inputAreaRef.value) {
+                resizeObserver = new ResizeObserver(entries => {
+                        for (let entry of entries) {
+                                // 读取 input-area 的实际高度，并赋值给 inputAreaHeight
+                                // 这样 padding-bottom 就会自动更新
+                                inputAreaHeight.value = entry.contentRect.height;
+                        }
+                });
+                resizeObserver.observe(inputAreaRef.value);
+        }
 	
 	// 监听窗口大小变化
 	const handleResize = () => {
@@ -3304,6 +3320,9 @@ const clearUnreadMessages = async () => {
 
 // 组件卸载时恢复原始主题
 onUnmounted(() => {
+        if (resizeObserver && inputAreaRef.value) {
+                resizeObserver.unobserve(inputAreaRef.value);
+        }
         // 清除当前聊天室状态
         clearCurrentChatRoom();
         console.log('离开聊天室:', actorId.value);
@@ -3315,6 +3334,13 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+
+.page-container {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+}
+
 .header-action-button {
         background: none;
         border: none;
@@ -3371,8 +3397,8 @@ onUnmounted(() => {
         overflow: hidden;
         display: flex;
         flex-direction: column;
-        margin-top:  calc(-1 * var(--header-height) - 132px);
-
+        padding-top: 0;
+        margin-bottom: -120px;
 }
 
 .messages-container {
@@ -3380,11 +3406,13 @@ onUnmounted(() => {
         overflow-y: auto;
         padding: 0 20px;
         /* 为header和音乐播放器预留空间 */
-        padding-top: 132px;
         display: flex;
         flex-direction: column;
         gap: 15px;
         transition: padding-bottom 0.3s ease;
+        background-color: transparent;
+        padding-top: calc(10px + var(--header-height));
+        padding-bottom: 120px;
 }
 
 .loading-indicator {
@@ -3507,21 +3535,42 @@ onUnmounted(() => {
         color: var(--text-secondary);
         padding: 0 8px;
 }
-
 .input-area {
+        background-color: var(--footer-bg);
+        /* 使用 Footer 的半透明背景色 */
+        backdrop-filter: blur(15px);
+        -webkit-backdrop-filter: blur(15px);
         position: fixed;
         bottom: 0;
         left: 0;
         right: 0;
-        background-color: var(--bg-primary);
         border-top: 1px solid var(--border-color);
         padding-top: 5px;
         padding-bottom: max(var(--safe-bottom), 15px);
         padding-left: 15px;
         padding-right: 15px;
-        backdrop-filter: blur(15px);
-        -webkit-backdrop-filter: blur(15px);
         z-index: 100;
+        max-height: 100px;
+}
+
+.message-input {
+        background-color: rgba(var(--bg-card-rgb), 0.5);
+        /* 使用卡片背景色，并增加透明度 */
+        color: var(--text-primary);
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.message-input::placeholder {
+        color: var(--accent-text);
+        /* 确保占位符颜色有足够对比度 */
+}
+
+.function-btn {
+        background-color: rgba(var(--bg-card-rgb), 0.3);
+}
+
+.function-btn:hover {
+        background-color: rgba(var(--bg-card-rgb), 0.5);
 }
 
 /* 确保在键盘弹出时input-area能够正确显示 */
@@ -3947,10 +3996,6 @@ onUnmounted(() => {
         position: relative;
 }
 
-.input-container {
-        background: var(--bg-primary);
-        border-top: 1px solid var(--border-light);
-}
 
 /* 音乐消息样式 */
 
@@ -4540,7 +4585,6 @@ onUnmounted(() => {
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	background-color: var(--bg-secondary);
 	border-radius: 8px;
 	flex-shrink: 0;
 }

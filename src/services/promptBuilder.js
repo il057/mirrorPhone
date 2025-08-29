@@ -626,25 +626,49 @@ export async function buildBackgroundActivityPrompt(character) {
     // 获取用户人格信息
     const userPersona = await getEffectiveUserPersona(character);
     
-    // 获取最近的少量聊天记录作为上下文
+    // 获取更多的上下文信息
     const recentMessages = await db.events
         .where('contextId').equals(character.id)
         .and(event => event.type === 'privateMessage')
         .reverse()
-        .limit(4)
+        .limit(8) // 增加聊天记录数量
         .toArray();
-    recentMessages.reverse(); // 恢复时间顺序
+    recentMessages.reverse();
 
-    // 获取角色自己的最后一次活动（消息或动态）
-    const lastActivity = await db.events
+    // 获取角色最近的所有活动
+    const recentActivities = await db.events
         .where('actorId').equals(character.id)
         .reverse()
-        .first();
+        .limit(5)
+        .toArray();
 
-    let prompt = `你正在扮演 ${character.name}。`;
+    // 获取最近的动态
+    const recentPosts = await db.events
+        .where('type').equals('post')
+        .reverse()
+        .limit(10)
+        .toArray();
 
-    // 加入严格的核心规则
-    prompt += `\n\n# 核心规则\n1. 你的所有回复都必须严格遵循指定的JSON格式。\n2. **严禁重复**：你的活动内容(无论是消息还是动态)必须与你最近的活动和聊天记录有明显不同。不要发送相似或相同的内容。`;
+    // 获取其他角色的动态（可以点赞评论的内容）
+    const otherActorsPosts = recentPosts.filter(post => 
+        post.actorId !== character.id && 
+        post.actorId !== '__USER__'
+    ).slice(0, 5);
+
+    // 获取角色的关系信息
+    const relationships = await db.relationships
+        .where('sourceId').equals(character.id)
+        .toArray();
+
+    let prompt = `你正在扮演 ${character.name}。这是你的后台活动时间，你可以选择主动做一些事情。`;
+
+    // 核心规则
+    prompt += `\n\n# 核心规则
+1. 你的回复必须是严格的JSON格式
+2. **严禁重复**：避免与最近的活动内容相似
+3. **可以执行多个动作**：你可以一次性发送多条消息、发布动态并评论其他人的动态等
+4. **可以选择跳过**：如果你觉得现在没有合适的事情要做，可以返回 {} 跳过本次活动
+5. **要符合角色设定**：所有行为都应该符合你的性格和当前情况`;
 
     if (character.persona) {
         prompt += `\n\n# 你的角色设定：\n${character.persona}`;
@@ -654,34 +678,95 @@ export async function buildBackgroundActivityPrompt(character) {
         prompt += `\n\n# 你正在互动的用户（${userPersona.name}）的信息：\n${userPersona.persona || '用户没有设定特别的人格。'}`;
     }
 
-    // 注入当前时间
+    // 注入当前时间和情境
     prompt += buildTimeInfo();
+    prompt += `\n\n# 当前情境分析
+- 现在是后台活动时间，用户可能在忙其他事情
+- 你可以选择主动联系用户、发布动态、或与其他内容互动
+- 也可以选择什么都不做，安静地等待`;
 
     // 注入最近聊天记录
     if (recentMessages.length > 0) {
-        prompt += `\n\n# 最近聊天记录摘要(用于避免重复):`;
+        prompt += `\n\n# 最近聊天记录 (用于了解当前关系状态和避免重复):`;
         for (const msg of recentMessages) {
             const author = msg.actorId === character.id ? character.name : (userPersona?.name || '用户');
             const content = msg.content?.content || '[非文本消息]';
-            prompt += `\n- ${author}: ${content.substring(0, 50)}${content.length > 50 ? '...' : ''}`;
+            const time = new Date(msg.timestamp).toLocaleString('zh-CN');
+            prompt += `\n- [${time}] ${author}: ${content.substring(0, 60)}${content.length > 60 ? '...' : ''}`;
         }
     }
 
-    // 注入角色上一次的活动
-    if (lastActivity) {
-        const lastContent = lastActivity.content?.text || lastActivity.content?.content || '[非文本活动]';
-        prompt += `\n\n# 你上一次的活动内容(避免重复这个): \n"${lastContent.substring(0, 50)}${lastContent.length > 50 ? '...' : ''}"`;
+    // 注入角色最近的活动
+    if (recentActivities.length > 0) {
+        prompt += `\n\n# 你最近的活动记录 (避免重复):`;
+        for (const activity of recentActivities) {
+            const content = activity.content?.text || activity.content?.content || '[非文本活动]';
+            const time = new Date(activity.timestamp).toLocaleString('zh-CN');
+            const type = activity.type === 'post' ? '发布动态' : '发送消息';
+            prompt += `\n- [${time}] ${type}: ${content.substring(0, 60)}${content.length > 60 ? '...' : ''}`;
+        }
+    }
+
+    // 注入可互动的动态
+    if (otherActorsPosts.length > 0) {
+        prompt += `\n\n# 可以互动的动态 (你可以选择点赞或评论):`;
+        for (const post of otherActorsPosts) {
+            const author = await db.actors.get(post.actorId);
+            const authorName = author ? author.name : '某人';
+            const content = post.content?.text || '[动态内容]';
+            const time = new Date(post.timestamp).toLocaleString('zh-CN');
+            prompt += `\n- [${time}] ${authorName} 发布: ${content.substring(0, 80)}${content.length > 80 ? '...' : ''} (ID: ${post.id})`;
+        }
+    }
+
+    // 注入关系信息
+    if (relationships.length > 0) {
+        prompt += `\n\n# 你的人际关系状态:`;
+        for (const rel of relationships) {
+            const target = await db.actors.get(rel.targetId);
+            if (target && target.id !== '__USER__') {
+                prompt += `\n- 与${target.name}: ${rel.type || '朋友'} (好感度: ${rel.score || 0})`;
+                if (rel.tags && rel.tags.length > 0) {
+                    const tagNames = rel.tags.map(tag => tag.name || tag).join('、');
+                    prompt += ` - 印象: ${tagNames}`;
+                }
+            }
+        }
     }
 
     // 添加世界书内容
     prompt += await buildWorldbookInfo(character);
 
     // 输出格式要求
-    prompt += `\n\n# 输出格式要求\n你的回复必须是严格的JSON格式。根据你的选择，返回以下两种格式之一：\n`;
-    prompt += `{"activityType": "sendMessage", "message": {"type": "text", "content": "你的消息内容"}}
-    或
-    {"activityType": "createPost", "post": {"text": "你的动态内容"}}`;
-    prompt += `\n请只返回JSON，不要包含任何额外的解释或标记。`;
+    prompt += `\n\n# 输出格式要求
+你的回复必须是严格的JSON格式。你可以选择以下任意一种或组合多种行为：
+
+1. **跳过本次活动**：
+   {}
+
+2. **发送消息（可发送多条）**：
+   {"actions": [{"type": "sendMessage", "message": {"type": "text", "content": "消息内容"}}]}
+
+3. **发布动态**：
+   {"actions": [{"type": "createPost", "post": {"text": "动态内容"}}]}
+
+4. **更新状态**：
+   {"actions": [{"type": "updateStatus", "status": {"text": "状态文本", "color": "#颜色", "mood": "心情", "location": "位置", "outfit": "装扮"}}]}
+
+5. **点赞动态**：
+   {"actions": [{"type": "likePost", "postId": 动态ID}]}
+
+6. **评论动态**：
+   {"actions": [{"type": "commentPost", "postId": 动态ID, "comment": "评论内容"}]}
+
+7. **组合多个行为**：
+   {"actions": [
+     {"type": "createPost", "post": {"text": "发布动态"}},
+     {"type": "likePost", "postId": 123},
+     {"type": "sendMessage", "message": {"type": "text", "content": "发送消息"}}
+   ]}
+
+请只返回JSON，不要包含任何额外的解释或标记。如果你觉得现在没有合适的事情要做，请返回 {}。`;
 
     return prompt;
 }

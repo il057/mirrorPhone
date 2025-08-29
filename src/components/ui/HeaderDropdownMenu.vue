@@ -22,7 +22,7 @@ defineEmits(['close']);
         left: 0;
         width: 100%;
         height: 100%;
-        z-index: 199;
+        z-index: 201;
         /* Below modal overlay */
 }
 
