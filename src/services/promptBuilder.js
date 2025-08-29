@@ -448,6 +448,7 @@ export function buildFunctionsList(isSpotifyLoggedIn = false, stickerList = []) 
             items: [
                 '**发布文字动态**: {"type": "create_post", "content": "动态文字内容", "postType": "text"}',
                 '**发布图片描述动态**: {"type": "create_post", "content": "配图文字", "postType": "image", "imageDescription": "第一张图片的描述\\n第二张图片的描述\\n..."}',
+                '**@其他角色**: 在发布动态或评论时，可以使用@角色名来提及其他角色。例如：{"type": "create_post", "content": "@小明 今天天气真好！", "postType": "text"}',
                 '**点赞动态**: {"type": "like_post", "postId": "动态ID"}',
                 '**评论动态**: {"type": "comment_on_post", "postId": "动态ID", "content": "评论内容"}'
             ]
@@ -484,9 +485,56 @@ export function buildFunctionsList(isSpotifyLoggedIn = false, stickerList = []) 
 }
 
 /**
- * 构建时间信息提示词
- * @returns {string} 时间信息提示词
+ * 构建@功能说明提示词
+ * @param {Object} character - 角色信息
+ * @returns {Promise<string>} @功能说明提示词
  */
+export async function buildAtFunctionInfo(character) {
+    let prompt = '\n\n## @功能说明\n';
+    prompt += '你可以在发布动态或评论时@其他角色来提及他们，被@的角色会收到提醒尽快与该动态互动。\n\n';
+    
+    // 获取同分组的角色
+    const sameGroupActors = [];
+    if (character.groupIds && character.groupIds.length > 0) {
+        for (const groupId of character.groupIds) {
+            const group = await db.groups.get(groupId);
+            if (group) {
+                // 获取分组内的所有角色（除了自己，包括用户persona）
+                const groupActors = await db.actors
+                    .where('groupIds')
+                    .anyOf(groupId)
+                    .and(actor => actor.id !== character.id && actor.isGroup === 0)
+                    .toArray();
+                sameGroupActors.push(...groupActors);
+            }
+        }
+    }
+    
+    // 去重
+    const uniqueActors = sameGroupActors.filter((actor, index, self) => 
+        index === self.findIndex(a => a.id === actor.id)
+    );
+    
+    if (uniqueActors.length > 0) {
+        prompt += '**你可以@的角色和用户：**\n';
+        uniqueActors.forEach(actor => {
+            if (actor.id === '__USER__') {
+                prompt += `- ${actor.name} (用户)\n`;
+            } else {
+                prompt += `- ${actor.name}\n`;
+            }
+        });
+        prompt += '\n**使用示例：**\n';
+        const exampleActor = uniqueActors.find(a => a.id !== '__USER__') || uniqueActors[0];
+        prompt += `- 发布动态：{"type": "create_post", "content": "@${exampleActor.name} 今天我们一起去玩吧！", "postType": "text"}\n`;
+        prompt += `- 评论动态：{"type": "comment_on_post", "postId": "动态ID", "content": "@${exampleActor.name} 我也想去！"}\n`;
+        prompt += `- @用户：{"type": "create_post", "content": "@user 快来看看这个！", "postType": "text"}\n`;
+    } else {
+        prompt += '当前没有其他同分组角色可以@。\n';
+    }
+    
+    return prompt;
+}
 export function buildTimeInfo() {
     return `\n\n## ⏰ 当前时间信息
 当前时间：${new Date().toLocaleString('zh-CN', { 
@@ -704,6 +752,9 @@ export async function buildChatSystemPrompt(character, userId, contextSettings, 
     
     // JSON格式要求
     prompt += buildJsonFormatRequirements();
+    
+    // @功能信息
+    prompt += await buildAtFunctionInfo(character);
     
     // 功能列表
     const availableStickers = await db.stickers.orderBy('order').toArray();
@@ -1236,6 +1287,10 @@ function analyzeSpecialTasks(recentEvents, userId) {
         tasks.push(buildMusicControlTask());
     }
     
+    // 检测动态中的@提及
+    const mentionTasks = analyzeMentionTasks(recentEvents, userId);
+    tasks.push(...mentionTasks);
+    
     return tasks;
 }
 
@@ -1410,4 +1465,64 @@ function buildMusicControlTask() {
 - **下一首**: {"type": "spotify_next_track"}
 - **上一首**: {"type": "spotify_previous_track"}
 当用户提到切歌、暂停、播放等需求时，请主动使用这些功能。`;
+}
+
+/**
+ * 分析动态中的@提及任务
+ * @param {Array} recentEvents - 最近的事件列表
+ * @param {string} userId - 用户ID
+ * @returns {Array} @提及任务列表
+ */
+function analyzeMentionTasks(recentEvents, userId) {
+    const tasks = [];
+    const mentionRegex = /@(\w+)/g;
+    
+    for (const event of recentEvents) {
+        if (event.type === 'moment' && event.content) {
+            const mentions = [];
+            let match;
+            while ((match = mentionRegex.exec(event.content)) !== null) {
+                mentions.push(match[1]);
+            }
+            
+            if (mentions.length > 0) {
+                tasks.push(buildMentionTask(event, mentions, userId));
+            }
+        }
+    }
+    
+    return tasks;
+}
+
+/**
+ * 构建@提及任务
+ * @param {Object} event - 动态事件
+ * @param {Array} mentions - 被@的角色名称列表
+ * @param {string} userId - 用户ID
+ * @returns {string} @提及任务提示
+ */
+function buildMentionTask(event, mentions, userId) {
+    const isUserMentioned = mentions.some(mention => mention.toLowerCase() === 'user');
+    const mentionedChars = mentions.filter(mention => mention.toLowerCase() !== 'user');
+    
+    let task = `
+# 临时任务：有人在动态中@了你
+动态内容：${event.content}
+被@的角色：${mentions.join(', ')}`;
+    
+    if (isUserMentioned) {
+        task += `
+你被用户@了！请尽快查看这条动态并与之互动。你可以：
+- **点赞动态**: {"type": "like_post", "postId": "${event.contextId}"}
+- **评论动态**: {"type": "comment_on_post", "postId": "${event.contextId}", "content": "你的回复内容"}
+- **发布新动态回复**: {"type": "create_post", "content": "回复@用户的动态内容"}`;
+    }
+    
+    if (mentionedChars.length > 0) {
+        task += `
+其他被@的角色：${mentionedChars.join(', ')}
+请注意这些角色可能也会与这条动态互动。`;
+    }
+    
+    return task;
 }

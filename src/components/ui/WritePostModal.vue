@@ -9,8 +9,26 @@
                         <div class="modal-body">
                                 <!-- 文本输入区域 -->
                                 <div class="text-input-section">
-                                        <textarea v-model="postText" placeholder="分享新鲜事..." class="post-textarea"
-                                                :rows="isImagePost ? 3 : 6"></textarea>
+                                        <div class="textarea-container">
+                                                <textarea v-model="postText" placeholder="分享新鲜事..." class="post-textarea"
+                                                        :rows="isImagePost ? 3 : 6" @input="handleTextInput"
+                                                        @keydown="handleKeydown" ref="postTextarea"></textarea>
+                                                
+                                                <!-- @下拉菜单 -->
+                                                <div v-if="showAtDropdown" class="at-dropdown" :style="{ top: dropdownPosition.top + 'px', left: dropdownPosition.left + 'px' }">
+                                                        <div v-for="actor in filteredActors" :key="actor.id" 
+                                                                class="at-option" @click="selectAtActor(actor)">
+                                                                <div class="actor-avatar">
+                                                                        <img v-if="getActorAvatar(actor)" :src="getActorAvatar(actor)" :alt="actor.name">
+                                                                        <span v-else class="avatar-initial">{{ getInitial(actor.name) }}</span>
+                                                                </div>
+                                                                <span class="actor-name">{{ actor.name }}</span>
+                                                        </div>
+                                                        <div v-if="filteredActors.length === 0" class="no-results">
+                                                                没有找到匹配的角色
+                                                        </div>
+                                                </div>
+                                        </div>
                                 </div>
 
                                 <!-- 图片区域 - 仅在图片动态时显示 -->
@@ -145,9 +163,11 @@
                                                                 <label v-for="group in availableGroups" :key="group.id"
                                                                         class="checkbox-item">
                                                                         <input type="checkbox" :value="group.id"
-                                                                                v-model="selectedGroups">
+                                                                                v-model="selectedGroups"
+                                                                                :disabled="isGroupRequiredByMention(group.id)">
                                                                         <span class="checkbox-text">{{ group.name
                                                                                 }}</span>
+                                                                        <span v-if="isGroupRequiredByMention(group.id)" class="required-hint">@提及要求</span>
                                                                 </label>
                                                         </div>
                                                 </div>
@@ -161,7 +181,8 @@
                                                                                                 :key="friend.id"
                                                                                                 class="checkbox-item">
                                                                                                 <input type="checkbox" :value="friend.id"
-                                                                                                                v-model="selectedFriends">
+                                                                                                                v-model="selectedFriends"
+                                                                                                                :disabled="isFriendRequiredByMention(friend.id)">
                                                                                                 <div class="friend-item">
                                                                                                                 <div class="avatar">
                                                                                                                                 <img v-if="friend.avatar"
@@ -174,6 +195,7 @@
                                                                                                                 </div>
                                                                                                                 <span class="checkbox-text">{{
                                                                                                                                 friend.name }}</span>
+                                                                                                                <span v-if="isFriendRequiredByMention(friend.id)" class="required-hint">@提及要求</span>
                                                                                                 </div>
                                                                                 </label>
                                                                 </div>
@@ -232,6 +254,14 @@ const imageDescription = ref('');
 const showDescription = ref(true);
 const selectedImages = ref([]);
 
+// @功能相关
+const showAtDropdown = ref(false);
+const dropdownPosition = ref({ top: 0, left: 0 });
+const atQuery = ref('');
+const allActors = ref([]);
+const filteredActors = ref([]);
+const postTextarea = ref(null);
+
 // 可见性设置
 const showVisibilityOptions = ref(false);
 const visibilityMode = ref('public'); // 'public', 'group', 'friends'
@@ -239,6 +269,9 @@ const selectedGroups = ref([]);
 const selectedFriends = ref([]);
 const availableGroups = ref([]);
 const availableFriends = ref([]);
+
+// @提及相关
+const mentionedActors = ref([]); // 跟踪被@的角色
 
 // 计算属性
 const visibilityText = computed(() => {
@@ -299,6 +332,246 @@ const resetForm = () => {
 const getInitial = (name) => {
         if (!name) return 'U';
         return name.charAt(0).toUpperCase();
+};
+
+// 获取角色头像
+const getActorAvatar = (actor) => {
+        if (!actor) return null;
+        return actor.currentAvatar || (actor.avatarLibrary && actor.avatarLibrary.length > 0 ? actor.avatarLibrary[0] : actor.avatar);
+};
+
+// 处理文本输入
+const handleTextInput = (event) => {
+        const textarea = event.target;
+        const cursorPosition = textarea.selectionStart;
+        const text = textarea.value;
+        
+        // 检查@提及的变化
+        updateMentionedActors(text);
+        
+        // 检查光标前是否有@
+        const beforeCursor = text.substring(0, cursorPosition);
+        const atIndex = beforeCursor.lastIndexOf('@');
+        
+        if (atIndex !== -1) {
+                const afterAt = beforeCursor.substring(atIndex + 1);
+                // 如果@后面没有空格或换行符，显示下拉菜单
+                if (!/\s/.test(afterAt)) {
+                        atQuery.value = afterAt;
+                        showAtDropdown.value = true;
+                        updateDropdownPosition(textarea, atIndex);
+                        filterActors();
+                        return;
+                }
+        }
+        
+        // 隐藏下拉菜单
+        showAtDropdown.value = false;
+};
+
+// 处理键盘事件
+const handleKeydown = (event) => {
+        if (showAtDropdown.value) {
+                if (event.key === 'Escape') {
+                        showAtDropdown.value = false;
+                        event.preventDefault();
+                } else if (event.key === 'ArrowDown') {
+                        // 可以添加上下选择逻辑
+                        event.preventDefault();
+                } else if (event.key === 'Enter' && filteredActors.value.length > 0) {
+                        selectAtActor(filteredActors.value[0]);
+                        event.preventDefault();
+                }
+        }
+};
+
+// 更新下拉菜单位置
+const updateDropdownPosition = (textarea, atIndex) => {
+        const text = textarea.value.substring(0, atIndex);
+        const lines = text.split('\n');
+        const currentLine = lines.length - 1;
+        const currentLineText = lines[currentLine];
+        
+        // 创建临时span来计算文本宽度
+        const span = document.createElement('span');
+        span.style.font = window.getComputedStyle(textarea).font;
+        span.style.whiteSpace = 'pre';
+        span.textContent = currentLineText;
+        document.body.appendChild(span);
+        
+        const textWidth = span.offsetWidth;
+        document.body.removeChild(span);
+        
+        const rect = textarea.getBoundingClientRect();
+        const lineHeight = parseInt(window.getComputedStyle(textarea).lineHeight) || 20;
+        
+        dropdownPosition.value = {
+                top: rect.top + (currentLine * lineHeight) + lineHeight,
+                left: rect.left + textWidth
+        };
+};
+
+// 筛选角色
+const filterActors = () => {
+        if (!atQuery.value) {
+                filteredActors.value = allActors.value.slice(0, 10); // 显示前10个
+        } else {
+                const query = atQuery.value.toLowerCase();
+                filteredActors.value = allActors.value
+                        .filter(actor => actor.name.toLowerCase().includes(query))
+                        .sort((a, b) => a.name.localeCompare(b.name))
+                        .slice(0, 10);
+        }
+};
+
+// 选择@角色
+const selectAtActor = (actor) => {
+        const textarea = postTextarea.value;
+        const cursorPosition = textarea.selectionStart;
+        const text = textarea.value;
+        
+        // 找到最后一个@的位置
+        const beforeCursor = text.substring(0, cursorPosition);
+        const atIndex = beforeCursor.lastIndexOf('@');
+        
+        if (atIndex !== -1) {
+                // 替换@后面的内容为角色名
+                const beforeAt = text.substring(0, atIndex);
+                const afterAt = text.substring(atIndex + 1);
+                const spaceIndex = afterAt.search(/\s/);
+                const afterSelection = spaceIndex !== -1 ? afterAt.substring(spaceIndex) : '';
+                
+                postText.value = beforeAt + '@' + actor.name + ' ' + afterSelection;
+                
+                // 添加到被@角色列表（如果还没添加）
+                if (!mentionedActors.value.some(a => a.id === actor.id)) {
+                        mentionedActors.value.push(actor);
+                        
+                        // 根据可见性模式自动调整选择
+                        adjustVisibilityForMention(actor);
+                }
+                
+                // 设置光标位置
+                const newCursorPosition = beforeAt.length + actor.name.length + 2;
+                setTimeout(() => {
+                        textarea.setSelectionRange(newCursorPosition, newCursorPosition);
+                        textarea.focus();
+                }, 0);
+        }
+        
+        showAtDropdown.value = false;
+};
+
+// 根据@提及调整可见性设置
+const adjustVisibilityForMention = async (actor) => {
+        // 如果当前是公开模式，不需要调整
+        if (visibilityMode.value === 'public') return;
+        
+        if (visibilityMode.value === 'group') {
+                // 获取角色的分组
+                const character = await db.actors.where('id').equals(actor.id).first();
+                if (character && character.groupIds && character.groupIds.length > 0) {
+                        // 添加角色的分组到选择中
+                        character.groupIds.forEach(groupId => {
+                                if (!selectedGroups.value.includes(groupId)) {
+                                        selectedGroups.value.push(groupId);
+                                }
+                        });
+                }
+        } else if (visibilityMode.value === 'friends') {
+                // 添加角色到好友选择中
+                if (!selectedFriends.value.includes(actor.id)) {
+                        selectedFriends.value.push(actor.id);
+                }
+        }
+};
+
+// 从@提及中移除角色
+const removeMentionedActor = (actorId) => {
+        mentionedActors.value = mentionedActors.value.filter(a => a.id !== actorId);
+        
+        // 检查是否需要重置可见性
+        if (mentionedActors.value.length === 0) {
+                // 如果没有@提及了，可以重置为公开
+                visibilityMode.value = 'public';
+                selectedGroups.value = [];
+                selectedFriends.value = [];
+        }
+};
+
+// 更新被@的角色列表
+const updateMentionedActors = (text) => {
+        const mentionRegex = /@(\w+)/g;
+        const currentMentions = [];
+        let match;
+        
+        while ((match = mentionRegex.exec(text)) !== null) {
+                const actorName = match[1];
+                const actor = allActors.value.find(a => a.name === actorName);
+                if (actor) {
+                        currentMentions.push(actor);
+                }
+        }
+        
+        // 找出被移除的@提及
+        const removedActors = mentionedActors.value.filter(actor => 
+                !currentMentions.some(current => current.id === actor.id)
+        );
+        
+        // 移除不存在的@提及
+        removedActors.forEach(actor => {
+                removeMentionedActor(actor.id);
+        });
+        
+        // 更新mentionedActors
+        mentionedActors.value = currentMentions;
+};
+
+// 检查分组是否因为@提及而被要求选择
+const isGroupRequiredByMention = (groupId) => {
+        return mentionedActors.value.some(actor => 
+                actor.groupIds && actor.groupIds.includes(groupId)
+        );
+};
+
+// 检查好友是否因为@提及而被要求选择
+const isFriendRequiredByMention = (friendId) => {
+        return mentionedActors.value.some(actor => actor.id === friendId);
+};
+
+// 加载所有角色
+const loadAllActors = async () => {
+        try {
+                let actors = [];
+                
+                // 如果是角色发布动态，加载同组角色和用户persona
+                if (props.currentActor && props.currentActor.id !== '__USER__') {
+                        // 获取当前角色的分组
+                        const character = await db.actors.where('id').equals(props.currentActor.id).first();
+                        if (character && character.groupIds && character.groupIds.length > 0) {
+                                // 获取同组的所有角色（包括用户persona）
+                                actors = await db.actors
+                                        .where('groupIds')
+                                        .anyOf(character.groupIds)
+                                        .distinct()
+                                        .toArray();
+                        } else {
+                                // 如果角色没有分组，加载所有非群组角色
+                                actors = await db.actors
+                                        .where('isGroup').equals(0)
+                                        .toArray();
+                        }
+                } else {
+                        // 用户发布动态，加载所有非群组角色
+                        actors = await db.actors
+                                .where('isGroup').equals(0)
+                                .toArray();
+                }
+                
+                allActors.value = actors.sort((a, b) => a.name.localeCompare(b.name));
+        } catch (error) {
+                console.error('加载角色列表失败:', error);
+        }
 };
 
 const handleImageSelection = async () => {
@@ -438,6 +711,7 @@ const loadFriends = async () => {
 onMounted(() => {
         loadGroups();
         loadFriends();
+        loadAllActors();
         // 默认将描述框设为可见，并切换图片模式为上传
         if (props.postType === 'image') {
                 imageMode.value = 'upload';
@@ -782,6 +1056,79 @@ watch(() => props.editData, (newEditData) => {
         color: var(--text-primary);
 }
 
+.textarea-container {
+        position: relative;
+}
+
+.at-dropdown {
+        position: fixed;
+        background: var(--bg-primary);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        max-height: 200px;
+        overflow-y: auto;
+        z-index: 1000;
+        min-width: 200px;
+        max-width: 300px;
+}
+
+.at-option {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 12px;
+        cursor: pointer;
+        border-bottom: 1px solid var(--border-color);
+}
+
+.at-option:last-child {
+        border-bottom: none;
+}
+
+.at-option:hover {
+        background: var(--bg-secondary);
+}
+
+.actor-avatar {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        overflow: hidden;
+        flex-shrink: 0;
+}
+
+.actor-avatar img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+}
+
+.avatar-initial {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--accent-primary);
+        color: white;
+        font-weight: 600;
+        font-size: 14px;
+}
+
+.actor-name {
+        color: var(--text-primary);
+        font-size: 14px;
+        flex: 1;
+}
+
+.no-results {
+        padding: 12px;
+        color: var(--text-secondary);
+        font-size: 14px;
+        text-align: center;
+}
+
 .modal-footer {
         display: flex;
         gap: 10px;
@@ -823,5 +1170,21 @@ watch(() => props.editData, (newEditData) => {
 
 .publish-btn:not(:disabled):hover {
         background: var(--accent-darker);
+}
+
+/* @提及相关样式 */
+.required-hint {
+        font-size: 12px;
+        color: var(--accent-primary);
+        font-weight: 500;
+        margin-left: auto;
+}
+
+.checkbox-item input:disabled {
+        opacity: 0.5;
+}
+
+.checkbox-item input:disabled + .checkbox-text {
+        color: var(--text-secondary);
 }
 </style>

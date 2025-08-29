@@ -206,6 +206,9 @@ const goBack = () => {
                 } else if (originalFrom === 'chatroom') {
                         // 如果从聊天室来，返回到对应的聊天室
                         router.push(`/chatroom/${actorId.value}`);
+                } else if (originalFrom === 'moments') {
+                        // 如果从动态页面来，返回到动态页面
+                        router.push('/chat/moments');
                 } else {
                         // 其他未知的来源，默认返回消息
                         router.push('/chat/messages');

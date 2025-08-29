@@ -80,8 +80,16 @@
                                                 <div class="moment-row-2">
                                                         <div class="moment-spacer"></div>
                                                         <div class="moment-content">
-                                                                <p v-if="moment.content.text" class="moment-text">{{
-                                                                        moment.content.text }}</p>
+                                                                <div v-if="moment.content.text" class="moment-text">
+                                                                        <span v-for="(part, index) in parseAtMentions(moment.content.text)" :key="index">
+                                                                                <span v-if="part.type === 'text'">{{ part.content }}</span>
+                                                                                <span v-else-if="part.type === 'mention'" 
+                                                                                        class="mention" 
+                                                                                        @click="handleMentionClick(part.actorName)">
+                                                                                        {{ part.content }}
+                                                                                </span>
+                                                                        </span>
+                                                                </div>
 
                                                                 <div v-if="moment.content.images && moment.content.images.length > 0"
                                                                         class="moment-images">
@@ -175,6 +183,8 @@
                                                         <div class="comment-input-section">
                                                                 <input v-model="moment.commentText" type="text"
                                                                         placeholder="写评论..." class="comment-input"
+                                                                        @input="handleCommentInput($event, moment)"
+                                                                        @keydown="handleCommentKeydown($event, moment)"
                                                                         @keyup.enter="submitComment(moment)">
                                                                 <button @click="submitComment(moment)"
                                                                         class="comment-submit-btn">发送</button>
@@ -223,9 +233,16 @@
                                                                                 <div class="comment-author">{{
                                                                                         reply.author.name
                                                                                         }}</div>
-                                                                                <div class="comment-text">{{
-                                                                                        reply.content.text
-                                                                                        }}</div>
+                                                                                <div class="comment-text">
+                                                                                        <span v-for="(part, index) in parseAtMentions(reply.content.text)" :key="index">
+                                                                                                <span v-if="part.type === 'text'">{{ part.content }}</span>
+                                                                                                <span v-else-if="part.type === 'mention'" 
+                                                                                                        class="mention" 
+                                                                                                        @click="handleMentionClick(part.actorName)">
+                                                                                                        {{ part.content }}
+                                                                                                </span>
+                                                                                        </span>
+                                                                                </div>
                                                                         </div>
                                                                 </div>
                                                         </div>
@@ -309,8 +326,16 @@
                                                 <div class="moment-row-2">
                                                         <div class="moment-spacer"></div>
                                                         <div class="moment-content">
-                                                                <p v-if="moment.content.text" class="moment-text">{{
-                                                                        moment.content.text }}</p>
+                                                                <div v-if="moment.content.text" class="moment-text">
+                                                                        <span v-for="(part, index) in parseAtMentions(moment.content.text)" :key="index">
+                                                                                <span v-if="part.type === 'text'">{{ part.content }}</span>
+                                                                                <span v-else-if="part.type === 'mention'" 
+                                                                                        class="mention" 
+                                                                                        @click="handleMentionClick(part.actorName)">
+                                                                                        {{ part.content }}
+                                                                                </span>
+                                                                        </span>
+                                                                </div>
 
                                                                 <div v-if="moment.content.images && moment.content.images.length > 0"
                                                                         class="moment-images">
@@ -404,6 +429,8 @@
                                                         <div class="comment-input-section">
                                                                 <input v-model="moment.commentText" type="text"
                                                                         placeholder="写评论..." class="comment-input"
+                                                                        @input="handleCommentInput($event, moment)"
+                                                                        @keydown="handleCommentKeydown($event, moment)"
                                                                         @keyup.enter="submitComment(moment)">
                                                                 <button @click="submitComment(moment)"
                                                                         class="comment-submit-btn">发送</button>
@@ -431,11 +458,9 @@
                                                                                         :alt="user.name">
                                                                                 <span v-else class="avatar-initial">{{
                                                                                         getInitial(user.name) }}</span>
+                                                                                </div>
                                                                         </div>
-                                                                </div>
-                                                        </div>
-
-                                                        <!-- 评论列表 -->
+                                                                </div>                                                        <!-- 评论列表 -->
                                                         <div v-if="moment.recentReplies && moment.recentReplies.length > 0"
                                                                 class="comments-section">
                                                                 <div v-for="reply in moment.recentReplies"
@@ -452,9 +477,16 @@
                                                                                 <div class="comment-author">{{
                                                                                         reply.author.name
                                                                                         }}</div>
-                                                                                <div class="comment-text">{{
-                                                                                        reply.content.text
-                                                                                        }}</div>
+                                                                                <div class="comment-text">
+                                                                                        <span v-for="(part, index) in parseAtMentions(reply.content.text)" :key="index">
+                                                                                                <span v-if="part.type === 'text'">{{ part.content }}</span>
+                                                                                                <span v-else-if="part.type === 'mention'" 
+                                                                                                        class="mention" 
+                                                                                                        @click="handleMentionClick(part.actorName)">
+                                                                                                        {{ part.content }}
+                                                                                                </span>
+                                                                                        </span>
+                                                                                </div>
                                                                         </div>
                                                                 </div>
                                                         </div>
@@ -463,6 +495,21 @@
                                 </div>
                         </main>
                 </template>
+
+                <!-- @下拉菜单 -->
+                <div v-if="showAtDropdown" class="at-dropdown" :style="{ top: dropdownPosition.top + 'px', left: dropdownPosition.left + 'px' }">
+                        <div v-for="actor in filteredActors" :key="actor.id" 
+                                class="at-option" @click="selectCommentAtActor(actor, currentCommentMoment)">
+                                <div class="actor-avatar">
+                                        <img v-if="getActorAvatar(actor)" :src="getActorAvatar(actor)" :alt="actor.name">
+                                        <span v-else class="avatar-initial">{{ getInitial(actor.name) }}</span>
+                                </div>
+                                <span class="actor-name">{{ actor.name }}</span>
+                        </div>
+                        <div v-if="filteredActors.length === 0" class="no-results">
+                                没有找到匹配的角色
+                        </div>
+                </div>
 
                 <!-- 发布动态模态框 -->
                 <WritePostModal :isVisible="showWritePostModal" :postType="postType" :editData="editingMoment"
@@ -513,6 +560,15 @@ const editingMoment = ref(null);
 
 // 动态菜单
 const activeDropdown = ref(null);
+
+// @功能相关
+const showAtDropdown = ref(false);
+const dropdownPosition = ref({ top: 0, left: 0 });
+const atQuery = ref('');
+const allActors = ref([]);
+const filteredActors = ref([]);
+const activeCommentInput = ref(null); // 当前激活的评论输入框引用
+const currentCommentMoment = ref(null); // 当前正在评论的动态
 
 // 根据当前是公共动态还是个人动态，决定显示谁的头像和名字
 const displayUser = computed(() => {
@@ -764,7 +820,194 @@ const getInitial = (name) => {
         return name.charAt(0).toUpperCase();
 };
 
-// 切换收藏状态
+// 获取角色头像
+const getActorAvatar = (actor) => {
+        if (!actor) return null;
+        return actor.currentAvatar || (actor.avatarLibrary && actor.avatarLibrary.length > 0 ? actor.avatarLibrary[0] : actor.avatar);
+};
+
+// 处理评论输入的@功能
+const handleCommentInput = (event, moment) => {
+        const input = event.target;
+        const cursorPosition = input.selectionStart;
+        const text = input.value;
+        
+        // 设置当前正在评论的动态
+        currentCommentMoment.value = moment;
+        
+        // 检查光标前是否有@
+        const beforeCursor = text.substring(0, cursorPosition);
+        const atIndex = beforeCursor.lastIndexOf('@');
+        
+        if (atIndex !== -1) {
+                const afterAt = beforeCursor.substring(atIndex + 1);
+                // 如果@后面没有空格或换行符，显示下拉菜单
+                if (!/\s/.test(afterAt)) {
+                        atQuery.value = afterAt;
+                        showAtDropdown.value = true;
+                        activeCommentInput.value = input;
+                        updateCommentDropdownPosition(input, atIndex);
+                        filterActors();
+                        return;
+                }
+        }
+        
+        // 隐藏下拉菜单
+        showAtDropdown.value = false;
+        activeCommentInput.value = null;
+};
+
+// 处理评论输入的键盘事件
+const handleCommentKeydown = (event, moment) => {
+        if (showAtDropdown.value) {
+                if (event.key === 'Escape') {
+                        showAtDropdown.value = false;
+                        activeCommentInput.value = null;
+                        event.preventDefault();
+                } else if (event.key === 'ArrowDown') {
+                        // 可以添加上下选择逻辑
+                        event.preventDefault();
+                } else if (event.key === 'Enter' && filteredActors.value.length > 0) {
+                        selectCommentAtActor(filteredActors.value[0], moment);
+                        event.preventDefault();
+                }
+        }
+};
+
+// 更新评论下拉菜单位置
+const updateCommentDropdownPosition = (input, atIndex) => {
+        const text = input.value.substring(0, atIndex);
+        
+        const span = document.createElement('span');
+        span.style.font = window.getComputedStyle(input).font;
+        span.style.whiteSpace = 'pre';
+        span.textContent = text;
+        document.body.appendChild(span);
+        
+        const textWidth = span.offsetWidth;
+        document.body.removeChild(span);
+        
+        const rect = input.getBoundingClientRect();
+        
+        dropdownPosition.value = {
+                top: rect.bottom + 5,
+                left: rect.left + textWidth
+        };
+};
+
+// 筛选角色
+const filterActors = () => {
+        if (!atQuery.value) {
+                filteredActors.value = allActors.value.slice(0, 10); // 显示前10个
+        } else {
+                const query = atQuery.value.toLowerCase();
+                filteredActors.value = allActors.value
+                        .filter(actor => actor.name.toLowerCase().includes(query))
+                        .sort((a, b) => a.name.localeCompare(b.name))
+                        .slice(0, 10);
+        }
+};
+
+// 选择评论中的@角色
+const selectCommentAtActor = (actor, moment) => {
+        const input = activeCommentInput.value;
+        if (!input) return;
+        
+        const cursorPosition = input.selectionStart;
+        const text = input.value;
+        
+        // 找到最后一个@的位置
+        const beforeCursor = text.substring(0, cursorPosition);
+        const atIndex = beforeCursor.lastIndexOf('@');
+        
+        if (atIndex !== -1) {
+                // 替换@后面的内容为角色名
+                const beforeAt = text.substring(0, atIndex);
+                const afterAt = text.substring(atIndex + 1);
+                const spaceIndex = afterAt.search(/\s/);
+                const afterSelection = spaceIndex !== -1 ? afterAt.substring(spaceIndex) : '';
+                
+                // 更新Vue的响应式数据
+                const newText = beforeAt + '@' + actor.name + ' ' + afterSelection;
+                moment.commentText = newText;
+                
+                // 设置光标位置
+                const newCursorPosition = beforeAt.length + actor.name.length + 2;
+                setTimeout(() => {
+                        input.setSelectionRange(newCursorPosition, newCursorPosition);
+                        input.focus();
+                }, 0);
+        }
+        
+        showAtDropdown.value = false;
+        activeCommentInput.value = null;
+        currentCommentMoment.value = null;
+};
+
+// 加载所有角色
+const loadAllActors = async () => {
+        try {
+                const actors = await db.actors
+                        .where('isGroup').equals(0) // 不包括群组
+                        .and(actor => !actor.id.startsWith('user_') && actor.id !== '__USER__') // 排除用户预设
+                        .toArray();
+                allActors.value = actors.sort((a, b) => a.name.localeCompare(b.name));
+        } catch (error) {
+                console.error('加载角色列表失败:', error);
+        }
+};
+
+// 解析@角色的方法
+const parseAtMentions = (text) => {
+        if (!text) return [];
+        
+        const parts = [];
+        const regex = /(@[^\s]+)/g;
+        let lastIndex = 0;
+        let match;
+        
+        while ((match = regex.exec(text)) !== null) {
+                // 添加@前的文本
+                if (match.index > lastIndex) {
+                        parts.push({
+                                type: 'text',
+                                content: text.substring(lastIndex, match.index)
+                        });
+                }
+                
+                // 添加@角色
+                const mention = match[1];
+                const actorName = mention.substring(1); // 去掉@
+                parts.push({
+                        type: 'mention',
+                        content: mention,
+                        actorName: actorName
+                });
+                
+                lastIndex = match.index + match[0].length;
+        }
+        
+        // 添加剩余文本
+        if (lastIndex < text.length) {
+                parts.push({
+                        type: 'text',
+                        content: text.substring(lastIndex)
+                });
+        }
+        
+        return parts;
+};
+
+// 点击@角色跳转到profile
+const handleMentionClick = (actorName) => {
+        // 查找对应的角色
+        const actor = allActors.value.find(a => a.name === actorName);
+        if (actor) {
+                // 记录来源页面
+                sessionStorage.setItem(`profile_${actor.id}_from`, 'moments');
+                router.push(`/profile/${actor.id}`);
+        }
+};
 const toggleFavorite = async (moment) => {
         try {
                 if (!currentPersona.value?.id) return;
@@ -1241,6 +1484,7 @@ onMounted(async () => {
         await loadCurrentPersona();
         await loadWallpaperSettings();
         await loadMomentsHeaderImage();
+        await loadAllActors();
         await loadMoments();
 
         // 清除moments未读状态
@@ -1539,7 +1783,18 @@ onUnmounted(() => {
         font-size: 15px;
         line-height: 1.5;
         color: var(--text-primary);
-        margin: 0 0 12px 0;
+        margin-bottom: 12px;
+        word-wrap: break-word;
+}
+
+.mention {
+        color: var(--accent-primary);
+        cursor: pointer;
+        font-weight: 500;
+}
+
+.mention:hover {
+        text-decoration: underline;
 }
 
 .moment-text.image-description {
@@ -1860,5 +2115,73 @@ onUnmounted(() => {
         height: 16px;
 }
 
+.at-dropdown {
+        position: fixed;
+        background: var(--bg-primary);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        max-height: 200px;
+        overflow-y: auto;
+        z-index: 1000;
+        min-width: 200px;
+        max-width: 300px;
+}
+
+.at-option {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 12px;
+        cursor: pointer;
+        border-bottom: 1px solid var(--border-color);
+}
+
+.at-option:last-child {
+        border-bottom: none;
+}
+
+.at-option:hover {
+        background: var(--bg-secondary);
+}
+
+.actor-avatar {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        overflow: hidden;
+        flex-shrink: 0;
+}
+
+.actor-avatar img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+}
+
+.avatar-initial {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--accent-primary);
+        color: white;
+        font-weight: 600;
+        font-size: 14px;
+}
+
+.actor-name {
+        color: var(--text-primary);
+        font-size: 14px;
+        flex: 1;
+}
+
+.no-results {
+        padding: 12px;
+        color: var(--text-secondary);
+        font-size: 14px;
+        text-align: center;
+}
 
 </style>
